@@ -371,7 +371,7 @@ export default function App() {
               <Icons.Book />
               {isSyncing && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-ping border border-white"></span>}
             </div>
-            <h1 className={`text-sm font-semibold tracking-tight whitespace-nowrap ${ui.textMain}`}>Meu Catálogo</h1>
+            <h1 className={`text-sm font-semibold tracking-tight whitespace-nowrap ${ui.textMain}`}>Memorabilia</h1>
           </div>
           
           <div className={`flex items-center gap-3 text-[9px] sm:text-[10px] sm:border-l sm:pl-4 ${ui.divider} ${ui.textMuted} overflow-x-auto scrollbar-hide`}>
