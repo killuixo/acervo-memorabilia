@@ -26,12 +26,12 @@ const CLASS_CODES = {
   'Fita Cassete': '515.3',
   'VHS': '544.1',
   'DVD': '544.2',
-  'Mega Drive': '520',
-  'SNES': '520',
-  'Wii': '520',
-  'PS1': '520',
-  'PS2': '520',
-  'PS4': '520'
+  'Mega Drive': '522.1',
+  'SNES': '522.2',
+  'Wii': '522.3',
+  'PS1': '522.4',
+  'PS2': '522.5',
+  'PS4': '522.6'
 };
 
 const INITIAL_ITEMS = [
@@ -393,7 +393,11 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       videoRef.current.srcObject = null;
     }
     if (scannerRef.current) {
-      try { scannerRef.current.stop().catch(() => {}); } catch(e) {}
+      try {
+        scannerRef.current.stop().then(() => {
+          scannerRef.current?.clear();
+        }).catch(() => {});
+      } catch(e) {}
       scannerRef.current = null;
     }
   };
@@ -401,68 +405,68 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   useEffect(() => {
     let isMounted = true;
 
-    const initCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (isMounted && videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setHasCameraPermission(true);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setHasCameraPermission(false);
-          setScanStatus({ type: 'error', message: 'Câmera inacessível. Usando preenchimento manual.' });
-          setAddMode('manual');
-        }
-      }
-    };
-
-    if (addMode === 'camera_ai' || addMode === 'barcode') {
-      initCamera();
-      
-      if (addMode === 'barcode') {
-        const startScanner = () => {
-          if (!window.Html5Qrcode || scannerRef.current || !isMounted) return;
-          
-          const html5QrCode = new window.Html5Qrcode("reader-barcode");
-          scannerRef.current = html5QrCode;
-          
-          html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 150 } },
-            (decodedText) => {
-              if (isProcessingScan.current) return;
-              isProcessingScan.current = true;
-              
-              cleanupMedia(); 
-              
-              if (isMounted) {
-                setAddMode('manual');
-                setFormData(prev => ({ ...prev, barcode: decodedText }));
-                fetchMultiDatabase(decodedText);
-                setTimeout(() => { isProcessingScan.current = false; }, 2000);
-              }
-            },
-            () => {} 
-          ).catch(() => {});
-        };
-
-        if (window.Html5Qrcode) {
-          startScanner();
-        } else {
-          if (!document.getElementById('html5-qrcode-script')) {
-            const script = document.createElement('script');
-            script.id = 'html5-qrcode-script';
-            script.src = "https://unpkg.com/html5-qrcode";
-            script.onload = startScanner;
-            document.head.appendChild(script);
-          } else {
-            setTimeout(startScanner, 500);
+    // A IA usa a câmera diretamente
+    if (addMode === 'camera_ai') {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', advanced: [{ focusMode: 'continuous' }] } })
+        .then(stream => {
+          if (isMounted && videoRef.current) {
+            videoRef.current.srcObject = stream;
+            setHasCameraPermission(true);
           }
+        })
+        .catch(err => {
+          if (isMounted) {
+            setHasCameraPermission(false);
+            setScanStatus({ type: 'error', message: 'Câmera inacessível. Usando preenchimento manual.' });
+            setAddMode('manual');
+          }
+        });
+    }
+
+    // O Scanner tem controle exclusivo da câmera no seu modo
+    if (addMode === 'barcode') {
+      const startScanner = () => {
+        if (!window.Html5Qrcode || scannerRef.current || !isMounted) return;
+        
+        scannerRef.current = new window.Html5Qrcode("reader-barcode");
+        scannerRef.current.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 150 } },
+          (decodedText) => {
+            if (isProcessingScan.current) return;
+            isProcessingScan.current = true;
+            
+            cleanupMedia(); 
+            
+            if (isMounted) {
+              setAddMode('manual');
+              setFormData(prev => ({ ...prev, barcode: decodedText }));
+              fetchMultiDatabase(decodedText);
+              setTimeout(() => { isProcessingScan.current = false; }, 2000);
+            }
+          },
+          () => {} 
+        ).catch(() => {
+          if (isMounted) {
+             setHasCameraPermission(false);
+             setAddMode('manual');
+          }
+        });
+      };
+
+      if (window.Html5Qrcode) {
+        startScanner();
+      } else {
+        if (!document.getElementById('html5-qrcode-script')) {
+          const script = document.createElement('script');
+          script.id = 'html5-qrcode-script';
+          script.src = "https://unpkg.com/html5-qrcode";
+          script.onload = startScanner;
+          document.head.appendChild(script);
+        } else {
+          setTimeout(startScanner, 500);
         }
       }
-    } else {
-      cleanupMedia();
     }
 
     return () => {
@@ -574,7 +578,20 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         contents: [{
           role: "user",
           parts: [
-            { text: `Extraia as informações desta mídia. Responda APENAS com JSON no formato exato: 'type' (escolha UM entre: ${ALL_TYPES.join(', ')}), 'title', 'author_developer', 'year', 'publisher', 'description' (crie uma breve sinopse de 2 linhas baseada no item).` },
+            { text: `Você é um arquivista especialista. Analise esta imagem detalhadamente. Ela pode ser a capa de um livro, uma ficha catalográfica (leia as letras miúdas!), a capa de um CD/Vinil/Fita, ou um cartucho/disco de videogame.
+1. Identifique qual o objeto.
+2. Extraia as informações principais baseadas no que você lê.
+3. Responda APENAS com um objeto JSON válido, sem formatações extras, com as seguintes chaves exatas:
+{
+  "type": "Escolha EXATAMENTE UM entre: ${ALL_TYPES.join(', ')}",
+  "title": "Título da obra",
+  "author_developer": "Autor, banda, artista principal ou estúdio",
+  "year": "Ano de publicação/lançamento (apenas 4 dígitos)",
+  "publisher": "Editora, gravadora ou distribuidora",
+  "pages_or_time": "Se for ficha catalográfica, identifique o número de páginas impresso. Se for jogo, tempo estimado. Se não achar, deixe vazio",
+  "description": "Crie uma breve sinopse de 2 a 3 linhas baseada no item identificado."
+}
+Seja preciso. Retorne apenas o objeto JSON.` },
             { inlineData: { mimeType: "image/jpeg", data: base64Image } }
           ]
         }],
@@ -589,20 +606,27 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (aiText) {
-        const cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsedData = JSON.parse(cleanedText);
+        // Encontra o bloco JSON mesmo se a IA mandar texto antes ou depois
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
         
-        setFormData(prev => ({
-          ...prev,
-          title: parsedData.title || '',
-          author_developer: parsedData.author_developer || '',
-          year: parsedData.year?.toString() || '',
-          publisher: parsedData.publisher || '',
-          description: parsedData.description || '',
-          type: ALL_TYPES.includes(parsedData.type) ? parsedData.type : 'Livro'
-        }));
-        playChipBeep('success');
-        setScanStatus({ type: 'success', message: 'SUCESSO: Inteligência Artificial completou os dados!' });
+        if (jsonMatch) {
+          const parsedData = JSON.parse(jsonMatch[0]);
+          
+          setFormData(prev => ({
+            ...prev,
+            title: parsedData.title || '',
+            author_developer: parsedData.author_developer || '',
+            year: parsedData.year?.toString() || '',
+            publisher: parsedData.publisher || '',
+            pages_or_time: parsedData.pages_or_time || prev.pages_or_time,
+            description: parsedData.description || '',
+            type: ALL_TYPES.includes(parsedData.type) ? parsedData.type : 'Livro'
+          }));
+          playChipBeep('success');
+          setScanStatus({ type: 'success', message: 'SUCESSO: Inteligência Artificial completou os dados!' });
+        } else {
+          throw new Error("JSON estruturado não encontrado na resposta");
+        }
       }
     } catch (error) {
       playChipBeep('error');
