@@ -92,16 +92,13 @@ const playChipBeep = (type) => {
     const now = globalAudioCtx.currentTime;
 
     if (type === 'success') {
-      // SUCESSO: "Ting" simples e rápido
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(1046.50, now); // C6
       gainNode.gain.setValueAtTime(0.05, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
       oscillator.start(now);
       oscillator.stop(now + 0.15);
-
     } else if (type === 'error') {
-      // ERRO: "Bloop" grave rápido
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(300, now);
       oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.2);
@@ -109,9 +106,7 @@ const playChipBeep = (type) => {
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
       oscillator.start(now);
       oscillator.stop(now + 0.2);
-
     } else if (type === 'save') {
-      // SALVAR: "Blip-Blip" suave e discreto
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(523.25, now); // C5
       oscillator.frequency.setValueAtTime(783.99, now + 0.1); // G5
@@ -157,9 +152,9 @@ const MInput = ({ label, value, onChange, type = "text", placeholder = "", multi
   <div className="flex flex-col mb-3">
     <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>{label}</label>
     {multiline ? (
-      <textarea value={value} onChange={onChange} placeholder={placeholder} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-yellow-100 dark:focus:bg-yellow-900 transition-colors min-h-[80px] resize-none`} />
+      <textarea value={value} onChange={onChange} placeholder={placeholder} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-yellow-100 transition-colors min-h-[80px] resize-none`} />
     ) : (
-      <input type={type} value={value} onChange={onChange} placeholder={placeholder} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-sky-100 dark:focus:bg-sky-900 transition-colors`} />
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-sky-100 transition-colors`} />
     )}
   </div>
 );
@@ -168,8 +163,8 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
   if (!isOpen) return null;
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-        <h3 className="font-black uppercase tracking-widest text-lg leading-tight border-b-4 border-black dark:border-gray-500 pb-2">{title}</h3>
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-4 pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
         <p className="text-sm font-medium opacity-90">{message}</p>
         <div className="flex gap-2 mt-4">
           <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
@@ -236,7 +231,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
           confirmText="Apagar"
         />
 
-        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center gap-3 sticky top-0 z-10 bg-inherit" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center gap-3 sticky top-0 z-10 shadow-sm" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <button onClick={() => setSelectedItem(null)} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-gray-100'} active:scale-95 transition-transform`}>
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -245,11 +240,11 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
 
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4">
-            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex items-center justify-center overflow-hidden bg-black" colorClass="bg-black border-[4px]">
+            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
               {selectedItem.cover_url ? (
                 <img src={selectedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" />
               ) : (
-                <LibraryBig className="w-10 h-10 text-white opacity-30" />
+                <LibraryBig className={`w-10 h-10 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />
               )}
             </MContainer>
             
@@ -259,7 +254,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
               <div className="text-xs font-bold opacity-80 uppercase tracking-wide">{selectedItem.author_developer}</div>
               <div className="text-[10px] opacity-60 mt-1 uppercase tracking-widest leading-tight">{selectedItem.publisher}</div>
               {selectedItem.pages_or_time && (
-                <div className="text-[10px] font-bold bg-black text-white dark:bg-gray-700 w-max px-2 py-1 mt-2">
+                <div className={`text-[10px] font-bold w-max px-2 py-1 mt-2 ${darkMode ? 'bg-gray-700 text-white' : 'bg-black text-white'}`}>
                   {selectedItem.pages_or_time} {['Livro', 'Quadrinho'].includes(selectedItem.type) ? 'Páginas' : 'Horas'}
                 </div>
               )}
@@ -267,22 +262,22 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
           </div>
 
           <div className="flex gap-2">
-            <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-sky-800' : 'bg-sky-300'}>
-               <div className="text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 border-black/20 pb-1">Status</div>
+            <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black'}>
+               <div className={`text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 pb-1 ${darkMode ? 'border-gray-500' : 'border-black/20'}`}>Status</div>
                <div className="text-[10px] font-bold tracking-wider">{selectedItem.status}</div>
             </MContainer>
-            <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-yellow-700' : 'bg-yellow-400'}>
-               <div className="text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 border-black/20 pb-1">Avaliação</div>
+            <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
+               <div className={`text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 pb-1 ${darkMode ? 'border-gray-500' : 'border-black/20'}`}>Avaliação</div>
                <div className="flex gap-0.5 mt-1">
                   {[1, 2, 3, 4, 5].map(star => (
-                    <Star key={star} onClick={() => updateRating(selectedItem.id, star)} className={`w-4 h-4 cursor-pointer ${star <= selectedItem.rating ? (darkMode ? 'fill-yellow-600 text-yellow-600' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-500 opacity-30')}`} />
+                    <Star key={star} onClick={() => updateRating(selectedItem.id, star)} className={`w-4 h-4 cursor-pointer ${star <= selectedItem.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-500' : 'text-gray-500 opacity-30')}`} />
                   ))}
                 </div>
             </MContainer>
           </div>
 
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-800' : 'bg-white'}>
-            <div className="text-[10px] font-black uppercase tracking-widest mb-3 border-b-[3px] border-black dark:border-gray-500 pb-1">Descrição / Sinopse</div>
+          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
+            <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[3px] pb-1 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Descrição / Sinopse</div>
             <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap text-justify">
               {selectedItem.description || "Nenhuma descrição ou sinopse disponível para este item."}
             </p>
@@ -298,10 +293,10 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
 
   return (
     <div className="flex flex-col h-full">
-      <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 bg-inherit shadow-md" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+      <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 shadow-md" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="relative">
           <Search className={`absolute left-3 top-3 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-          <input type="text" placeholder="Buscar Título ou Autor..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-9 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white'} font-sans text-sm outline-none`} />
+          <input type="text" placeholder="Buscar Título ou Autor..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-9 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none`} />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {['Todos', ...Object.keys(CATEGORIES)].map(cat => (
@@ -326,7 +321,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
             {paginatedItems.map((item, idx) => (
               <div key={item.id} className="flex flex-row h-32 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedItem(item)}>
                 <MContainer darkMode={darkMode} className="w-4 border-r-0" colorClass={getMondrianColor(idx, darkMode)} />
-                <MContainer darkMode={darkMode} className="flex-1 flex p-2 bg-inherit" colorClass={darkMode ? 'bg-gray-800' : 'bg-white'}>
+                <MContainer darkMode={darkMode} className="flex-1 flex p-2" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
                   <div className="flex-1 flex flex-col justify-between overflow-hidden">
                     <div>
                       <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1 truncate">{item.type} • {item.year}</div>
@@ -337,7 +332,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
                       <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status}</div>
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                         {[1, 2, 3, 4, 5].map(star => (
-                          <Star key={star} onClick={() => updateRating(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= item.rating ? (darkMode ? 'fill-yellow-600 text-yellow-600' : 'fill-yellow-400 text-yellow-500') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
+                          <Star key={star} onClick={() => updateRating(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= item.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
                         ))}
                       </div>
                     </div>
@@ -768,22 +763,22 @@ const DashboardTab = ({ items, darkMode }) => {
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4">
       <div className="flex gap-4">
-        <MContainer darkMode={darkMode} className="flex-1 flex flex-col items-center justify-center py-6 relative overflow-hidden" colorClass={darkMode ? 'bg-sky-800' : 'bg-sky-300'}>
-          <LibraryBig className="absolute -left-4 -bottom-4 w-24 h-24 opacity-10 text-black dark:text-white" />
+        <MContainer darkMode={darkMode} className="flex-1 flex flex-col items-center justify-center py-6 relative overflow-hidden" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black'}>
+          <LibraryBig className={`absolute -left-4 -bottom-4 w-24 h-24 ${darkMode ? 'text-white opacity-10' : 'text-black opacity-10'}`} />
           <div className="text-5xl font-black z-10">{totalItems}</div>
           <div className="text-[10px] font-bold uppercase tracking-widest mt-1 z-10">Total na Coleção</div>
         </MContainer>
       </div>
 
-      <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-        <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[3px] border-black dark:border-gray-500 pb-2">Distribuição Geral</div>
+      <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[3px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Distribuição Geral</div>
         <div className="space-y-3">
           {Object.entries(byCategory).filter(([_, count]) => count > 0).map(([cat, count]) => {
             const percentage = Math.round((count / totalItems) * 100) || 0;
             return (
               <div key={cat} className="flex items-center gap-2">
                 <div className="w-16 text-[10px] font-bold uppercase tracking-wider">{cat}</div>
-                <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-800 border-[2px] border-black dark:border-gray-500 flex">
+                <div className={`flex-1 h-3 border-[2px] flex ${darkMode ? 'bg-gray-800 border-gray-500' : 'bg-gray-200 border-black'}`}>
                   <div className={`h-full ${darkMode ? 'bg-gray-600' : 'bg-black'} transition-all duration-1000`} style={{ width: `${percentage}%` }}></div>
                 </div>
                 <div className="w-8 text-[10px] font-bold text-right">{count} un.</div>
@@ -796,23 +791,23 @@ const DashboardTab = ({ items, darkMode }) => {
       {totalItems > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {stats.reliquia && (
-            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-yellow-700' : 'bg-yellow-400'}>
+            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
               <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia<br/>(Mais Antigo)</div><Clock className="w-5 h-5 opacity-50" /></div>
               <div><div className="text-sm font-black truncate">{stats.reliquia.title}</div><div className="text-[10px] font-bold">Lançado em {stats.reliquia.year}</div></div>
             </MContainer>
           )}
           {stats.epico && (
-            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-rose-800' : 'bg-rose-300'}>
+            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300 text-black'}>
               <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico<br/>(Mais Longo)</div><Flame className="w-5 h-5 opacity-50" /></div>
               <div><div className="text-sm font-black truncate">{stats.epico.title}</div><div className="text-[10px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho'].includes(stats.epico.type) ? 'Páginas' : 'Horas'}</div></div>
             </MContainer>
           )}
-          <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-gray-800' : 'bg-gray-200'}>
+          <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
             <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">Pilha da<br/>Vergonha</div><Ghost className="w-5 h-5 opacity-50" /></div>
             <div className="flex items-end gap-1"><div className="text-3xl font-black leading-none">{stats.vergonha}</div><div className="text-[9px] font-bold uppercase tracking-widest pb-1">Intocados</div></div>
           </MContainer>
           {stats.favorite && (
-            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-emerald-800' : 'bg-emerald-300'}>
+            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-300 text-black'}>
               <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">Mestre de<br/>Obras</div><Trophy className="w-5 h-5 opacity-50" /></div>
               <div><div className="text-xs font-black truncate uppercase">{stats.favorite}</div><div className="text-[9px] font-bold opacity-80 mt-1">Autor / Estúdio</div></div>
             </MContainer>
@@ -894,15 +889,15 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         confirmText="Substituir Coleção"
       />
 
-      <MContainer darkMode={darkMode} className="p-4 mb-4 flex justify-between items-center" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+      <MContainer darkMode={darkMode} className="p-4 mb-4 flex justify-between items-center" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <div className="text-xs font-bold uppercase tracking-widest">Aparência</div>
         <MButton darkMode={darkMode} onClick={() => setDarkMode(!darkMode)} variant="black" className="px-4 py-2">
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {darkMode ? 'Modo Claro' : 'Modo Escuro'}
         </MButton>
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-        <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[3px] border-black dark:border-gray-500 pb-2 flex items-center gap-2">
+      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[3px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>
           <Library className="w-4 h-4" /> Integrações
         </div>
         <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings.geminiApiKey} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} />
@@ -914,8 +909,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-yellow-600' : 'bg-yellow-400'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[3px] border-black dark:border-gray-500 pb-2 ${darkMode ? 'text-white' : 'text-black'}`}>
+      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[3px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>
           Backup Local (.CSV)
         </div>
         <div className="flex gap-2">
@@ -963,8 +958,6 @@ export default function App() {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light');
-      if (darkMode) document.documentElement.classList.add('dark');
-      else document.documentElement.classList.remove('dark');
     }
   }, [darkMode, isLoaded]);
 
@@ -993,15 +986,33 @@ export default function App() {
     }
   };
 
+  // Cálculos do Cabeçalho Global (Discreto)
+  const totalItems = items.length;
+  const validRatings = items.filter(i => i.rating > 0);
+  const avgRating = validRatings.length > 0 ? (validRatings.reduce((acc, i) => acc + i.rating, 0) / validRatings.length) : 0;
+  const totalPages = items.filter(i => ['Livro', 'Quadrinho'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const totalHours = items.filter(i => !['Livro', 'Quadrinho'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+
   if (!isLoaded) return null; 
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-[#121212] text-[#E0E0E0]' : 'bg-white text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      <div className="max-w-md mx-auto h-screen relative flex flex-col border-x-[4px] border-black dark:border-gray-500 bg-gray-50 dark:bg-[#1a1a1a] shadow-2xl overflow-hidden">
+      <div className={`max-w-md mx-auto h-screen relative flex flex-col border-x-[4px] shadow-2xl overflow-hidden ${darkMode ? 'border-gray-500 bg-[#1a1a1a]' : 'border-black bg-gray-50'}`}>
         
-        <header className="flex-none p-4 border-b-[4px] border-black dark:border-gray-500 bg-white dark:bg-gray-900 z-20 flex justify-between items-center">
-          <div className="flex flex-col"><h1 className="text-2xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1><span className="text-[9px] font-bold tracking-[0.2em] opacity-60">Personal Archive</span></div>
-          <div className="w-6 h-6 bg-rose-500 dark:bg-rose-700 border-[3px] border-black dark:border-gray-400"></div>
+        {/* CABEÇALHO COM ESTATÍSTICAS REVISADAS */}
+        <header className={`flex-none p-3 border-b-[4px] z-20 flex justify-between items-center ${darkMode ? 'border-gray-500 bg-gray-900' : 'border-black bg-white'}`}>
+          <div className="flex flex-col flex-1 pr-2">
+            <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">
+              Memorabilia
+            </h1>
+            <div className={`flex gap-2 text-[9px] font-bold tracking-widest mt-1.5 uppercase ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <span>{totalItems} <span className="opacity-60">UN</span></span>
+              <span>★ {avgRating.toFixed(1)}</span>
+              <span>{totalPages} <span className="opacity-60">PÁG</span></span>
+              <span>{totalHours} <span className="opacity-60">H</span></span>
+            </div>
+          </div>
+          <div className={`w-6 h-6 flex-shrink-0 border-[3px] ${darkMode ? 'bg-rose-800 border-gray-500' : 'bg-rose-500 border-black'}`}></div>
         </header>
 
         <main className="flex-1 overflow-hidden p-3 relative z-0">
@@ -1011,8 +1022,8 @@ export default function App() {
           {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} />}
         </main>
 
-        <nav className="flex-none flex border-t-[4px] border-black dark:border-gray-500 bg-white dark:bg-gray-900 z-20 h-16 relative">
-          <button onClick={() => { initAudio(); setActiveTab('library'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] border-black dark:border-gray-500 transition-colors ${activeTab === 'library' ? (darkMode ? 'bg-sky-800' : 'bg-sky-300') : ''}`}>
+        <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-500 bg-gray-900' : 'border-black bg-white'}`}>
+          <button onClick={() => { initAudio(); setActiveTab('library'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] transition-colors ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300') : ''}`}>
             <Library className="w-5 h-5 mb-1" />
             <span className="text-[8px] font-bold uppercase">Biblioteca</span>
           </button>
@@ -1021,18 +1032,18 @@ export default function App() {
             onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd}
             onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd}
             onClick={handleAddClick}
-            className={`flex-1 flex flex-col items-center justify-center border-r-[3px] border-black dark:border-gray-500 transition-colors ${activeTab === 'add' ? (darkMode ? 'bg-yellow-700' : 'bg-yellow-400') : ''}`}
+            className={`flex-1 flex flex-col items-center justify-center border-r-[3px] transition-colors ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400') : ''}`}
           >
             <PlusSquare className="w-5 h-5 mb-1" />
             <span className="text-[8px] font-bold uppercase">Adicionar</span>
           </button>
           
-          <button onClick={() => { initAudio(); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] border-black dark:border-gray-500 transition-colors ${activeTab === 'dashboard' ? (darkMode ? 'bg-rose-800' : 'bg-rose-300') : ''}`}>
+          <button onClick={() => { initAudio(); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] transition-colors ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300') : ''}`}>
             <BarChart2 className="w-5 h-5 mb-1" />
             <span className="text-[8px] font-bold uppercase">Dashboard</span>
           </button>
           
-          <button onClick={() => { initAudio(); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700' : 'bg-gray-200') : ''}`}>
+          <button onClick={() => { initAudio(); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}>
             <Settings className="w-5 h-5 mb-1" />
             <span className="text-[8px] font-bold uppercase">Ajustes</span>
           </button>
