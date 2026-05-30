@@ -147,7 +147,7 @@ export default function App() {
           (decodedText) => {
             playChipBeep();
             stopScanner();
-            fetchBookByISBN(decodedText);
+            fetchMediaByISBN(decodedText);
           },
           () => {} 
         );
@@ -166,48 +166,93 @@ export default function App() {
     setViewState('list');
   };
 
-  const fetchBookByISBN = async (isbn) => {
-    const cleanIsbn = isbn.replace(/[-\s]/g, "");
+  // --- BUSCA DE METADADOS MELHORADA PARA MÍDIAS FÍSICAS ---
+  const fetchMediaByISBN = async (barcode) => {
+    const cleanCode = barcode.replace(/[-\s]/g, "");
     setIsLoading(true);
     try {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
-      const data = await res.json();
-      let foundItem = { isbn: cleanIsbn, title: '', authors: '', publisher: '', publishedDate: '', pageCount: '', type: 'Livro', status: 'Quero Ler', rating: 0, notes: '', coverUrl: '' };
+      let foundItem = { isbn: cleanCode, title: '', authors: '', publisher: '', publishedDate: '', pageCount: '', type: 'Livro', status: 'Quero Ler', rating: 0, notes: '', coverUrl: '' };
+      let found = false;
 
-      if (data.items && data.items.length > 0) {
-        const info = data.items[0].volumeInfo;
-        foundItem = {
-          ...foundItem,
-          title: info.title || "", authors: info.authors ? info.authors.join(", ") : "",
-          publisher: info.publisher || "", publishedDate: info.publishedDate ? info.publishedDate.substring(0, 4) : "",
-          pageCount: info.pageCount || "", coverUrl: info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
-        };
-        const pub = (info.publisher || "").toLowerCase();
-        if (pub.includes('jbc') || pub.includes('conrad') || pub.includes('panini') || pub.includes('l&pm') || pub.includes('quadrinhos')) {
-          foundItem.type = 'Quadrinho/Mangá';
+      // 1. MUSICBRAINZ (Para CDs/Discos se não tiver padrão de ISBN de livro - 978/979)
+      if (!cleanCode.startsWith("978") && !cleanCode.startsWith("979") && cleanCode.length <= 13) {
+        try {
+          const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json`);
+          const mbData = await mbRes.json();
+          if (mbData.releases && mbData.releases.length > 0) {
+            const release = mbData.releases[0];
+            foundItem = {
+              ...foundItem,
+              title: release.title || "",
+              authors: release["artist-credit"] ? release["artist-credit"].map(a => a.name).join(", ") : "",
+              publisher: release.label ? release.label : (release["label-info"] && release["label-info"].length > 0 && release["label-info"][0].label ? release["label-info"][0].label.name : ""),
+              publishedDate: release.date ? release.date.substring(0, 4) : "",
+              type: 'CD/Disco',
+              status: 'Na Coleção'
+            };
+            found = true;
+          }
+        } catch(e) { console.warn("MusicBrainz falhou", e); }
+      }
+
+      // 2. GOOGLE BOOKS (Acha livros e alguns DVDs/CDs que estão no banco de dados)
+      if (!found) {
+        const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
+        const gbData = await gbRes.json();
+        if (gbData.items && gbData.items.length > 0) {
+          const info = gbData.items[0].volumeInfo;
+          foundItem = {
+            ...foundItem,
+            title: info.title || "",
+            authors: info.authors ? info.authors.join(", ") : "",
+            publisher: info.publisher || "",
+            publishedDate: info.publishedDate ? info.publishedDate.substring(0, 4) : "",
+            pageCount: info.pageCount || "",
+            coverUrl: info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
+          };
+          const pub = (info.publisher || "").toLowerCase();
+          const title = (info.title || "").toLowerCase();
+          if (pub.includes('jbc') || pub.includes('conrad') || pub.includes('panini') || pub.includes('quadrinhos')) foundItem.type = 'Quadrinho/Mangá';
+          else if (title.includes('cd ') || title.includes('álbum') || title.includes('album')) { foundItem.type = 'CD/Disco'; foundItem.status = 'Na Coleção'; }
+          else if (title.includes('dvd') || title.includes('blu-ray')) { foundItem.type = 'DVD/Blu-Ray'; foundItem.status = 'Na Coleção'; }
+          found = true;
         }
-      } else {
-        const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
+      }
+
+      // 3. OPEN LIBRARY (Última tentativa para livros)
+      if (!found) {
+        const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&format=json&jscmd=data`);
         const olData = await olRes.json();
-        const bookKey = `ISBN:${cleanIsbn}`;
+        const bookKey = `ISBN:${cleanCode}`;
         if (olData[bookKey]) {
           const info = olData[bookKey];
           foundItem = {
             ...foundItem,
-            title: info.title || "", authors: info.authors ? info.authors.map(a => a.name).join(", ") : "",
+            title: info.title || "",
+            authors: info.authors ? info.authors.map(a => a.name).join(", ") : "",
             publisher: info.publishers ? info.publishers.map(p => p.name).join(", ") : "",
             publishedDate: info.publish_date ? info.publish_date.slice(-4) : "",
-            pageCount: info.number_of_pages || "", coverUrl: info.cover?.medium || ""
+            pageCount: info.number_of_pages || "",
+            coverUrl: info.cover?.medium || ""
           };
-        } else {
-          setError(`ISBN ${cleanIsbn} não encontrado. Preencha os dados manualmente.`);
+          found = true;
         }
       }
+
+      // Se nada encontrou, deixa para preenchimento manual
+      if (!found) {
+        setError(`Código ${cleanCode} não identificado. Preencha os dados manualmente.`);
+        if (!cleanCode.startsWith("978") && !cleanCode.startsWith("979")) {
+           foundItem.type = 'CD/Disco'; // Define como padrão se não for ISBN padrão
+           foundItem.status = 'Na Coleção';
+        }
+      }
+
       setCurrentItem(foundItem);
       setViewState('form');
     } catch (err) {
-      setError("Erro de rede ao buscar informações.");
-      setCurrentItem({ isbn: cleanIsbn, title: '', authors: '', publisher: '', publishedDate: '', pageCount: '', type: 'Livro', status: 'Quero Ler', rating: 0, notes: '' });
+      setError("Erro de rede ao buscar informações do código.");
+      setCurrentItem({ isbn: cleanCode, title: '', authors: '', publisher: '', publishedDate: '', pageCount: '', type: 'Livro', status: 'Quero Ler', rating: 0, notes: '' });
       setViewState('form');
     } finally {
       setIsLoading(false);
@@ -293,7 +338,7 @@ export default function App() {
 
   const exportCSV = () => {
     if (items.length === 0) return setError("Catálogo vazio.");
-    const headers = ["ISBN", "Título", "Autores", "Editora", "Ano", "Páginas", "Tipo", "Status", "Nota", "Anotações", "Cadastrado Em"];
+    const headers = ["ISBN/Código", "Título", "Autores/Artistas", "Editora/Gravadora", "Ano", "Páginas", "Tipo", "Status", "Nota", "Anotações", "Cadastrado Em"];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
     const rows = items.map(i => [
       escape(i.isbn), escape(i.title), escape(i.authors), escape(i.publisher), escape(i.publishedDate), 
@@ -303,7 +348,7 @@ export default function App() {
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob); link.download = `Catalogo_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.href = URL.createObjectURL(blob); link.download = `Collectio_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
 
@@ -452,6 +497,7 @@ export default function App() {
                 <option value="Quero Ler">Quero Ler</option>
                 <option value="Lendo">Lendo</option>
                 <option value="Lido">Lido</option>
+                <option value="Na Coleção">Na Coleção</option>
               </select>
             </div>
 
@@ -466,6 +512,7 @@ export default function App() {
                   <div key={item.id} onClick={() => { setCurrentItem(item); setViewState('details'); }} className={`border rounded-lg p-2.5 cursor-pointer transition-all flex flex-col h-full relative ${ui.card} hover:border-[${theme.blue}]`}>
                     <div className="absolute top-2 right-2 flex gap-1 z-10">
                       {item.type === 'Quadrinho/Mangá' && <span className="w-1.5 h-1.5 rounded-full shadow-sm" style={{ backgroundColor: theme.yellow }} title="Quadrinho/Mangá"></span>}
+                      {(item.type === 'CD/Disco' || item.type === 'DVD/Blu-Ray' || item.type === 'Video Game') && <span className="w-1.5 h-1.5 rounded-full shadow-sm" style={{ backgroundColor: theme.red }} title="Mídia"></span>}
                     </div>
                     <BookCover coverUrl={item.coverUrl} title={item.title} authors={item.authors} className={`w-full aspect-[2/3] mb-2 ${ui.divider}`} />
                     <div className="flex-1 flex flex-col justify-between">
@@ -474,7 +521,7 @@ export default function App() {
                         <p className={`text-[10px] line-clamp-1 mt-0.5 ${ui.textMuted}`}>{item.authors}</p>
                       </div>
                       <div className={`mt-2 pt-2 border-t flex justify-between items-center text-[10px] ${ui.divider}`}>
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] ${item.status === 'Lido' ? 'bg-green-500/10 text-green-600' : item.status === 'Lendo' ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-500/10 text-slate-500'}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] ${item.status === 'Lido' || item.status === 'Na Coleção' ? 'bg-green-500/10 text-green-600' : item.status === 'Lendo' ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-500/10 text-slate-500'}`}>
                           {item.status}
                         </span>
                         {item.rating > 0 && (
@@ -505,17 +552,27 @@ export default function App() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Título *</label><input type="text" value={currentItem.title} onChange={e => setCurrentItem({...currentItem, title: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} /></div>
-                <div className="col-span-2"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Autor(es) *</label><input type="text" value={currentItem.authors} onChange={e => setCurrentItem({...currentItem, authors: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} /></div>
-                <div className="col-span-1"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>ISBN</label><input type="text" value={currentItem.isbn} onChange={e => setCurrentItem({...currentItem, isbn: e.target.value})} className={`w-full p-2 border rounded outline-none font-mono text-[10px] ${ui.input}`} /></div>
-                <div className="col-span-1"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Tipo de Obra</label><select value={currentItem.type} onChange={e => setCurrentItem({...currentItem, type: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`}><option value="Livro">Livro</option><option value="Quadrinho/Mangá">Quadrinho/Mangá</option><option value="Revista">Revista</option></select></div>
-                <div className="col-span-2"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Editora</label><input type="text" value={currentItem.publisher} onChange={e => setCurrentItem({...currentItem, publisher: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} placeholder="Ex: L&PM, JBC..." /></div>
+                <div className="col-span-2"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Autor / Artista *</label><input type="text" value={currentItem.authors} onChange={e => setCurrentItem({...currentItem, authors: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} /></div>
+                <div className="col-span-1"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Código / ISBN</label><input type="text" value={currentItem.isbn} onChange={e => setCurrentItem({...currentItem, isbn: e.target.value})} className={`w-full p-2 border rounded outline-none font-mono text-[10px] ${ui.input}`} /></div>
+                <div className="col-span-1">
+                  <label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Tipo de Mídia</label>
+                  <select value={currentItem.type} onChange={e => setCurrentItem({...currentItem, type: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`}>
+                    <option value="Livro">Livro</option>
+                    <option value="Quadrinho/Mangá">Quadrinho/Mangá</option>
+                    <option value="Revista">Revista</option>
+                    <option value="CD/Disco">CD/Disco</option>
+                    <option value="DVD/Blu-Ray">DVD/Blu-Ray</option>
+                    <option value="Video Game">Video Game</option>
+                  </select>
+                </div>
+                <div className="col-span-2"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Editora / Gravadora</label><input type="text" value={currentItem.publisher} onChange={e => setCurrentItem({...currentItem, publisher: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} placeholder="Ex: L&PM, Sony, Nintendo..." /></div>
                 <div className="col-span-1"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Ano</label><input type="number" value={currentItem.publishedDate} onChange={e => setCurrentItem({...currentItem, publishedDate: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} /></div>
-                <div className="col-span-1"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Páginas</label><input type="number" value={currentItem.pageCount} onChange={e => setCurrentItem({...currentItem, pageCount: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} /></div>
+                <div className="col-span-1"><label className={`block text-[10px] mb-1 ${ui.textMuted}`}>Páginas / Duração</label><input type="number" value={currentItem.pageCount} onChange={e => setCurrentItem({...currentItem, pageCount: e.target.value})} className={`w-full p-2 border rounded outline-none ${ui.input}`} /></div>
                 <div className={`col-span-2 mt-1 pt-3 border-t ${ui.divider}`}>
-                  <label className={`block text-[10px] mb-1.5 ${ui.textMuted}`}>Status de Leitura</label>
+                  <label className={`block text-[10px] mb-1.5 ${ui.textMuted}`}>Status na Coleção</label>
                   <div className="flex gap-2">
-                    {["Quero Ler", "Lendo", "Lido"].map(status => (
-                      <button key={status} onClick={() => setCurrentItem({...currentItem, status})} className={`flex-1 py-1.5 rounded border text-[10px] font-medium transition-colors ${currentItem.status === status ? 'bg-slate-800 text-white border-slate-800' : `${isDarkMode ? 'bg-[#1A1A1A] border-[#333333] text-slate-300' : 'bg-white text-slate-600 border-slate-200'}`}`}>{status}</button>
+                    {["Quero Ler", "Lendo", "Lido", "Na Coleção"].map(status => (
+                      <button key={status} onClick={() => setCurrentItem({...currentItem, status})} className={`flex-1 py-1.5 rounded border text-[9px] font-medium transition-colors ${currentItem.status === status ? 'bg-slate-800 text-white border-slate-800' : `${isDarkMode ? 'bg-[#1A1A1A] border-[#333333] text-slate-300' : 'bg-white text-slate-600 border-slate-200'}`}`}>{status}</button>
                     ))}
                   </div>
                 </div>
@@ -560,9 +617,9 @@ export default function App() {
                 <h2 className={`text-base font-semibold mt-1 leading-tight ${ui.textMain}`}>{currentItem.title}</h2>
                 <p className={`mt-1 ${ui.textMuted}`}>{currentItem.authors}</p>
                 <div className={`mt-2 text-[10px] space-y-0.5 ${ui.textMuted}`}>
-                  <p>Editora: <span className={ui.textMain}>{currentItem.publisher || '--'}</span></p>
-                  <p>Ano: <span className={ui.textMain}>{currentItem.publishedDate || '--'}</span> | Págs: <span className={ui.textMain}>{currentItem.pageCount || '--'}</span></p>
-                  <p>ISBN: <span className={`font-mono ${ui.textMain}`}>{currentItem.isbn || '--'}</span></p>
+                  <p>Editora/Marca: <span className={ui.textMain}>{currentItem.publisher || '--'}</span></p>
+                  <p>Ano: <span className={ui.textMain}>{currentItem.publishedDate || '--'}</span> | Págs/Dur.: <span className={ui.textMain}>{currentItem.pageCount || '--'}</span></p>
+                  <p>Cód./ISBN: <span className={`font-mono ${ui.textMain}`}>{currentItem.isbn || '--'}</span></p>
                 </div>
               </div>
             </div>
