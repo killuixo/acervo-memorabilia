@@ -1,14 +1,41 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Book, Disc, Gamepad2, Tv, Video, Library, 
-  PlusSquare, BarChart2, Settings, Search, 
-  Camera, Sun, Moon, Download, Upload, ExternalLink, 
-  Star, ChevronLeft, ChevronRight, X, Check, ScanLine,
-  Clock, Flame, Ghost, Trophy, LibraryBig, Info, AlertTriangle
-} from 'lucide-react';
 
 // ==========================================
-// 1. CONSTANTES E CONFIGURAÇÕES GERAIS
+// 1. ÍCONES NATIVOS (Zero Dependências Externas)
+// ==========================================
+const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
+  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    {path}
+  </svg>
+);
+
+const Search = (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
+const Library = (p) => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></>} />;
+const PlusSquare = (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
+const BarChart2 = (p) => <Icon {...p} path={<><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></>} />;
+const Settings = (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />;
+const Camera = (p) => <Icon {...p} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
+const Sun = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />;
+const Moon = (p) => <Icon {...p} path={<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>} />;
+const Download = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
+const Upload = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></>} />;
+const ExternalLink = (p) => <Icon {...p} path={<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>} />;
+const Star = ({ className = '', onClick }) => <Icon onClick={onClick} className={className} fill={className.includes('fill') ? 'currentColor' : 'none'} path={<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>} />;
+const ChevronLeft = (p) => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
+const ChevronRight = (p) => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
+const X = (p) => <Icon {...p} path={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} />;
+const Check = (p) => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
+const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
+const Clock = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
+const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
+const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
+const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />;
+const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
+const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
+const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
+
+// ==========================================
+// 2. CONSTANTES E CONFIGURAÇÕES GERAIS
 // ==========================================
 const CATEGORIES = {
   'Livros': ['Livro', 'Quadrinho'],
@@ -32,11 +59,10 @@ const getMondrianColor = (index, darkMode) => {
 };
 
 // ==========================================
-// 2. SISTEMA DE ÁUDIO 8-BIT (MELHORADO E SUTIL)
+// 3. SISTEMA DE ÁUDIO 8-BIT (SUTIL E OTIMIZADO)
 // ==========================================
 let globalAudioCtx = null;
 
-// Função para "destravar" o áudio no primeiro toque do usuário
 const initAudio = () => {
   try {
     if (!globalAudioCtx) {
@@ -55,8 +81,6 @@ const playChipBeep = (type) => {
   try {
     if (!globalAudioCtx) initAudio();
     if (!globalAudioCtx) return;
-    
-    // Garante que o contexto está ativo antes de tocar
     if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
 
     const oscillator = globalAudioCtx.createOscillator();
@@ -68,37 +92,31 @@ const playChipBeep = (type) => {
     const now = globalAudioCtx.currentTime;
 
     if (type === 'success') {
-      // SUCESSO SCANNER: "Ting" simples (1 nota curta e aguda)
+      // SUCESSO: "Ting" simples e rápido
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(1046.50, now); // C6
-      
       gainNode.gain.setValueAtTime(0.05, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      
       oscillator.start(now);
       oscillator.stop(now + 0.15);
 
     } else if (type === 'error') {
-      // ERRO SCANNER: "Bloop" grave rápido
+      // ERRO: "Bloop" grave rápido
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(300, now);
       oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-      
       gainNode.gain.setValueAtTime(0.05, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      
       oscillator.start(now);
       oscillator.stop(now + 0.2);
 
     } else if (type === 'save') {
-      // SALVAR ITEM: "Blip-Blip" duplo muito sutil e satisfatório
+      // SALVAR: "Blip-Blip" suave e discreto
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(523.25, now); // C5
-      oscillator.frequency.setValueAtTime(783.99, now + 0.1); // G5 rápida transição
-      
+      oscillator.frequency.setValueAtTime(783.99, now + 0.1); // G5
       gainNode.gain.setValueAtTime(0.04, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-      
       oscillator.start(now);
       oscillator.stop(now + 0.25);
     }
@@ -108,7 +126,7 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// 3. COMPONENTES UI COMPARTILHADOS
+// 4. COMPONENTES UI COMPARTILHADOS & MODAIS
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>
@@ -116,15 +134,19 @@ const MContainer = ({ children, className = '', colorClass = '', darkMode }) => 
   </div>
 );
 
-const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode }) => {
-  let bgClass = darkMode ? 'bg-gray-800' : 'bg-white';
-  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800' : 'bg-rose-300';
-  if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800' : 'bg-sky-300';
-  if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-600' : 'bg-yellow-400';
+const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
+  let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
+  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300 text-black';
+  if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black';
+  if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black';
   if (variant === 'black') bgClass = darkMode ? 'bg-gray-300 text-black' : 'bg-black text-white';
 
   return (
-    <button onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} active:scale-95 transition-transform ${bgClass} ${className}`}>
+    <button 
+      disabled={disabled}
+      onClick={onClick} 
+      className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'} transition-transform ${bgClass} ${className}`}
+    >
       {icon && icon}
       {children}
     </button>
@@ -135,19 +157,36 @@ const MInput = ({ label, value, onChange, type = "text", placeholder = "", multi
   <div className="flex flex-col mb-3">
     <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>{label}</label>
     {multiline ? (
-      <textarea value={value} onChange={onChange} placeholder={placeholder} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-yellow-100 dark:focus:bg-yellow-900 transition-colors min-h-[80px]`} />
+      <textarea value={value} onChange={onChange} placeholder={placeholder} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-yellow-100 dark:focus:bg-yellow-900 transition-colors min-h-[80px] resize-none`} />
     ) : (
       <input type={type} value={value} onChange={onChange} placeholder={placeholder} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-sky-100 dark:focus:bg-sky-900 transition-colors`} />
     )}
   </div>
 );
 
+const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+        <h3 className="font-black uppercase tracking-widest text-lg leading-tight border-b-4 border-black dark:border-gray-500 pb-2">{title}</h3>
+        <p className="text-sm font-medium opacity-90">{message}</p>
+        <div className="flex gap-2 mt-4">
+          <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
+          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
+        </div>
+      </MContainer>
+    </div>
+  );
+};
+
 // ==========================================
-// 4. ABAS (COMPONENTES SEPARADOS)
+// 5. ABAS DA APLICAÇÃO
 // ==========================================
 
 const LibraryTab = ({ items, setItems, darkMode }) => {
   const [selectedItem, setSelectedItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
@@ -176,25 +215,35 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
     }
   };
 
-  const handleDelete = (id) => {
-    if (confirm("Tem certeza que deseja remover este item da sua coleção?")) {
-      setItems(items.filter(item => item.id !== id));
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete));
+      setItemToDelete(null);
       setSelectedItem(null);
     }
   };
 
-  // --- VISUALIZAÇÃO DA FICHA DETALHADA ---
   if (selectedItem) {
     return (
-      <div className="flex flex-col h-full pb-20">
+      <div className="flex flex-col h-full pb-20 relative">
+        <MModal 
+          isOpen={!!itemToDelete} 
+          title="Excluir Item" 
+          message={`Tem certeza que deseja apagar "${selectedItem.title}" definitivamente da sua coleção?`} 
+          onConfirm={confirmDelete} 
+          onCancel={() => setItemToDelete(null)} 
+          darkMode={darkMode} 
+          confirmText="Apagar"
+        />
+
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center gap-3 sticky top-0 z-10 bg-inherit" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-          <button onClick={() => setSelectedItem(null)} className="p-2 border-[2px] border-black dark:border-gray-500 active:scale-95 bg-gray-100 dark:bg-gray-800">
+          <button onClick={() => setSelectedItem(null)} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-gray-100'} active:scale-95 transition-transform`}>
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="font-black uppercase tracking-widest text-[10px] truncate flex-1">Detalhes da Mídia</div>
         </MContainer>
 
-        <div className="flex-1 overflow-y-auto px-1 space-y-4">
+        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4">
             <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex items-center justify-center overflow-hidden bg-black" colorClass="bg-black border-[4px]">
               {selectedItem.cover_url ? (
@@ -205,20 +254,25 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
             </MContainer>
             
             <div className="flex flex-col flex-1 justify-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">{selectedItem.type} • {selectedItem.year}</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1 leading-tight">{selectedItem.type} • {selectedItem.year}</div>
               <div className="text-xl font-black leading-none mb-2">{selectedItem.title}</div>
               <div className="text-xs font-bold opacity-80 uppercase tracking-wide">{selectedItem.author_developer}</div>
-              <div className="text-[10px] opacity-60 mt-1 uppercase tracking-widest">{selectedItem.publisher}</div>
+              <div className="text-[10px] opacity-60 mt-1 uppercase tracking-widest leading-tight">{selectedItem.publisher}</div>
+              {selectedItem.pages_or_time && (
+                <div className="text-[10px] font-bold bg-black text-white dark:bg-gray-700 w-max px-2 py-1 mt-2">
+                  {selectedItem.pages_or_time} {['Livro', 'Quadrinho'].includes(selectedItem.type) ? 'Páginas' : 'Horas'}
+                </div>
+              )}
             </div>
           </div>
 
           <div className="flex gap-2">
             <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-sky-800' : 'bg-sky-300'}>
-               <div className="text-[9px] font-black uppercase tracking-widest mb-1">Status</div>
-               <div className="text-[10px] font-bold">{selectedItem.status}</div>
+               <div className="text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 border-black/20 pb-1">Status</div>
+               <div className="text-[10px] font-bold tracking-wider">{selectedItem.status}</div>
             </MContainer>
             <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-yellow-700' : 'bg-yellow-400'}>
-               <div className="text-[9px] font-black uppercase tracking-widest mb-1">Avaliação</div>
+               <div className="text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 border-black/20 pb-1">Avaliação</div>
                <div className="flex gap-0.5 mt-1">
                   {[1, 2, 3, 4, 5].map(star => (
                     <Star key={star} onClick={() => updateRating(selectedItem.id, star)} className={`w-4 h-4 cursor-pointer ${star <= selectedItem.rating ? (darkMode ? 'fill-yellow-600 text-yellow-600' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-500 opacity-30')}`} />
@@ -228,24 +282,23 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
           </div>
 
           <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-800' : 'bg-white'}>
-            <div className="text-[10px] font-black uppercase tracking-widest mb-3 border-b-[2px] border-black dark:border-gray-500 pb-1">Descrição / Sinopse</div>
-            <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap">
-              {selectedItem.description || "Nenhuma descrição disponível para este item no momento."}
+            <div className="text-[10px] font-black uppercase tracking-widest mb-3 border-b-[3px] border-black dark:border-gray-500 pb-1">Descrição / Sinopse</div>
+            <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap text-justify">
+              {selectedItem.description || "Nenhuma descrição ou sinopse disponível para este item."}
             </p>
           </MContainer>
 
-          <MButton darkMode={darkMode} onClick={() => handleDelete(selectedItem.id)} variant="red" className="w-full mt-4">
-             Apagar da Coleção
+          <MButton darkMode={darkMode} onClick={() => setItemToDelete(selectedItem.id)} variant="red" className="w-full">
+             Remover da Coleção
           </MButton>
         </div>
       </div>
     );
   }
 
-  // --- LISTA PADRÃO DA BIBLIOTECA ---
   return (
     <div className="flex flex-col h-full">
-      <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 bg-inherit" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+      <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 bg-inherit shadow-md" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="relative">
           <Search className={`absolute left-3 top-3 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
           <input type="text" placeholder="Buscar Título ou Autor..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-9 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white'} font-sans text-sm outline-none`} />
@@ -281,10 +334,10 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
                       <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer}</div>
                     </div>
                     <div className="flex justify-between items-end mt-2">
-                      <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900' : 'border-black bg-yellow-100'} font-black uppercase tracking-widest`}>{item.status}</div>
+                      <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status}</div>
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                         {[1, 2, 3, 4, 5].map(star => (
-                          <Star key={star} onClick={() => updateRating(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= item.rating ? (darkMode ? 'fill-yellow-600 text-yellow-600' : 'fill-yellow-400 text-yellow-400') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
+                          <Star key={star} onClick={() => updateRating(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= item.rating ? (darkMode ? 'fill-yellow-600 text-yellow-600' : 'fill-yellow-400 text-yellow-500') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
                         ))}
                       </div>
                     </div>
@@ -309,6 +362,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
 const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab }) => {
   const [scanStatus, setScanStatus] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState(true);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -343,10 +397,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         if (isMounted && videoRef.current) {
           videoRef.current.srcObject = stream;
+          setHasCameraPermission(true);
         }
       } catch (err) {
         if (isMounted) {
-          setScanStatus({ type: 'error', message: 'Permissão de câmera negada. Preencha manualmente.' });
+          setHasCameraPermission(false);
+          setScanStatus({ type: 'error', message: 'Câmera inacessível. Usando preenchimento manual.' });
           setAddMode('manual');
         }
       }
@@ -385,10 +441,15 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         if (window.Html5Qrcode) {
           startScanner();
         } else {
-          const script = document.createElement('script');
-          script.src = "https://unpkg.com/html5-qrcode";
-          script.onload = startScanner;
-          document.head.appendChild(script);
+          if (!document.getElementById('html5-qrcode-script')) {
+            const script = document.createElement('script');
+            script.id = 'html5-qrcode-script';
+            script.src = "https://unpkg.com/html5-qrcode";
+            script.onload = startScanner;
+            document.head.appendChild(script);
+          } else {
+            setTimeout(startScanner, 500);
+          }
         }
       }
     } else {
@@ -405,7 +466,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     setScanStatus({ type: 'info', message: 'Buscando em múltiplos bancos de dados...' });
     
     try {
-      // 1. TENTA GOOGLE BOOKS
       const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcode}`);
       const gbData = await gbRes.json();
       if (gbData.items && gbData.items.length > 0) {
@@ -423,7 +483,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         return; 
       }
 
-      // 2. TENTA OPENLIBRARY
       const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${barcode}&jscmd=data&format=json`);
       const olData = await olRes.json();
       if (olData[`ISBN:${barcode}`]) {
@@ -436,12 +495,11 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           publisher: info.publishers?.map(p => p.name).join(', ') || '',
           pages_or_time: info.number_of_pages?.toString() || '',
           description: info.subtitle || '',
-          cover_url: `https://covers.openlibrary.org/b/isbn/${barcode}-M.jpg`
+          cover_url: `https://covers.openlibrary.org/b/isbn/${barcode}-L.jpg`
         });
         return; 
       }
 
-      // 3. TENTA MUSICBRAINZ
       const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${barcode}&fmt=json`, {
         headers: { 'Accept': 'application/json', 'User-Agent': 'MemorabiliaApp/1.0.0' }
       });
@@ -467,7 +525,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       }
 
       handleScanError();
-
     } catch (e) {
       handleScanError();
     }
@@ -475,18 +532,18 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   const handleScanSuccess = (mappedData) => {
     playChipBeep('success'); 
-    setScanStatus({ type: 'success', message: 'SUCESSO: Encontrado no banco de dados!' });
+    setScanStatus({ type: 'success', message: 'SUCESSO: Informações recuperadas da rede!' });
     setFormData(prev => ({ ...prev, ...mappedData }));
   };
 
   const handleScanError = () => {
     playChipBeep('error'); 
-    setScanStatus({ type: 'error', message: 'FALHA: Não encontrado. Use IA ou preencha manual.' });
+    setScanStatus({ type: 'error', message: 'FALHA: Item não encontrado. Preencha manualmente ou use a IA.' });
   };
 
   const captureAndAnalyzeAI = async () => {
     if (!settings.geminiApiKey) {
-      setScanStatus({ type: 'error', message: 'Chave API do Gemini ausente (Ajustes).' });
+      setScanStatus({ type: 'error', message: 'Chave API do Gemini ausente (Vá na aba Ajustes).' });
       changeMode('manual');
       return;
     }
@@ -508,7 +565,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         contents: [{
           role: "user",
           parts: [
-            { text: `Extraia as informações desta mídia. Responda APENAS com JSON com chaves em minúsculo: 'type' (escolha UM entre: ${ALL_TYPES.join(', ')}), 'title', 'author_developer', 'year', 'publisher', 'description' (breve resumo/sinopse).` },
+            { text: `Extraia as informações desta mídia. Responda APENAS com JSON no formato exato: 'type' (escolha UM entre: ${ALL_TYPES.join(', ')}), 'title', 'author_developer', 'year', 'publisher', 'description' (crie uma breve sinopse de 2 linhas baseada no item).` },
             { inlineData: { mimeType: "image/jpeg", data: base64Image } }
           ]
         }],
@@ -523,8 +580,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (aiText) {
-        const cleanedText = aiText.replace(/```json/g, '').replace(/```/g, '');
+        const cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
         const parsedData = JSON.parse(cleanedText);
+        
         setFormData(prev => ({
           ...prev,
           title: parsedData.title || '',
@@ -535,20 +593,23 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           type: ALL_TYPES.includes(parsedData.type) ? parsedData.type : 'Livro'
         }));
         playChipBeep('success');
-        setScanStatus({ type: 'success', message: 'SUCESSO: IA analisou a imagem!' });
+        setScanStatus({ type: 'success', message: 'SUCESSO: Inteligência Artificial completou os dados!' });
       }
     } catch (error) {
       playChipBeep('error');
-      setScanStatus({ type: 'error', message: 'FALHA: A Inteligência Artificial não conseguiu ler a imagem.' });
+      setScanStatus({ type: 'error', message: 'FALHA: A Inteligência Artificial não conseguiu interpretar a imagem.' });
     } finally {
       setLoadingAi(false);
       setAddMode('manual');
     }
   };
 
+  const [showErrorModal, setShowErrorModal] = useState(false);
+
   const handleSave = () => {
     if (!formData.title) {
-      alert("O Título é obrigatório!");
+      playChipBeep('error');
+      setShowErrorModal(true);
       return;
     }
     const newItem = { ...formData, id: Date.now().toString(), rating: 0 };
@@ -556,13 +617,25 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     
     playChipBeep('save'); 
     
-    setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '' });
+    setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '' });
     setScanStatus(null);
     setActiveTab('library');
   };
 
   return (
     <div className="flex flex-col h-full pb-20">
+      
+      <MModal 
+        isOpen={showErrorModal} 
+        title="Atenção" 
+        message="O Título é obrigatório para salvar na biblioteca." 
+        onConfirm={() => setShowErrorModal(false)} 
+        onCancel={() => setShowErrorModal(false)} 
+        darkMode={darkMode} 
+        confirmText="OK"
+        cancelText="Fechar"
+      />
+
       <div className="flex gap-2 mb-4">
         <MButton darkMode={darkMode} variant={addMode === 'manual' ? 'blue' : 'white'} onClick={() => changeMode('manual')} className="flex-1 py-2 text-[10px]">
           <PlusSquare className="w-4 h-4" /> Manual
@@ -577,12 +650,23 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
       {(addMode === 'camera_ai' || addMode === 'barcode') && (
         <MContainer darkMode={darkMode} className="flex-1 mb-4 flex flex-col relative overflow-hidden bg-black items-center justify-center">
-          {loadingAi ? (
+          {!hasCameraPermission && !loadingAi && (
+            <div className="text-white text-xs font-bold uppercase p-6 text-center leading-relaxed">
+              Permissão de câmera bloqueada pelo navegador. <br/><br/>
+              <MButton darkMode={true} onClick={() => changeMode('manual')} variant="yellow" className="mx-auto mt-4">
+                Ir para o modo Manual
+              </MButton>
+            </div>
+          )}
+          
+          {loadingAi && (
             <div className="text-white font-sans text-sm animate-pulse flex flex-col items-center">
               <div className="w-8 h-8 border-4 border-white border-t-rose-500 rounded-full animate-spin mb-4"></div>
               Processando IA...
             </div>
-          ) : (
+          )}
+          
+          {!loadingAi && hasCameraPermission && (
             <>
               <div id="reader-barcode" className={`w-full h-full object-cover ${addMode === 'barcode' ? 'block' : 'hidden'}`}></div>
               <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${addMode === 'camera_ai' ? 'block' : 'hidden'}`} />
@@ -740,7 +824,9 @@ const DashboardTab = ({ items, darkMode }) => {
 };
 
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode }) => {
-  
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [importData, setImportData] = useState(null);
+
   const handleExportCSV = () => {
     const headers = ['id', 'type', 'title', 'author_developer', 'year', 'publisher', 'status', 'rating', 'pages_or_time', 'barcode', 'description', 'cover_url'];
     const csvContent = [
@@ -773,17 +859,41 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         if(item.id) newItems.push(item);
       }
       if(newItems.length > 0) {
-        if(confirm(`Encontrados ${newItems.length} itens. Substituir coleção atual?`)) {
-          setItems(newItems);
-          alert("Coleção atualizada com sucesso!");
-        }
+        setImportData(newItems);
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const confirmImport = () => {
+    if (importData) {
+      setItems(importData);
+      setImportData(null);
+    }
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1">
+    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative">
+      <MModal 
+        isOpen={showResetConfirm} 
+        title="Aviso Crítico" 
+        message="Deseja realmente apagar TODOS os itens da sua biblioteca? Esta ação não tem volta." 
+        onConfirm={() => { setItems([]); setShowResetConfirm(false); }} 
+        onCancel={() => setShowResetConfirm(false)} 
+        darkMode={darkMode} 
+        confirmText="Apagar Tudo"
+      />
+      <MModal 
+        isOpen={!!importData} 
+        title="Importar CSV" 
+        message={`Foram encontrados ${importData ? importData.length : 0} itens no arquivo. Deseja substituir a coleção atual por eles?`} 
+        onConfirm={confirmImport} 
+        onCancel={() => setImportData(null)} 
+        darkMode={darkMode} 
+        confirmText="Substituir Coleção"
+      />
+
       <MContainer darkMode={darkMode} className="p-4 mb-4 flex justify-between items-center" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="text-xs font-bold uppercase tracking-widest">Aparência</div>
         <MButton darkMode={darkMode} onClick={() => setDarkMode(!darkMode)} variant="black" className="px-4 py-2">
@@ -819,7 +929,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </div>
       </MContainer>
 
-      <MButton darkMode={darkMode} onClick={() => { if(confirm("CUIDADO: Apagar biblioteca?")) setItems([]); }} variant="red" className="w-full">
+      <MButton darkMode={darkMode} onClick={() => setShowResetConfirm(true)} variant="red" className="w-full">
           Resetar / Apagar Tudo
       </MButton>
     </div>
@@ -827,7 +937,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 };
 
 // ==========================================
-// 5. COMPONENTE PRINCIPAL (APP)
+// 6. COMPONENTE PRINCIPAL (APP)
 // ==========================================
 export default function App() {
   const [activeTab, setActiveTab] = useState('library');
@@ -858,12 +968,11 @@ export default function App() {
     }
   }, [darkMode, isLoaded]);
 
-  // Gestão de clique vs segurar na barra de navegação + DESTRAVAR ÁUDIO
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
 
   const handleAddPressStart = () => {
-    initAudio(); // Destrava o audio no touch start
+    initAudio(); 
     isLongPress.current = false;
     pressTimer.current = setTimeout(() => {
       isLongPress.current = true;
@@ -877,7 +986,7 @@ export default function App() {
   };
 
   const handleAddClick = () => {
-    initAudio(); // Destrava o audio no clique normal
+    initAudio(); 
     if (!isLongPress.current) {
       setAddMode('barcode'); 
       setActiveTab('add');
@@ -888,9 +997,9 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-[#121212] text-[#E0E0E0]' : 'bg-white text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      <div className="max-w-md mx-auto h-screen relative flex flex-col border-x-[4px] border-black dark:border-gray-500 bg-gray-50 dark:bg-[#1a1a1a] shadow-2xl">
+      <div className="max-w-md mx-auto h-screen relative flex flex-col border-x-[4px] border-black dark:border-gray-500 bg-gray-50 dark:bg-[#1a1a1a] shadow-2xl overflow-hidden">
         
-        <header className="flex-none p-4 border-b-[4px] border-black dark:border-gray-500 bg-white dark:bg-gray-900 z-20 flex justify-between items-center sticky top-0">
+        <header className="flex-none p-4 border-b-[4px] border-black dark:border-gray-500 bg-white dark:bg-gray-900 z-20 flex justify-between items-center">
           <div className="flex flex-col"><h1 className="text-2xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1><span className="text-[9px] font-bold tracking-[0.2em] opacity-60">Personal Archive</span></div>
           <div className="w-6 h-6 bg-rose-500 dark:bg-rose-700 border-[3px] border-black dark:border-gray-400"></div>
         </header>
@@ -902,7 +1011,7 @@ export default function App() {
           {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} />}
         </main>
 
-        <nav className="flex-none flex border-t-[4px] border-black dark:border-gray-500 bg-white dark:bg-gray-900 sticky bottom-0 z-20 h-16">
+        <nav className="flex-none flex border-t-[4px] border-black dark:border-gray-500 bg-white dark:bg-gray-900 z-20 h-16 relative">
           <button onClick={() => { initAudio(); setActiveTab('library'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] border-black dark:border-gray-500 transition-colors ${activeTab === 'library' ? (darkMode ? 'bg-sky-800' : 'bg-sky-300') : ''}`}>
             <Library className="w-5 h-5 mb-1" />
             <span className="text-[8px] font-bold uppercase">Biblioteca</span>
