@@ -253,6 +253,11 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
               <div className="text-xl font-black leading-none mb-2">{selectedItem.title}</div>
               <div className="text-xs font-bold opacity-80 uppercase tracking-wide">{selectedItem.author_developer}</div>
               <div className="text-[10px] opacity-60 mt-1 uppercase tracking-widest leading-tight">{selectedItem.publisher}</div>
+              {selectedItem.location && (
+                <div className="text-[10px] font-bold opacity-80 mt-2 uppercase tracking-widest flex items-center gap-1">
+                  <Library className="w-3 h-3" /> Local: {selectedItem.location}
+                </div>
+              )}
               {selectedItem.pages_or_time && (
                 <div className={`text-[10px] font-bold w-max px-2 py-1 mt-2 ${darkMode ? 'bg-gray-700 text-white' : 'bg-black text-white'}`}>
                   {selectedItem.pages_or_time} {['Livro', 'Quadrinho'].includes(selectedItem.type) ? 'Páginas' : 'Horas'}
@@ -282,6 +287,15 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
               {selectedItem.description || "Nenhuma descrição ou sinopse disponível para este item."}
             </p>
           </MContainer>
+
+          {selectedItem.notes && (
+            <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-100 text-black'}>
+              <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[3px] pb-1 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Fichamento / Anotações</div>
+              <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap text-justify">
+                {selectedItem.notes}
+              </p>
+            </MContainer>
+          )}
 
           <MButton darkMode={darkMode} onClick={() => setItemToDelete(selectedItem.id)} variant="red" className="w-full">
              Remover da Coleção
@@ -365,7 +379,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   const isProcessingScan = useRef(false);
 
   const [formData, setFormData] = useState({
-    type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: ''
+    type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: ''
   });
 
   const changeMode = (newMode) => {
@@ -607,12 +621,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       setShowErrorModal(true);
       return;
     }
-    const newItem = { ...formData, id: Date.now().toString(), rating: 0 };
+    const newItem = { ...formData, id: Date.now().toString() };
     setItems([newItem, ...items]); 
     
     playChipBeep('save'); 
     
-    setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '' });
+    setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '' });
     setScanStatus(null);
     setActiveTab('library');
   };
@@ -708,25 +722,33 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             </div>
 
             <div className="flex gap-2 mb-2">
-              <div className="flex-1"><MInput darkMode={darkMode} label="Título *" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
-              <div className="w-24"><MInput darkMode={darkMode} label="Ano" type="number" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})} /></div>
-            </div>
-
-            <MInput darkMode={darkMode} label="Autor / Desenvolvedor / Artista" value={formData.author_developer} onChange={e => setFormData({...formData, author_developer: e.target.value})} />
-            
-            <div className="flex gap-2">
               <div className="flex-1"><MInput darkMode={darkMode} label="Editora / Gravadora" value={formData.publisher} onChange={e => setFormData({...formData, publisher: e.target.value})} /></div>
               <div className="w-1/3"><MInput darkMode={darkMode} label="Págs / Tempo" type="number" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
             </div>
             
             <MInput darkMode={darkMode} label="URL da Capa (Opcional)" value={formData.cover_url} onChange={e => setFormData({...formData, cover_url: e.target.value})} />
+            <MInput darkMode={darkMode} label="Localização Física" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="Ex: Estante Sala, Caixa 3..." />
             <MInput darkMode={darkMode} label="Descrição / Sinopse" multiline value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+            <MInput darkMode={darkMode} label="Fichamento e Anotações" multiline value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Suas impressões, citações, etc." />
 
             <div className="mb-4">
               <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>Status Atual</label>
               <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className={`w-full p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none`}>
                 {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
+            </div>
+
+            <div className="mb-4">
+              <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>Avaliação (Nota)</label>
+              <div className={`flex gap-2 p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-white'}`}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <Star 
+                    key={star} 
+                    onClick={() => setFormData({...formData, rating: star})} 
+                    className={`w-6 h-6 cursor-pointer ${star <= formData.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} 
+                  />
+                ))}
+              </div>
             </div>
 
             <MButton darkMode={darkMode} onClick={handleSave} variant="black" className="mt-2 py-4 text-sm"><Check className="w-5 h-5 mr-2" /> Salvar Item</MButton>
@@ -823,7 +845,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const [importData, setImportData] = useState(null);
 
   const handleExportCSV = () => {
-    const headers = ['id', 'type', 'title', 'author_developer', 'year', 'publisher', 'status', 'rating', 'pages_or_time', 'barcode', 'description', 'cover_url'];
+    const headers = ['id', 'type', 'title', 'author_developer', 'year', 'publisher', 'status', 'rating', 'pages_or_time', 'barcode', 'description', 'cover_url', 'location', 'notes'];
     const csvContent = [
       headers.join(','),
       ...items.map(item => headers.map(h => `"${(item[h] || '').toString().replace(/"/g, '""')}"`).join(','))
