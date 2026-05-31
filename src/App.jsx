@@ -412,7 +412,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
                   <div className="flex-1 flex flex-col justify-between overflow-hidden">
                     <div>
                       <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 truncate">{item.type || '--'} • {item.year || '--'}</div>
-                      <div className="text-sm font-black leading-tight truncate">{item.title || 'S/ Título'}</div>
+                      <div className="text-sm font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title || 'S/ Título'}</div>
                       <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer || '--'}</div>
                     </div>
                     <div className="flex justify-between items-end mt-2">
@@ -838,13 +838,13 @@ const DashboardTab = ({ items, darkMode }) => {
             {stats.reliquia && (
               <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div>
-                <div><div className="text-xs font-black truncate">{stats.reliquia.title}</div><div className="text-[9px] font-bold">Ano {stats.reliquia.year}</div></div>
+                <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.reliquia.title}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year}</div></div>
               </MContainer>
             )}
             {stats.epico && (
               <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
-                <div><div className="text-xs font-black truncate">{stats.epico.title}</div><div className="text-[9px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho', 'Revista'].includes(stats.epico.type) ? 'Págs' : 'Horas'}</div></div>
+                <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.epico.title}</div><div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {['Livro', 'Quadrinho', 'Revista'].includes(stats.epico.type) ? 'Págs' : 'Horas'}</div></div>
               </MContainer>
             )}
           </div>
@@ -1011,6 +1011,7 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [globalToast, setGlobalToast] = useState(false); 
   const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
+  const [libraryResetKey, setLibraryResetKey] = useState(0);
 
   const globalFileInputRef = useRef(null);
 
@@ -1146,6 +1147,19 @@ Retorne EXATAMENTE um objeto JSON válido. Use o seguinte formato exato sem queb
     if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); }
   };
 
+  const libPressTimer = useRef(null);
+  const isLibLongPress = useRef(false);
+
+  const handleLibPressStart = () => {
+    initAudio(); isLibLongPress.current = false;
+    libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); 
+  };
+  const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
+  const handleLibClick = () => {
+    initAudio(); 
+    if (!isLibLongPress.current) { setActiveTab('library'); }
+  };
+
   const totalItems = items.length;
   const validRatings = items.filter(i => i.rating > 0);
   const avgRating = validRatings.length > 0 ? (validRatings.reduce((acc, i) => acc + i.rating, 0) / validRatings.length) : 0;
@@ -1178,7 +1192,7 @@ Retorne EXATAMENTE um objeto JSON válido. Use o seguinte formato exato sem queb
         <main className="flex-1 overflow-hidden p-3 relative z-0">
           <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
           
-          {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
+          {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
           
           {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} />}
           
@@ -1187,7 +1201,7 @@ Retorne EXATAMENTE um objeto JSON válido. Use o seguinte formato exato sem queb
         </main>
 
         <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
-          <button onClick={() => { initAudio(); setActiveTab('library'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[8px] font-black uppercase tracking-widest">Biblioteca</span></button>
+          <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[8px] font-black uppercase tracking-widest">Biblioteca</span></button>
           <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[8px] font-black uppercase tracking-widest">Adicionar</span></button>
           <button onClick={() => { initAudio(); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[8px] font-black uppercase tracking-widest">Visão</span></button>
           <button onClick={() => { initAudio(); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[8px] font-black uppercase tracking-widest">Ajustes</span></button>
