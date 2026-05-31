@@ -48,9 +48,7 @@ const CLASS_CODES = {
   'VHS': '544.1', 'DVD': '544.2', 'Mega Drive': '520', 'SNES': '520', 'Wii': '520', 'PS1': '520', 'PS2': '520', 'PS4': '520'
 };
 
-const INITIAL_ITEMS = [
-  { id: '1', archive_code: 'LUI-562.1-0001', type: 'Livro', title: 'Neuromancer', author_developer: 'William Gibson', year: '1984', publisher: 'Aleph', status: 'Concluído', rating: 5, pages_or_time: '320', barcode: '9788576573005', cover_url: 'https://books.google.com/books/content?id=pMytzQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api', description: 'O romance de estreia de William Gibson e o primeiro a ganhar os três principais prêmios de ficção científica.', location: 'Estante Principal', notes: '', wiki_info: '' }
-];
+const INITIAL_ITEMS = [];
 
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
 
@@ -100,48 +98,7 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// 4. PARSER DE CSV ROBUSTO E MAPEAMENTO
-// ==========================================
-function parseCSV(str) {
-  const arr = [];
-  let quote = false;
-  let row = 0, col = 0, c = 0;
-  for (; c < str.length; c++) {
-    let cc = str[c], nc = str[c+1];
-    arr[row] = arr[row] || [];
-    arr[row][col] = arr[row][col] || '';
-    if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
-    if (cc === '"') { quote = !quote; continue; }
-    if (cc === ',' && !quote) { ++col; continue; }
-    if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
-    if (cc === '\n' && !quote) { ++row; col = 0; continue; }
-    if (cc === '\r' && !quote) { ++row; col = 0; continue; }
-    arr[row][col] += cc;
-  }
-  return arr;
-}
-
-const HEADER_MAP = {
-  'id': 'id', 'ID': 'id',
-  'archive_code': 'archive_code', 'Código Arquivístico': 'archive_code',
-  'type': 'type', 'Tipo': 'type',
-  'title': 'title', 'Título': 'title',
-  'author_developer': 'author_developer', 'Autor/Desenvolvedor': 'author_developer',
-  'year': 'year', 'Ano': 'year',
-  'publisher': 'publisher', 'Editora/Gravadora': 'publisher',
-  'status': 'status', 'Status': 'status',
-  'rating': 'rating', 'Nota': 'rating',
-  'pages_or_time': 'pages_or_time', 'Páginas/Tempo': 'pages_or_time',
-  'barcode': 'barcode', 'Código de Barras': 'barcode',
-  'description': 'description', 'Descrição': 'description',
-  'cover_url': 'cover_url', 'URL da Capa': 'cover_url',
-  'location': 'location', 'Localização': 'location',
-  'notes': 'notes', 'Anotações': 'notes',
-  'wiki_info': 'wiki_info'
-};
-
-// ==========================================
-// 5. COMPONENTES UI MONDRIAN
+// 4. COMPONENTES UI MONDRIAN
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
@@ -189,7 +146,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 };
 
 // ==========================================
-// 6. ABAS DA APLICAÇÃO
+// 5. ABAS DA APLICAÇÃO
 // ==========================================
 
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
@@ -289,6 +246,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
       <div className="flex flex-col h-full pb-20 relative">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
         
+        {/* CABEÇALHO DA EDIÇÃO DE FICHA */}
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10 shadow-sm" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} active:scale-95 transition-transform`}><ChevronLeft className="w-5 h-5" /></button>
@@ -380,6 +338,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
     );
   }
 
+  // --- MODO LISTA NORMAL ---
   return (
     <div className="flex flex-col h-full">
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 shadow-md" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -460,6 +419,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
+  // Escuta os resultados da IA global no arquivo raiz
   useEffect(() => {
     const handleAiSuccess = (e) => {
       const data = e.detail;
@@ -765,9 +725,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   const handleExportCSV = () => {
     if (items.length === 0) return;
-    const headers = ['id', 'archive_code', 'type', 'title', 'author_developer', 'year', 'publisher', 'status', 'rating', 'pages_or_time', 'barcode', 'description', 'cover_url', 'location', 'notes', 'wiki_info'];
+    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
-    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes), escape(i.wiki_info)]);
+    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes)]);
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Memorabilia_Export_${new Date().toISOString().split('T')[0]}.csv`; link.click();
@@ -778,19 +738,47 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const rows = parseCSV(evt.target.result);
+      const text = evt.target.result;
+      const rows = text.split('\n').map(row => {
+        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        return matches ? matches.map(m => m.replace(/^"|"$/g, '').replace(/""/g, '"')) : [];
+      }).filter(r => r.length > 1);
+
       if (rows.length < 2) return;
-      const headers = rows[0].map(h => h.trim());
+      const headers = rows[0].map(h => h.trim().replace(/\r$/, ''));
       const newItems = [];
+
       for(let i = 1; i < rows.length; i++) {
         const row = rows[i];
         if (row.length === 1 && !row[0].trim()) continue; 
         const item = {};
+        
         headers.forEach((h, idx) => { 
-           const mappedKey = HEADER_MAP[h] || h;
-           item[mappedKey] = row[idx] || ''; 
+           let key = h;
+           if (h === 'ID') key = 'id';
+           if (h === 'Código Arquivístico') key = 'archive_code';
+           if (h === 'Tipo') key = 'type';
+           if (h === 'Título') key = 'title';
+           if (h === 'Autor/Desenvolvedor') key = 'author_developer';
+           if (h === 'Ano') key = 'year';
+           if (h === 'Editora/Gravadora') key = 'publisher';
+           if (h === 'Status') key = 'status';
+           if (h === 'Nota') key = 'rating';
+           if (h === 'Páginas/Tempo') key = 'pages_or_time';
+           if (h === 'Código de Barras') key = 'barcode';
+           if (h === 'Descrição') key = 'description';
+           if (h === 'URL da Capa') key = 'cover_url';
+           if (h === 'Localização') key = 'location';
+           if (h === 'Anotações') key = 'notes';
+
+           item[key] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
         });
-        if(item.id) {
+
+        if (item.id) {
+          item.rating = parseInt(item.rating) || 0;
+          newItems.push(item);
+        } else if (item.title) {
+          item.id = Date.now().toString() + i;
           item.rating = parseInt(item.rating) || 0;
           newItems.push(item);
         }
