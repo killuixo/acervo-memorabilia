@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 // ==========================================
 // Substitua o link abaixo pelo link "Raw" da sua imagem no GitHub.
 // O aplicativo usará esta imagem automaticamente para o ícone de instalação!
-const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/cat-teste/refs/heads/main/icon-192.png?token=GHSAT0AAAAAAD6TIHVNGUZLI7622IYSBABY2Q4Q2EA";
+const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/cat-teste/refs/heads/main/icon-192.png";
 
 
 // ==========================================
