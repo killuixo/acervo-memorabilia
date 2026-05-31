@@ -29,6 +29,7 @@ const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0
 const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
 const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />;
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
+const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
 
@@ -118,6 +119,25 @@ function parseCSV(str) {
   }
   return arr;
 }
+
+const HEADER_MAP = {
+  'id': 'id', 'ID': 'id',
+  'archive_code': 'archive_code', 'Código Arquivístico': 'archive_code',
+  'type': 'type', 'Tipo': 'type',
+  'title': 'title', 'Título': 'title',
+  'author_developer': 'author_developer', 'Autor/Desenvolvedor': 'author_developer',
+  'year': 'year', 'Ano': 'year',
+  'publisher': 'publisher', 'Editora/Gravadora': 'publisher',
+  'status': 'status', 'Status': 'status',
+  'rating': 'rating', 'Nota': 'rating',
+  'pages_or_time': 'pages_or_time', 'Páginas/Tempo': 'pages_or_time',
+  'barcode': 'barcode', 'Código de Barras': 'barcode',
+  'description': 'description', 'Descrição': 'description',
+  'cover_url': 'cover_url', 'URL da Capa': 'cover_url',
+  'location': 'location', 'Localização': 'location',
+  'notes': 'notes', 'Anotações': 'notes',
+  'wiki_info': 'wiki_info'
+};
 
 // ==========================================
 // 5. COMPONENTES UI MONDRIAN
@@ -238,13 +258,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
     try {
       const payload = {
         contents: [{
-          parts: [{ text: `Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title || ''}" (Autor/Estúdio: "${editedItem.author_developer || ''}"). Retorne apenas o texto sem formatação extra.` }]
+          role: "user",
+          parts: [{ text: `Aja como um historiador, crítico e arquivista especialista. Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title || ''}" (Autor/Estúdio: "${editedItem.author_developer || ''}"). Retorne apenas o texto sem formatação extra.` }]
         }],
-        systemInstruction: { parts: [{ text: "Aja como um historiador, crítico e arquivista especialista." }] },
         generationConfig: { responseMimeType: "text/plain" }
       };
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${settings.geminiApiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiApiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const data = await response.json();
@@ -270,6 +290,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
       <div className="flex flex-col h-full pb-20 relative">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
         
+        {/* CABEÇALHO DA EDIÇÃO DE FICHA */}
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10 shadow-sm" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} active:scale-95 transition-transform`}><ChevronLeft className="w-5 h-5" /></button>
@@ -292,7 +313,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
           <div className="grid grid-cols-3 gap-2">
             <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="number" darkMode={darkMode} />
-            <MInput label={['Livro', 'Quadrinho', 'Revista'].includes(editedItem.type || '') ? 'Págs' : 'Horas / Minutos'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="number" darkMode={darkMode} />
+            <MInput label={['Livro', 'Quadrinho', 'Revista'].includes(editedItem.type || '') ? 'Págs' : 'Horas / Min'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="number" darkMode={darkMode} />
             <MInput label="Editora" value={editedItem.publisher || ''} onChange={e => setEditedItem({...editedItem, publisher: e.target.value})} darkMode={darkMode} />
           </div>
 
@@ -444,6 +465,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
+  // Escuta os resultados da IA global no arquivo raiz
   useEffect(() => {
     const handleAiSuccess = (e) => {
       const data = e.detail;
@@ -503,7 +525,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   const fetchMultiDatabase = async (barcode) => {
     const cleanCode = barcode.replace(/[-\s]/g, ""); 
-    updateStatus('loading', 'Buscando nos bancos de dados...');
+    updateStatus('loading', 'Buscando em bancos de dados...');
     try {
       let foundItem = { barcode: cleanCode, title: '', author_developer: '', publisher: '', year: '', pages_or_time: '', type: 'Livro', cover_url: '', description: '' };
       let found = false;
@@ -647,7 +669,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             <MInput darkMode={darkMode} label="Autor / Desenvolvedor / Artista" value={formData.author_developer} onChange={e => setFormData({...formData, author_developer: e.target.value})} />
             <div className="grid grid-cols-4 gap-2 mb-2 w-full">
               <div className="col-span-3"><MInput darkMode={darkMode} label="Editora / Gravadora" value={formData.publisher} onChange={e => setFormData({...formData, publisher: e.target.value})} /></div>
-              <div className="col-span-1"><MInput darkMode={darkMode} label={['Livro', 'Quadrinho', 'Revista'].includes(formData.type) ? 'Págs' : 'Horas / Min'} type="number" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
+              <div className="col-span-1"><MInput darkMode={darkMode} label="Págs / Tempo" type="number" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
             </div>
             <MInput darkMode={darkMode} label="URL da Capa (Opcional)" value={formData.cover_url} onChange={e => setFormData({...formData, cover_url: e.target.value})} />
             <MInput darkMode={darkMode} label="Localização Física" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="Ex: Estante Sala..." />
@@ -798,12 +820,12 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
            if (h === 'Tipo') key = 'type';
            if (h === 'Título') key = 'title';
            if (h === 'Autor/Desenvolvedor') key = 'author_developer';
-           if (h === 'Ano') key = 'year';
+           if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year';
            if (h === 'Editora/Gravadora') key = 'publisher';
            if (h === 'Status') key = 'status';
            if (h === 'Nota') key = 'rating';
-           if (h === 'Páginas/Tempo') key = 'pages_or_time';
-           if (h === 'Código de Barras') key = 'barcode';
+           if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time';
+           if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode';
            if (h === 'Descrição') key = 'description';
            if (h === 'URL da Capa') key = 'cover_url';
            if (h === 'Localização') key = 'location';
@@ -896,56 +918,86 @@ export default function App() {
   };
 
   // ==============================================================
-  // A MÁGICA DA IA (Gemini 2.5 Flash Preview Oficial)
+  // A MÁGICA DA IA (Gemini 1.5 Flash - Ultra Rápido e Seguro)
   // ==============================================================
   const processGlobalAIFile = async (file) => {
     if (!settings.geminiApiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente (Ajustes).'); return; }
-    setAiBoxState('loading'); setAiBoxMessage('Lendo imagem...');
+    setAiBoxState('loading'); setAiBoxMessage('Analisando mídia com IA...');
     
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      try {
-        const base64Data = reader.result.split(',')[1];
-        
-        const payload = {
-          contents: [{
-            role: "user",
-            parts: [
-              { text: `Extraia JSON (type, title, author_developer, year, publisher, pages_or_time, description) desta imagem (capa, encarte, disco, ficha catalográfica). Se for CD/Vinil, extraia nome da banda (author_developer), álbum (title), gravadora (publisher) e ano (busque o símbolo ℗ ou ©). Para "type" escolha estritamente UM: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4.` },
-              { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
-            ]
-          }],
-          generationConfig: { responseMimeType: "application/json" }
+    try {
+      // Redimensionamento Inteligente para evitar Timeouts do Vercel/Google
+      const base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 1600; 
+            let w = img.width, h = img.height;
+            if (w > h && w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; }
+            else if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; }
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+          };
+          img.src = e.target.result;
         };
+        reader.readAsDataURL(file);
+      });
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${settings.geminiApiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
+      const payload = {
+        contents: [{
+          parts: [
+            { text: `Você é um arquivista especialista catalogando itens físicos. Analise esta imagem (pode ser capa de CD, vinil, livro ou ficha catalográfica).
+- Se for MÚSICA (CD/Vinil): Identifique o Nome do Artista/Banda, o Título do Álbum, a Gravadora e o Ano (busque símbolos como ℗ ou ©).
+- Se for LIVRO: Identifique o Título, Autor, Editora, Ano e Número de Páginas (ex: procure por "p.").
+Retorne APENAS um objeto JSON perfeitamente válido com as chaves abaixo (use "" se não encontrar algo):
+{
+  "type": "Escolha UM: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4",
+  "title": "Título da obra",
+  "author_developer": "Autor ou Banda/Artista",
+  "year": "Ano (4 dígitos)",
+  "publisher": "Editora ou Gravadora",
+  "pages_or_time": "Apenas números",
+  "description": "Sinopse de 2 linhas."
+}` },
+            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+          ]
+        }],
+        generationConfig: { responseMimeType: "application/json" }
+      };
 
-        if (!response.ok) throw new Error("Erro na API.");
-        
-        const result = await response.json();
-        if (result.error) throw new Error(result.error.message);
+      // Usando o modelo Universal 1.5 Flash garantido
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
 
-        const aiText = result.candidates[0].content.parts[0].text;
-        const parsedData = JSON.parse(aiText.replace(/```json/g, '').replace(/```/g, '').trim());
-        
-        setAddMode('manual');
-        setAiBoxState('success');
-        setAiBoxMessage('Encontrado!');
-        playChipBeep('success');
-        
-        const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
-        window.dispatchEvent(event);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
 
-      } catch (error) { 
-        console.error("Erro IA:", error);
-        setAiBoxState('error'); 
-        setAiBoxMessage(`Não encontrado. Preencha manualmente.`); 
-        playChipBeep('error');
-      }
-    };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!aiText) throw new Error("Resposta da IA vazia.");
+      
+      let cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const start = cleanedText.indexOf('{');
+      const end = cleanedText.lastIndexOf('}');
+      if (start !== -1 && end !== -1) cleanedText = cleanedText.substring(start, end + 1);
+
+      const parsedData = JSON.parse(cleanedText);
+      
+      setAddMode('manual');
+      setAiBoxState('success');
+      setAiBoxMessage('Encontrado!');
+      playChipBeep('success');
+      
+      const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
+      window.dispatchEvent(event);
+
+    } catch (error) { 
+      console.error(error);
+      setAiBoxState('error'); setAiBoxMessage(`Erro: ${error.message.substring(0, 30)}...`); playChipBeep('error');
+    }
   };
 
   useEffect(() => {
@@ -1017,7 +1069,6 @@ export default function App() {
           
           {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
           
-          {/* Lógica de injetar o estado global da IA no formulário Manual */}
           {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} />}
           
           {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} />}
