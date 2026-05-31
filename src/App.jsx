@@ -483,10 +483,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
                       <div className="text-sm font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title || 'S/ Título'}</div>
                       <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer || '--'}</div>
                     </div>
-                    <div className="flex justify-between items-end mt-2">
-                      <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
+                    <div className="flex justify-between items-end mt-auto">
+                      {['Livro', 'Quadrinho', 'Revista', 'Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4'].includes(item.type) ? (
+                        <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
+                      ) : <div></div>}
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
-                        {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-5 h-5 cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                        {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
                     </div>
                   </div>
@@ -962,40 +964,71 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = evt.target.result;
-      const rows = text.split('\n').map(row => {
-        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-        return matches ? matches.map(m => m.replace(/^"|"$/g, '').replace(/""/g, '"')) : [];
-      }).filter(r => r.length > 1);
+      
+      const rows = [];
+      let row = [];
+      let inQuotes = false;
+      let val = '';
+      
+      for (let i = 0; i < text.length; i++) {
+        let char = text[i];
+        let nextChar = text[i + 1];
+        
+        if (char === '"' && inQuotes && nextChar === '"') {
+          val += '"';
+          i++;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          row.push(val);
+          val = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && nextChar === '\n') i++;
+          row.push(val);
+          rows.push(row);
+          row = [];
+          val = '';
+        } else {
+          val += char;
+        }
+      }
+      
+      if (val !== '' || row.length > 0) {
+         row.push(val);
+         rows.push(row);
+      }
 
-      if (rows.length < 2) return;
-      const headers = rows[0].map(h => h.trim().replace(/\r$/, ''));
+      const validRows = rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
+      if (validRows.length < 2) return;
+
+      const headers = validRows[0].map(h => h.trim());
       const newItems = [];
 
-      for(let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (row.length === 1 && !row[0].trim()) continue; 
+      for (let i = 1; i < validRows.length; i++) {
+        const currentRow = validRows[i];
+        if (currentRow.length === 1 && !currentRow[0].trim()) continue;
         const item = {};
-        
-        headers.forEach((h, idx) => { 
-           let key = h;
-           if (h === 'ID') key = 'id';
-           if (h === 'Código Arquivístico') key = 'archive_code';
-           if (h === 'Tipo') key = 'type';
-           if (h === 'Título') key = 'title';
-           if (h === 'Autor/Desenvolvedor') key = 'author_developer';
-           if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year';
-           if (h === 'Editora/Gravadora') key = 'publisher';
-           if (h === 'Status') key = 'status';
-           if (h === 'Nota') key = 'rating';
-           if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time';
-           if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode';
-           if (h === 'Descrição') key = 'description';
-           if (h === 'URL da Capa') key = 'cover_url';
-           if (h === 'Localização') key = 'location';
-           if (h === 'Anotações') key = 'notes';
-           if (h === 'Wiki') key = 'wiki_info';
 
-           item[key] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
+        headers.forEach((h, idx) => {
+          let key = h;
+          if (h === 'ID') key = 'id';
+          if (h === 'Código Arquivístico') key = 'archive_code';
+          if (h === 'Tipo') key = 'type';
+          if (h === 'Título') key = 'title';
+          if (h === 'Autor/Desenvolvedor') key = 'author_developer';
+          if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year';
+          if (h === 'Editora/Gravadora') key = 'publisher';
+          if (h === 'Status') key = 'status';
+          if (h === 'Nota') key = 'rating';
+          if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time';
+          if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode';
+          if (h === 'Descrição') key = 'description';
+          if (h === 'URL da Capa') key = 'cover_url';
+          if (h === 'Localização') key = 'location';
+          if (h === 'Anotações') key = 'notes';
+          if (h === 'Wiki') key = 'wiki_info';
+
+          item[key] = currentRow[idx] ? currentRow[idx].trim() : '';
         });
 
         if (item.id) {
@@ -1007,7 +1040,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           newItems.push(item);
         }
       }
-      if(newItems.length > 0) setImportData(newItems);
+      if (newItems.length > 0) setImportData(newItems);
     }; 
     reader.readAsText(file); 
     e.target.value = null;
