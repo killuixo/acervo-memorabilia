@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
-// 1. ÍCONES NATIVOS (Zero Dependências)
+// 1. ÍCONES NATIVOS
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
   <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
@@ -31,6 +31,7 @@ const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
+const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
 
 // ==========================================
 // 2. DADOS E PLANO DE CLASSIFICAÇÃO
@@ -59,7 +60,7 @@ const getMondrianColor = (index, darkMode) => {
 };
 
 // ==========================================
-// 3. SISTEMA DE ÁUDIO (CHIPTUNE 8-BIT)
+// 3. SISTEMA DE ÁUDIO 8-BIT
 // ==========================================
 let globalAudioCtx = null;
 const initAudio = () => {
@@ -98,7 +99,67 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// 4. COMPONENTES UI MONDRIAN
+// 4. PARSER CSV UNIVERSAL (Detecta vírgula ou ponto-e-vírgula)
+// ==========================================
+function parseCSV(text) {
+  // Autodetecção do delimitador (Brasil usa muito o ;)
+  const firstLine = text.split('\n')[0] || '';
+  const delimiter = firstLine.includes(';') ? ';' : ',';
+  
+  const result = [];
+  let row = [];
+  let inQuotes = false;
+  let currentValue = "";
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+    
+    if (char === '"' && inQuotes && nextChar === '"') {
+      currentValue += '"'; i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === delimiter && !inQuotes) {
+      row.push(currentValue); currentValue = "";
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') i++;
+      row.push(currentValue); result.push(row);
+      row = []; currentValue = "";
+    } else {
+      currentValue += char;
+    }
+  }
+  if (currentValue || row.length > 0) {
+    row.push(currentValue); result.push(row);
+  }
+  return result;
+}
+
+const normalizeHeader = (header) => {
+  const lower = header.trim().toLowerCase();
+  const map = {
+    'id': 'id',
+    'código arquivístico': 'archive_code', 'codigo arquivistico': 'archive_code', 'archive_code': 'archive_code',
+    'tipo': 'type', 'type': 'type',
+    'título': 'title', 'titulo': 'title', 'title': 'title',
+    'autor/desenvolvedor': 'author_developer', 'autor': 'author_developer', 'author_developer': 'author_developer',
+    'ano': 'year', 'year': 'year',
+    'editora/gravadora': 'publisher', 'editora': 'publisher', 'publisher': 'publisher',
+    'status': 'status',
+    'nota': 'rating', 'rating': 'rating',
+    'páginas/tempo': 'pages_or_time', 'paginas/tempo': 'pages_or_time', 'pages_or_time': 'pages_or_time',
+    'código de barras': 'barcode', 'codigo de barras': 'barcode', 'barcode': 'barcode',
+    'descrição': 'description', 'descricao': 'description', 'description': 'description',
+    'url da capa': 'cover_url', 'cover_url': 'cover_url',
+    'localização': 'location', 'localizacao': 'location', 'location': 'location',
+    'anotações': 'notes', 'anotacoes': 'notes', 'notes': 'notes',
+    'wiki_info': 'wiki_info'
+  };
+  return map[lower] || header;
+};
+
+// ==========================================
+// 5. COMPONENTES UI MONDRIAN
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
@@ -132,7 +193,7 @@ const MInput = ({ label, value, onChange, type = "text", placeholder = "", multi
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm z-[100]">
       <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-4 pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
         <p className="text-sm font-medium opacity-90">{message}</p>
@@ -146,23 +207,34 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 };
 
 // ==========================================
-// 5. ABAS DA APLICAÇÃO
+// 6. ABAS DA APLICAÇÃO
 // ==========================================
 
-const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
-  const [selectedItem, setSelectedItem] = useState(null);
+const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, selectedItemId, setSelectedItemId }) => {
   const [editedItem, setEditedItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [statusFilter, setStatusFilter] = useState('Todos');
+  const [sortOrder, setSortOrder] = useState('Recentes');
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 8;
 
+  // Sincroniza o item editado com o ID selecionado globalmente
+  useEffect(() => {
+    if (selectedItemId) {
+      const found = items.find(i => i.id === selectedItemId);
+      setEditedItem(found ? { ...found } : null);
+    } else {
+      setEditedItem(null);
+    }
+  }, [selectedItemId, items]);
+
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    let result = items.filter(item => {
       const titleSearch = (item.title || '').toLowerCase();
       const authorSearch = (item.author_developer || '').toLowerCase();
       const query = search.toLowerCase();
@@ -173,16 +245,32 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
         if (activeSubtype === 'Todos') matchesCategory = CATEGORIES[activeCategory]?.includes(item.type || '');
         else matchesCategory = (item.type || '') === activeSubtype;
       }
-      return matchesSearch && matchesCategory;
-    }).sort((a, b) => (b.id || '').localeCompare(a.id || '')); 
-  }, [items, search, activeCategory, activeSubtype]);
+
+      let matchesStatus = true;
+      if (statusFilter !== 'Todos') {
+        matchesStatus = (item.status || 'Não Iniciado') === statusFilter;
+      }
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+
+    result.sort((a, b) => {
+      if (sortOrder === 'Título') return (a.title || '').localeCompare(b.title || '');
+      if (sortOrder === 'Autor') return (a.author_developer || '').localeCompare(b.author_developer || '');
+      if (sortOrder === 'Ano') return parseInt(b.year || 0) - parseInt(a.year || 0);
+      if (sortOrder === 'Editora') return (a.publisher || '').localeCompare(b.publisher || '');
+      if (sortOrder === 'Nota') return Number(b.rating || 0) - Number(a.rating || 0);
+      return (b.id || '').localeCompare(a.id || ''); // Recentes
+    });
+
+    return result;
+  }, [items, search, activeCategory, activeSubtype, statusFilter, sortOrder]);
 
   const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
   const handleSelect = (item) => {
-    setSelectedItem(item);
-    setEditedItem({ ...item }); 
+    setSelectedItemId(item.id);
   };
 
   const updateRatingList = (id, newRating) => {
@@ -191,7 +279,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
-    setSelectedItem(editedItem);
     playChipBeep('save');
     onShowToast();
   };
@@ -200,8 +287,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
     if (itemToDelete) {
       setItems(items.filter(item => item.id !== itemToDelete));
       setItemToDelete(null);
-      setSelectedItem(null);
-      setEditedItem(null);
+      setSelectedItemId(null);
     }
   };
 
@@ -241,15 +327,15 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
     }
   };
 
-  if (selectedItem && editedItem) {
+  // --- MODO FICHA DETALHADA ---
+  if (selectedItemId && editedItem) {
     return (
-      <div className="flex flex-col h-full pb-20 relative">
+      <div className="flex flex-col h-full pb-20 relative animate-fade-in">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
         
-        {/* CABEÇALHO DA EDIÇÃO DE FICHA */}
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10 shadow-sm" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
-            <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} active:scale-95 transition-transform`}><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => setSelectedItemId(null)} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} active:scale-95 transition-transform`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes da Mídia</div>
           </div>
           <button onClick={saveModifications} className={`px-4 py-2 border-[3px] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-transform ${darkMode ? 'bg-emerald-800 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black'}`}>Salvar</button>
@@ -260,7 +346,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
             <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
               {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
             </MContainer>
-            <div className="flex flex-col flex-1 justify-between py-1">
+            <div className="flex flex-col flex-1 justify-between py-1 min-w-0">
               {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[2px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-500 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
               <MInput label="Título" value={editedItem.title || ''} onChange={e => setEditedItem({...editedItem, title: e.target.value})} darkMode={darkMode} />
               <MInput label="Autor/Artista" value={editedItem.author_developer || ''} onChange={e => setEditedItem({...editedItem, author_developer: e.target.value})} darkMode={darkMode} />
@@ -313,7 +399,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
             {editedItem.wiki_info ? (
               <div>
                 <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap text-justify mb-3 italic">"{editedItem.wiki_info}"</p>
-                <button onClick={fetchWikiInfo} className="text-[9px] font-bold uppercase underline opacity-70 hover:opacity-100 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Gerar Nova Pesquisa</button>
+                <button onClick={fetchWikiInfo} className="text-[9px] font-bold uppercase underline opacity-70 hover:opacity-100 flex items-center gap-1 mt-2"><Sparkles className="w-3 h-3" /> Gerar Nova Pesquisa</button>
               </div>
             ) : (
               <div className="text-center py-2">
@@ -340,21 +426,41 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
   // --- MODO LISTA NORMAL ---
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full animate-fade-in">
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 shadow-md" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="relative">
           <Search className={`absolute left-3 top-3 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
           <input type="text" placeholder="Buscar Título ou Autor..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-9 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none`} />
         </div>
+        
+        {/* Filtro de Categorias */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {['Todos', ...Object.keys(CATEGORIES)].map(cat => <button key={cat} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1 text-[10px] uppercase tracking-wider font-bold border-[2px] ${darkMode ? 'border-gray-500' : 'border-black'} ${activeCategory === cat ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
         </div>
+        
+        {/* Filtro de Subcategorias */}
         {activeCategory !== 'Todos' && CATEGORIES[activeCategory]?.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             <button onClick={() => { setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1 text-[10px] uppercase tracking-wider font-bold border-[2px] ${darkMode ? 'border-gray-500' : 'border-black'} ${activeSubtype === 'Todos' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
             {CATEGORIES[activeCategory].map(type => <button key={type} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1 text-[10px] uppercase tracking-wider font-bold border-[2px] ${darkMode ? 'border-gray-500' : 'border-black'} ${activeSubtype === type ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
           </div>
         )}
+
+        {/* Filtros de Status e Ordenação Avançados */}
+        <div className="flex gap-2 w-full mt-1">
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }} className={`w-1/2 p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} font-sans text-[10px] font-bold uppercase outline-none`}>
+            <option value="Todos">STATUS: TODOS</option>
+            {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+          <select value={sortOrder} onChange={(e) => { setSortOrder(e.target.value); setPage(0); }} className={`w-1/2 p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} font-sans text-[10px] font-bold uppercase outline-none`}>
+            <option value="Recentes">ORDEM: RECENTES</option>
+            <option value="Título">TÍTULO (A-Z)</option>
+            <option value="Autor">AUTOR (A-Z)</option>
+            <option value="Ano">ANO Lançamento</option>
+            <option value="Editora">EDITORA (A-Z)</option>
+            <option value="Nota">MAIOR NOTA</option>
+          </select>
+        </div>
       </MContainer>
 
       <div className="flex-1 overflow-y-auto pb-20 px-1">
@@ -373,9 +479,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
                       <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer || '--'}</div>
                     </div>
                     <div className="flex justify-between items-end mt-2">
-                      <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status || 'Na Fila'}</div>
+                      <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status || 'Não Iniciado'}</div>
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
-                        {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                        {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= Number(item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
                     </div>
                   </div>
@@ -396,7 +502,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
   );
 };
 
-const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast, triggerGlobalAI, globalAiState, globalAiMessage, resetGlobalAi }) => {
+const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast, pendingAIFile, clearPendingAIFile, triggerGlobalAI }) => {
   const [scanBox, setScanBox] = useState({ state: 'idle', message: '' }); 
   const scannerRef = useRef(null);
   const isProcessingScan = useRef(false);
@@ -409,7 +515,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   const changeMode = (newMode) => {
     setAddMode(newMode);
-    if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); }
+    if (newMode !== 'manual') updateStatus('idle', ''); 
   };
 
   const stopScanner = () => {
@@ -418,21 +524,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       scannerRef.current = null;
     }
   };
-
-  // Escuta os resultados da IA global no arquivo raiz
-  useEffect(() => {
-    const handleAiSuccess = (e) => {
-      const data = e.detail;
-      setFormData(prev => ({ 
-        ...prev, title: data.title || '', author_developer: data.author_developer || '', year: data.year?.toString() || '', publisher: data.publisher || '', description: data.description || '', pages_or_time: data.pages_or_time || prev.pages_or_time, type: ALL_TYPES.includes(data.type) ? data.type : 'Livro'
-      }));
-    };
-    window.addEventListener('aiScanSuccess', handleAiSuccess);
-    return () => window.removeEventListener('aiScanSuccess', handleAiSuccess);
-  }, []);
-
-  const displayBoxState = globalAiState !== 'idle' ? globalAiState : scanBox.state;
-  const displayBoxMessage = globalAiState !== 'idle' ? globalAiMessage : scanBox.message;
 
   useEffect(() => {
     let isMounted = true;
@@ -536,15 +627,70 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
+  const handleScanSuccess = (mappedData) => {
+    playChipBeep('success'); 
+    updateStatus('success', 'Informações extraídas com sucesso!');
+    setFormData(prev => ({ ...prev, ...mappedData }));
+  };
+
+  const processAIFile = async (file) => {
+    if (!settings.geminiApiKey) { updateStatus('error', 'Chave API ausente (Ajustes).'); changeMode('manual'); return; }
+    updateStatus('loading', 'Lendo imagem...');
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result.split(',')[1];
+        const payload = {
+          contents: [{
+            role: "user",
+            parts: [
+              { text: `Você é um arquivista especialista. Analise esta imagem. Procure especificamente pelo Autor, Título, Ano, Editora e Número de páginas (letras miúdas da ficha catalográfica). Responda ESTRITAMENTE com JSON válido:
+{"type": "Escolha UM entre: ${ALL_TYPES.join(', ')}", "title": "Título", "author_developer": "Autor/artista", "year": "Ano (4 dígitos)", "publisher": "Editora", "pages_or_time": "Apenas números", "description": "Sinopse 2 linhas."}` },
+              { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
+            ]
+          }],
+          generationConfig: { responseMimeType: "application/json" }
+        };
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+
+        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!aiText) throw new Error("Resposta da IA vazia.");
+        
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("JSON não encontrado.");
+
+        const parsedData = JSON.parse(jsonMatch[0]);
+        const typeMatched = ALL_TYPES.includes(parsedData.type) ? parsedData.type : 'Livro';
+        handleScanSuccess({
+          title: parsedData.title || '', author_developer: parsedData.author_developer || '', year: parsedData.year?.toString() || '', publisher: parsedData.publisher || '', description: parsedData.description || '', pages_or_time: parsedData.pages_or_time || formData.pages_or_time, type: typeMatched
+        });
+      } catch (error) { 
+        playChipBeep('error'); updateStatus('error', 'Falha ao interpretar imagem.'); 
+      } finally { 
+        setAddMode('manual'); 
+      }
+    };
+  };
+
+  useEffect(() => { if (pendingAIFile) { processAIFile(pendingAIFile); clearPendingAIFile(); } }, [pendingAIFile]);
+
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
     
+    // Geração do Código Exclusivo da Classe
     const classCode = CLASS_CODES[formData.type] || '000';
     let maxSeq = 0;
     items.forEach(item => {
-      if(item.archive_code) {
+      if(item.archive_code && item.archive_code.includes(`-${classCode}-`)) {
         const seqStr = item.archive_code.split('-').pop();
         const seqNum = parseInt(seqStr, 10);
         if(!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum;
@@ -563,12 +709,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     playChipBeep('save'); 
     onShowToast(); 
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
-    updateStatus('idle', ''); resetGlobalAi();
+    updateStatus('idle', '');
     setActiveTab('library');
   };
 
   return (
-    <div className="flex flex-col h-full pb-20">
+    <div className="flex flex-col h-full pb-20 animate-fade-in">
       <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar na biblioteca." onConfirm={() => setShowErrorModal(false)} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
 
       <div className="flex gap-2 mb-4">
@@ -577,12 +723,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         <MButton darkMode={darkMode} variant="red" onClick={triggerGlobalAI} className="flex-1 py-2 text-[10px]"><Camera className="w-4 h-4" /> Auto IA</MButton>
       </div>
 
-      {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-center justify-center gap-3 border-[3px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-yellow-700 border-yellow-500 text-white' : 'bg-yellow-400 border-black text-black') : displayBoxState === 'success' ? (darkMode ? 'bg-emerald-800 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-rose-800 border-rose-500 text-white' : 'bg-rose-400 border-black text-black')}`}>
-          {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-full animate-spin flex-shrink-0" />}
-          {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
-          {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0" />}
-          <span className="leading-tight">{displayBoxMessage}</span>
+      {scanBox.state !== 'idle' && (
+        <div className={`p-4 mb-4 flex items-center justify-center gap-3 border-[3px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${scanBox.state === 'loading' ? (darkMode ? 'bg-yellow-700 border-yellow-500 text-white' : 'bg-yellow-400 border-black text-black') : scanBox.state === 'success' ? (darkMode ? 'bg-emerald-800 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-rose-800 border-rose-500 text-white' : 'bg-rose-400 border-black text-black')}`}>
+          {scanBox.state === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-full animate-spin flex-shrink-0" />}
+          {scanBox.state === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
+          {scanBox.state === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0" />}
+          <span className="leading-tight">{scanBox.message}</span>
         </div>
       )}
 
@@ -605,15 +751,18 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
                 {Object.entries(CATEGORIES).map(([cat, subs]) => (<optgroup label={`--- ${cat.toUpperCase()} ---`} key={cat}>{subs.map(sub => <option key={sub} value={sub}>{sub}</option>)}</optgroup>))}
               </select>
             </div>
+            
             <div className="grid grid-cols-4 gap-2 mb-2 w-full">
               <div className="col-span-3"><MInput darkMode={darkMode} label="Título *" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
               <div className="col-span-1"><MInput darkMode={darkMode} label="Ano" type="number" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})} /></div>
             </div>
             <MInput darkMode={darkMode} label="Autor / Desenvolvedor / Artista" value={formData.author_developer} onChange={e => setFormData({...formData, author_developer: e.target.value})} />
+            
             <div className="grid grid-cols-4 gap-2 mb-2 w-full">
               <div className="col-span-3"><MInput darkMode={darkMode} label="Editora / Gravadora" value={formData.publisher} onChange={e => setFormData({...formData, publisher: e.target.value})} /></div>
               <div className="col-span-1"><MInput darkMode={darkMode} label="Págs / Tempo" type="number" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
             </div>
+            
             <MInput darkMode={darkMode} label="URL da Capa (Opcional)" value={formData.cover_url} onChange={e => setFormData({...formData, cover_url: e.target.value})} />
             <MInput darkMode={darkMode} label="Localização Física" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="Ex: Estante Sala..." />
             <MInput darkMode={darkMode} label="Descrição / Sinopse" multiline value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
@@ -654,7 +803,7 @@ const DashboardTab = ({ items, darkMode }) => {
     const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
     const validLengths = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
     const epico = validLengths.length > 0 ? validLengths.reduce((a, b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b) : null;
-    const vergonha = items.filter(i => i.status === 'Não Iniciado' || i.status === 'Na Fila').length;
+    const vergonha = items.filter(i => i.status === 'Não Iniciado').length;
     const authors = items.map(i => i.author_developer).filter(Boolean);
     const favorite = authors.length > 0 ? authors.sort((a,b) => authors.filter(v => v===a).length - authors.filter(v => v===b).length).pop() : null;
     return { reliquia, epico, vergonha, favorite };
@@ -662,7 +811,7 @@ const DashboardTab = ({ items, darkMode }) => {
   const stats = getFunStats();
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4">
+    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 animate-fade-in">
       <div className="flex gap-4">
         <MContainer darkMode={darkMode} className="flex-1 flex flex-col items-center justify-center py-6 relative overflow-hidden" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black'}>
           <LibraryBig className={`absolute -left-4 -bottom-4 w-24 h-24 ${darkMode ? 'text-white opacity-10' : 'text-black opacity-10'}`} />
@@ -704,8 +853,8 @@ const DashboardTab = ({ items, darkMode }) => {
             </MContainer>
           )}
           <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
-            <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">Pilha da<br/>Vergonha</div><Ghost className="w-5 h-5 opacity-50" /></div>
-            <div className="flex items-end gap-1"><div className="text-3xl font-black leading-none">{stats.vergonha}</div><div className="text-[9px] font-bold uppercase tracking-widest pb-1">Intocados</div></div>
+            <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">Intocados</div><Ghost className="w-5 h-5 opacity-50" /></div>
+            <div className="flex items-end gap-1"><div className="text-3xl font-black leading-none">{stats.vergonha}</div><div className="text-[9px] font-bold uppercase tracking-widest pb-1">Não Iniciado</div></div>
           </MContainer>
           {stats.favorite && (
             <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-300 text-black'}>
@@ -725,10 +874,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   const handleExportCSV = () => {
     if (items.length === 0) return;
-    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações'];
+    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
-    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes)]);
-    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes), escape(i.wiki_info)]);
+    const csvContent = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Memorabilia_Export_${new Date().toISOString().split('T')[0]}.csv`; link.click();
   };
@@ -739,47 +888,56 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = evt.target.result;
-      const rows = text.split('\n').map(row => {
-        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-        return matches ? matches.map(m => m.replace(/^"|"$/g, '').replace(/""/g, '"')) : [];
-      }).filter(r => r.length > 1);
-
-      if (rows.length < 2) return;
-      const headers = rows[0].map(h => h.trim().replace(/\r$/, ''));
+      const delimiter = text.indexOf(';') > -1 && text.indexOf(';') < text.indexOf('\n') ? ';' : ',';
+      
+      const result = [];
+      let row = [];
+      let inQuotes = false;
+      let currentValue = "";
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+        if (char === '"' && inQuotes && nextChar === '"') { currentValue += '"'; i++; }
+        else if (char === '"') { inQuotes = !inQuotes; }
+        else if (char === delimiter && !inQuotes) { row.push(currentValue); currentValue = ""; }
+        else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && nextChar === '\n') i++;
+          row.push(currentValue); result.push(row); row = []; currentValue = "";
+        } else { currentValue += char; }
+      }
+      if (currentValue || row.length > 0) { row.push(currentValue); result.push(row); }
+      
+      if (result.length < 2) return;
+      const headers = result[0].map(h => h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
       const newItems = [];
 
-      for(let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (row.length === 1 && !row[0].trim()) continue; 
+      for(let i = 1; i < result.length; i++) {
+        const r = result[i];
+        if (r.length === 1 && !r[0].trim()) continue; 
         const item = {};
         
         headers.forEach((h, idx) => { 
-           let key = h;
-           if (h === 'ID') key = 'id';
-           if (h === 'Código Arquivístico') key = 'archive_code';
-           if (h === 'Tipo') key = 'type';
-           if (h === 'Título') key = 'title';
-           if (h === 'Autor/Desenvolvedor') key = 'author_developer';
-           if (h === 'Ano') key = 'year';
-           if (h === 'Editora/Gravadora') key = 'publisher';
-           if (h === 'Status') key = 'status';
-           if (h === 'Nota') key = 'rating';
-           if (h === 'Páginas/Tempo') key = 'pages_or_time';
-           if (h === 'Código de Barras') key = 'barcode';
-           if (h === 'Descrição') key = 'description';
-           if (h === 'URL da Capa') key = 'cover_url';
-           if (h === 'Localização') key = 'location';
-           if (h === 'Anotações') key = 'notes';
-
-           item[key] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
+           if (h.includes('id')) item['id'] = r[idx];
+           else if (h.includes('arquiv') || h.includes('archive')) item['archive_code'] = r[idx];
+           else if (h.includes('tipo') || h.includes('type')) item['type'] = r[idx];
+           else if (h.includes('titul') || h.includes('title')) item['title'] = r[idx];
+           else if (h.includes('autor')) item['author_developer'] = r[idx];
+           else if (h.includes('ano') || h.includes('year')) item['year'] = r[idx];
+           else if (h.includes('editora')) item['publisher'] = r[idx];
+           else if (h.includes('status')) item['status'] = r[idx];
+           else if (h.includes('nota') || h.includes('rating')) item['rating'] = parseInt(r[idx]) || 0;
+           else if (h.includes('pagin') || h.includes('tempo')) item['pages_or_time'] = r[idx];
+           else if (h.includes('barras') || h.includes('barcode')) item['barcode'] = r[idx];
+           else if (h.includes('descri')) item['description'] = r[idx];
+           else if (h.includes('capa') || h.includes('url')) item['cover_url'] = r[idx];
+           else if (h.includes('localiz')) item['location'] = r[idx];
+           else if (h.includes('anotac') || h.includes('note')) item['notes'] = r[idx];
+           else if (h.includes('wiki')) item['wiki_info'] = r[idx];
         });
 
-        if (item.id) {
-          item.rating = parseInt(item.rating) || 0;
-          newItems.push(item);
-        } else if (item.title) {
-          item.id = Date.now().toString() + i;
-          item.rating = parseInt(item.rating) || 0;
+        if (item.id || item.title) {
+          if (!item.id) item.id = Date.now().toString() + i;
           newItems.push(item);
         }
       }
@@ -792,7 +950,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const handleSaveSettings = () => { playChipBeep('save'); onShowToast(); };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative">
+    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative animate-fade-in">
       <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
       <MModal isOpen={!!importData} title="Importar CSV" message={`Foram encontrados ${importData ? importData.length : 0} itens no arquivo. Substituir a coleção atual por eles?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir Coleção" />
 
@@ -834,78 +992,30 @@ export default function App() {
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '' });
   const [isLoaded, setIsLoaded] = useState(false);
   const [globalToast, setGlobalToast] = useState(false); 
+  const [selectedItemId, setSelectedItemId] = useState(null);
 
   const globalFileInputRef = useRef(null);
-
-  const [aiBoxState, setAiBoxState] = useState('idle'); 
-  const [aiBoxMessage, setAiBoxMessage] = useState('');
+  const [pendingAIFile, setPendingAIFile] = useState(null);
 
   const triggerGlobalAI = () => {
+    setAddMode('camera_ai');
     setActiveTab('add');
-    setAddMode('manual'); 
     if (globalFileInputRef.current) globalFileInputRef.current.click();
   };
 
   const handleGlobalFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setPendingAIFile(file);
+      setAddMode('camera_ai');
       setActiveTab('add');
-      setAddMode('manual');
-      processGlobalAIFile(file);
     }
     e.target.value = null;
   };
 
-  const processGlobalAIFile = async (file) => {
-    if (!settings.geminiApiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente (Ajustes).'); return; }
-    setAiBoxState('loading'); setAiBoxMessage('Lendo imagem...');
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      try {
-        const base64Data = reader.result.split(',')[1];
-        const payload = {
-          contents: [{
-            role: "user",
-            parts: [
-              { text: `Você é um arquivista especialista. Leia ATENTAMENTE TODO O TEXTO visível. Procure especificamente pelo Autor, Título, Ano, Editora e Número de páginas. Responda ESTRITAMENTE com JSON válido, sem tags markdown:
-{"type": "Escolha UM entre: ${ALL_TYPES.join(', ')}", "title": "Título identificado", "author_developer": "Autor/artista", "year": "Ano (4 dígitos)", "publisher": "Editora/Gravadora", "pages_or_time": "Apenas números", "description": "Sinopse 2 linhas."}` },
-              { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
-            ]
-          }],
-          generationConfig: { responseMimeType: "application/json" }
-        };
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
-
-        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!aiText) throw new Error("Resposta vazia.");
-        
-        const cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsedData = JSON.parse(cleanedText);
-        
-        setAddMode('manual');
-        setAiBoxState('success');
-        setAiBoxMessage('Encontrado!');
-        playChipBeep('success');
-        
-        const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
-        window.dispatchEvent(event);
-
-      } catch (error) { 
-        setAiBoxState('error'); setAiBoxMessage('Não encontrado. Preencha manualmente.'); playChipBeep('error');
-      }
-    };
-  };
-
   useEffect(() => {
     if (!document.getElementById('html5-qrcode-script')) {
-      const script = document.createElement('script'); script.id = 'html5-qrcode-script'; script.src = "https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"; script.async = true;
+      const script = document.createElement('script'); script.id = 'html5-qrcode-script'; script.src = "https://unpkg.com/html5-qrcode"; script.async = true;
       document.head.appendChild(script);
     }
   }, []);
@@ -939,10 +1049,10 @@ export default function App() {
   };
 
   const totalItems = items.length;
-  const validRatings = items.filter(i => i.rating > 0);
-  const avgRating = validRatings.length > 0 ? (validRatings.reduce((acc, i) => acc + i.rating, 0) / validRatings.length) : 0;
-  const totalPages = items.filter(i => ['Livro', 'Quadrinho', 'Revista'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
-  const totalHours = items.filter(i => !['Livro', 'Quadrinho', 'Revista'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const validRatings = items.filter(i => Number(i.rating) > 0);
+  const avgRating = validRatings.length > 0 ? (validRatings.reduce((acc, i) => acc + Number(i.rating), 0) / validRatings.length) : 0;
+  const totalPages = items.filter(i => ['Livro', 'Quadrinho', 'Revista'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time, 10) || 0), 0);
+  const totalHours = items.filter(i => !['Livro', 'Quadrinho', 'Revista'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time, 10) || 0), 0);
 
   if (!isLoaded) return null; 
 
@@ -970,16 +1080,14 @@ export default function App() {
         <main className="flex-1 overflow-hidden p-3 relative z-0">
           <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
           
-          {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
-          
-          {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} />}
-          
+          {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} selectedItemId={selectedItemId} setSelectedItemId={setSelectedItemId} />}
+          {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} pendingAIFile={pendingAIFile} clearPendingAIFile={() => setPendingAIFile(null)} triggerGlobalAI={triggerGlobalAI} />}
           {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} />}
           {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={() => setGlobalToast(true)} />}
         </main>
 
         <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-500 bg-gray-900' : 'border-black bg-white'}`}>
-          <button onClick={() => { initAudio(); setActiveTab('library'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] transition-colors ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[8px] font-bold uppercase">Biblioteca</span></button>
+          <button onClick={() => { initAudio(); setActiveTab('library'); setSelectedItemId(null); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] transition-colors ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[8px] font-bold uppercase">Biblioteca</span></button>
           <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] transition-colors ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[8px] font-bold uppercase">Adicionar</span></button>
           <button onClick={() => { initAudio(); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[3px] transition-colors ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[8px] font-bold uppercase">Dashboard</span></button>
           <button onClick={() => { initAudio(); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[8px] font-bold uppercase">Ajustes</span></button>
