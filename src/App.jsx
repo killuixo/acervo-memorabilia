@@ -22,6 +22,7 @@ const ExternalLink = (p) => <Icon {...p} path={<><path d="M15 3h6v6"/><path d="M
 const Star = ({ className = '', onClick }) => <Icon onClick={onClick} className={className} fill={className.includes('fill') ? 'currentColor' : 'none'} path={<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>} />;
 const ChevronLeft = (p) => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
 const ChevronRight = (p) => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
+const X = (p) => <Icon {...p} path={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} />;
 const Check = (p) => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
 const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
 const Clock = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
@@ -35,6 +36,266 @@ const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 
 // ==========================================
 // 2. DADOS E PLANO DE CLASSIFICAÇÃO
 // ==========================================
+const CATEGORIES = {
+  'Livros': ['Livro', 'Quadrinho'],
+  'Discos': ['CD', 'Vinil', 'Fita Cassete'],
+  'Vídeo': ['VHS', 'DVD'],
+  'Games': ['Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4']
+};
+const ALL_TYPES = Object.values(CATEGORIES).flat();
+
+const CLASS_CODES = {
+  'Livro': '562.1', 'Quadrinho': '562.2', 'CD': '515.1', 'Vinil': '515.2', 'Fita Cassete': '515.3',
+  'VHS': '544.1', 'DVD': '544.2', 'Mega Drive': '520', 'SNES': '520', 'Wii': '520', 'PS1': '520', 'PS2': '520', 'PS4': '520'
+};
+
+const INITIAL_ITEMS = [
+  { id: '1', archive_code: 'LUI-562.1-0001', type: 'Livro', title: 'Neuromancer', author_developer: 'William Gibson', year: '1984', publisher: 'Aleph', status: 'Concluído', rating: 5, pages_or_time: '320', cover_url: 'https://books.google.com/books/content?id=pMytzQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api', description: 'O romance de estreia de William Gibson e o primeiro a ganhar os três principais prêmios de ficção científica.', location: 'Estante Principal', notes: '', wiki_info: '' }
+];
+
+const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
+
+const getMondrianColor = (index, darkMode) => {
+  const colorsLight = ['bg-rose-300', 'bg-sky-300', 'bg-yellow-400', 'bg-white'];
+  const colorsDark = ['bg-rose-800', 'bg-sky-800', 'bg-yellow-600', 'bg-gray-900'];
+  return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
+};
+
+// ==========================================
+// 3. SISTEMA DE ÁUDIO (CHIPTUNE 8-BIT)
+// ==========================================
+let globalAudioCtx = null;
+const initAudio = () => {
+  try {
+    if (!globalAudioCtx) { const AudioContext = window.AudioContext || window.webkitAudioContext; if (AudioContext) globalAudioCtx = new AudioContext(); }
+    if (globalAudioCtx && globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+  } catch (e) { }
+};
+
+const playChipBeep = (type) => {
+  try {
+    if (!globalAudioCtx) initAudio();
+    if (!globalAudioCtx) return;
+    if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+
+    const oscillator = globalAudioCtx.createOscillator();
+    const gainNode = globalAudioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(globalAudioCtx.destination);
+    const now = globalAudioCtx.currentTime;
+
+    if (type === 'success') {
+      oscillator.type = 'triangle'; oscillator.frequency.setValueAtTime(1046.50, now);
+      gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      oscillator.start(now); oscillator.stop(now + 0.15);
+    } else if (type === 'error') {
+      oscillator.type = 'triangle'; oscillator.frequency.setValueAtTime(300, now); oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+      gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      oscillator.start(now); oscillator.stop(now + 0.2);
+    } else if (type === 'save') {
+      oscillator.type = 'triangle'; oscillator.frequency.setValueAtTime(523.25, now); oscillator.frequency.setValueAtTime(783.99, now + 0.1);
+      gainNode.gain.setValueAtTime(0.04, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      oscillator.start(now); oscillator.stop(now + 0.25);
+    }
+  } catch (e) {}
+};
+
+// ==========================================
+// 4. PARSER DE CSV ROBUSTO (Ignora vírgulas dentro do texto)
+// ==========================================
+function parseCSV(str) {
+  const arr = [];
+  let quote = false;
+  let row = 0, col = 0, c = 0;
+  for (; c < str.length; c++) {
+    let cc = str[c], nc = str[c+1];
+    arr[row] = arr[row] || [];
+    arr[row][col] = arr[row][col] || '';
+    if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
+    if (cc === '"') { quote = !quote; continue; }
+    if (cc === ',' && !quote) { ++col; continue; }
+    if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
+    if (cc === '\n' && !quote) { ++row; col = 0; continue; }
+    if (cc === '\r' && !quote) { ++row; col = 0; continue; }
+    arr[row][col] += cc;
+  }
+  return arr;
+}
+
+// ==========================================
+// 5. COMPONENTES UI MONDRIAN
+// ==========================================
+const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
+  <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
+);
+
+const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
+  let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
+  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300 text-black';
+  if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black';
+  if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black';
+  if (variant === 'black') bgClass = darkMode ? 'bg-gray-300 text-black' : 'bg-black text-white';
+
+  return (
+    <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${disabled ? 'opacity-50' : 'active:scale-95'} transition-transform ${bgClass} ${className}`}>
+      {icon && icon} {children}
+    </button>
+  );
+};
+
+const MInput = ({ label, value, onChange, type = "text", placeholder = "", multiline = false, darkMode }) => (
+  <div className="flex flex-col mb-3 w-full">
+    <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>{label}</label>
+    {multiline ? (
+      <textarea value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-yellow-100 dark:focus:bg-yellow-900 transition-colors min-h-[80px] resize-none`} />
+    ) : (
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none focus:bg-sky-100 dark:focus:bg-sky-900 transition-colors`} />
+    )}
+  </div>
+);
+
+const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-4 pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
+        <p className="text-sm font-medium opacity-90">{message}</p>
+        <div className="flex gap-2 mt-4">
+          <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
+          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
+        </div>
+      </MContainer>
+    </div>
+  );
+};
+
+// ==========================================
+// 6. ABAS DA APLICAÇÃO
+// ==========================================
+
+const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [editedItem, setEditedItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Todos');
+  const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [loadingWiki, setLoadingWiki] = useState(false);
+  const [wikiError, setWikiError] = useState('');
+  const itemsPerPage = 8;
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchesSearch = ((item.title || '').toLowerCase().includes(search.toLowerCase()) || (item.author_developer || '').toLowerCase().includes(search.toLowerCase()));
+      let matchesCategory = true;
+      if (activeCategory !== 'Todos') {
+        if (activeSubtype === 'Todos') matchesCategory = CATEGORIES[activeCategory]?.includes(item.type || '');
+        else matchesCategory = (item.type || '') === activeSubtype;
+      }
+      return matchesSearch && matchesCategory;
+    }).sort((a, b) => (b.id || '').localeCompare(a.id || '')); 
+  }, [items, search, activeCategory, activeSubtype]);
+
+  const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
+
+  const handleSelect = (item) => {
+    setSelectedItem(item);
+    setEditedItem({ ...item }); 
+  };
+
+  const updateRatingList = (id, newRating) => {
+    setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item));
+  };
+
+  const saveModifications = () => {
+    setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
+    setSelectedItem(editedItem);
+    playChipBeep('save');
+    onShowToast();
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete));
+      setItemToDelete(null);
+      setSelectedItem(null);
+      setEditedItem(null);
+    }
+  };
+
+  const fetchWikiInfo = async () => {
+    if (!settings.geminiApiKey) {
+      setWikiError("Para ativar a pesquisa IA, configure sua Chave de API na aba Ajustes.");
+      playChipBeep('error');
+      return;
+    }
+    setLoadingWiki(true);
+    setWikiError('');
+    try {
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [{ text: `Aja como um historiador, crítico e arquivista especialista. Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title || ''}" (Autor/Estúdio: "${editedItem.author_developer || ''}"). Retorne apenas o texto.` }]
+        }],
+        generationConfig: { responseMimeType: "text/plain" }
+      };
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (aiText) {
+        setEditedItem({...editedItem, wiki_info: aiText});
+        playChipBeep('success');
+      }
+    } catch (e) {
+      setWikiError("A Inteligência Artificial falhou ao buscar as informações desta vez.");
+      playChipBeep('error');
+    } finally {
+      setLoadingWiki(false);
+    }
+  };
+
+  if (selectedItem && editedItem) {
+    return (
+      <div className="flex flex-col h-full pb-20 relative">
+        <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
+        
+        {/* CABEÇALHO DA EDIÇÃO DE FICHA */}
+        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10 shadow-sm" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} active:scale-95 transition-transform`}><ChevronLeft className="w-5 h-5" /></button>
+            <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes da Mídia</div>
+          </div>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[3px] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-transform ${darkMode ? 'bg-emerald-800 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black'}`}>Salvar</button>
+        </MContainer>
+
+        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
+          <div className="flex gap-4">
+            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
+              {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
+            </MContainer>
+            <div className="flex flex-col flex-1 justify-between py-1">
+              {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[2px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-500 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
+              <MInput label="Título" value={editedItem.title || ''} onChange={e => setEditedItem({...editedItem, title: e.target.value})} darkMode={darkMode} />
+              <MInput label="Autor/Artista" value={editedItem.author_developer || ''} onChange={e => setEditedItem({...editedItem, author_developer: e.target.value})} darkMode={darkMode} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="number" darkMode={darkMode} />
+            <MInput label={['Livro', 'Quadrinho'].includes(editedItem.type || '') ? 'Págs' : 'Horas'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="number" darkMode={darkMode} />
+            <MInput label="Editora" value={editedItem.publisher || ''} onChange={e => setEditedItem({...editedItem, publisher: e.target.value})} darkMode={darkMode} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+          // ==========================================
 const CATEGORIES = {
   'Livros': ['Livro', 'Quadrinho'],
   'Discos': ['CD', 'Vinil', 'Fita Cassete'],
