@@ -30,6 +30,9 @@ const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
+// Ícones Adicionais para o Dashboard Interativo
+const FilterIcon = (p) => <Icon {...p} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
+const Calendar = (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />;
 
 // ==========================================
 // 2. DADOS E PLANO DE CLASSIFICAÇÃO
@@ -707,79 +710,185 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   );
 };
 
+// ==========================================
+// COMPONENTE DASHBOARD INTERATIVO
+// ==========================================
 const DashboardTab = ({ items, darkMode }) => {
-  const totalItems = items.length;
-  const byCategory = Object.keys(CATEGORIES).reduce((acc, cat) => {
-    acc[cat] = items.filter(i => CATEGORIES[cat].includes(i.type || '')).length;
+  // Estados para Filtros
+  const [filterCat, setFilterCat] = useState('Todas');
+  const [filterStatus, setFilterStatus] = useState('Todos');
+  const [filterRating, setFilterRating] = useState('Todas');
+
+  const dashItems = useMemo(() => {
+    return items.filter(item => {
+      let mCat = true, mStatus = true, mRating = true;
+      if (filterCat !== 'Todas') {
+        const catTypes = CATEGORIES[filterCat] || [];
+        mCat = catTypes.includes(item.type);
+      }
+      if (filterStatus !== 'Todos') mStatus = item.status === filterStatus;
+      if (filterRating !== 'Todas') mRating = item.rating === parseInt(filterRating);
+      return mCat && mStatus && mRating;
+    });
+  }, [items, filterCat, filterStatus, filterRating]);
+
+  const totalDash = dashItems.length;
+
+  // Agrupamento por Formato (Tipo)
+  const byType = dashItems.reduce((acc, i) => { acc[i.type || 'Outro'] = (acc[i.type || 'Outro'] || 0) + 1; return acc; }, {});
+  const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
+
+  // Agrupamento por Autor/Estúdio
+  const byAuthor = dashItems.reduce((acc, i) => { if (i.author_developer) { acc[i.author_developer] = (acc[i.author_developer] || 0) + 1; } return acc; }, {});
+  const sortedAuthors = Object.entries(byAuthor).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
+
+  // Agrupamento por Década
+  const byDecade = dashItems.reduce((acc, i) => {
+    const year = parseInt(i.year);
+    if (!isNaN(year) && year > 1800) {
+      const decade = Math.floor(year / 10) * 10;
+      acc[decade] = (acc[decade] || 0) + 1;
+    }
     return acc;
   }, {});
+  const decadesKeys = Object.keys(byDecade).sort();
+  const maxDecade = decadesKeys.length > 0 ? Math.max(...Object.values(byDecade)) : 1;
 
+  // Estatísticas Divertidas (Relíquia, Épico, Vergonha)
   const getFunStats = () => {
-    if (totalItems === 0) return {};
-    const validYears = items.filter(i => i.year && !isNaN(parseInt(i.year)));
+    if (totalDash === 0) return {};
+    const validYears = dashItems.filter(i => i.year && !isNaN(parseInt(i.year)));
     const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
-    const validLengths = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
+    const validLengths = dashItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
     const epico = validLengths.length > 0 ? validLengths.reduce((a, b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b) : null;
-    const vergonha = items.filter(i => i.status === 'Não Iniciado' && ['Livro', 'Quadrinho', 'Revista', 'Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4'].includes(i.type)).length;
-    const authors = items.map(i => i.author_developer).filter(Boolean);
-    const favorite = authors.length > 0 ? authors.sort((a,b) => authors.filter(v => v===a).length - authors.filter(v => v===b).length).pop() : null;
-    return { reliquia, epico, vergonha, favorite };
+    const vergonha = dashItems.filter(i => i.status === 'Não Iniciado').length;
+    return { reliquia, epico, vergonha };
   };
   const stats = getFunStats();
 
-  return (
-    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4">
-      <div className="flex gap-4">
-        <MContainer darkMode={darkMode} className="flex-1 flex flex-col items-center justify-center py-6 relative overflow-hidden" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black'}>
-          <LibraryBig className={`absolute -left-4 -bottom-4 w-32 h-32 ${darkMode ? 'text-white opacity-10' : 'text-black opacity-10'}`} />
-          <div className="text-6xl font-black z-10">{totalItems}</div>
-          <div className="text-[10px] font-black uppercase tracking-widest mt-1 z-10">Total na Coleção</div>
-        </MContainer>
+  // Gráfico Nativo Estilo Mondrian - Barra Horizontal
+  const MondrianHBar = ({ label, value, max, index }) => (
+    <div className="flex items-center gap-2 w-full mb-2">
+      <div className="w-16 text-[9px] font-black uppercase tracking-widest truncate" title={label}>{label}</div>
+      <div className={`flex-1 h-5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-gray-800 border-gray-500 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-gray-200 border-black'} flex relative`}>
+        <div className={`h-full transition-all duration-1000 ${getMondrianColor(index, darkMode)}`} style={{ width: `${(value / max) * 100}%` }} />
+        <span className={`absolute inset-0 flex items-center ml-2 text-[10px] font-black ${darkMode ? 'text-white' : 'text-black'} drop-shadow-md`}>{value}</span>
       </div>
+    </div>
+  );
 
-      <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Distribuição Geral</div>
-        <div className="space-y-3">
-          {Object.entries(byCategory).filter(([_, count]) => count > 0).map(([cat, count]) => {
-            const percentage = Math.round((count / totalItems) * 100) || 0;
-            return (
-              <div key={cat} className="flex items-center gap-2">
-                <div className="w-16 text-[10px] font-black uppercase tracking-wider">{cat}</div>
-                <div className={`flex-1 h-4 border-[3px] flex shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-gray-800 border-gray-500 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-gray-200 border-black'}`}>
-                  <div className={`h-full ${darkMode ? 'bg-gray-400' : 'bg-black'} transition-all duration-1000`} style={{ width: `${percentage}%` }}></div>
-                </div>
-                <div className="w-8 text-[10px] font-black text-right">{count} un.</div>
-              </div>
-            );
-          })}
+  return (
+    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide">
+      
+      {}
+      <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
+          <FilterIcon className="w-4 h-4" /> Filtros Interativos
+        </div>
+        <div className="flex gap-2">
+          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            <option value="Todas">Tudo</option>
+            {Object.keys(CATEGORIES).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            <option value="Todos">Status</option>
+            {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+          <select value={filterRating} onChange={e => setFilterRating(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            <option value="Todas">Notas</option>
+            {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Estrelas</option>)}
+          </select>
         </div>
       </MContainer>
 
-      {totalItems > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          {stats.reliquia && (
-            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
-              <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia<br/>(Mais Antigo)</div><Clock className="w-5 h-5 opacity-50" /></div>
-              <div><div className="text-sm font-black truncate">{stats.reliquia.title}</div><div className="text-[10px] font-bold">Lançado em {stats.reliquia.year}</div></div>
-            </MContainer>
-          )}
-          {stats.epico && (
-            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black'}>
-              <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico<br/>(Mais Longo)</div><Flame className="w-5 h-5 opacity-50" /></div>
-              <div><div className="text-sm font-black truncate">{stats.epico.title}</div><div className="text-[10px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho', 'Revista'].includes(stats.epico.type) ? 'Páginas' : 'Horas'}</div></div>
-            </MContainer>
-          )}
-          <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
-            <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">Intocados<br/>(Sem Iniciar)</div><Ghost className="w-5 h-5 opacity-50" /></div>
-            <div className="flex items-end gap-1"><div className="text-4xl font-black leading-none">{stats.vergonha}</div></div>
+      {}
+      <div className="grid grid-cols-2 gap-3">
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black'}>
+          <LibraryBig className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
+          <div className="text-5xl font-black z-10">{totalDash}</div>
+          <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div>
+        </MContainer>
+
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
+          <Ghost className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
+          <div className="text-5xl font-black z-10">{stats.vergonha || 0}</div>
+          <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Intocados / Backlog</div>
+        </MContainer>
+      </div>
+
+      {totalDash === 0 && (
+        <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest opacity-50">Nenhum dado para este filtro.</div>
+      )}
+
+      {}
+      {totalDash > 0 && (
+        <>
+          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+            <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Formatos Populares</div>
+            <div className="flex flex-col">
+              {sortedTypes.map(([type, count], index) => (
+                <MondrianHBar key={type} label={type} value={count} max={maxType} index={index} />
+              ))}
+            </div>
           </MContainer>
-          {stats.favorite && (
-            <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400 text-black'}>
-              <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">Mestre de<br/>Obras</div><Trophy className="w-5 h-5 opacity-50" /></div>
-              <div><div className="text-xs font-black truncate uppercase">{stats.favorite}</div><div className="text-[9px] font-bold opacity-80 mt-1">Autor / Estúdio</div></div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {stats.reliquia && (
+              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
+                <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div>
+                <div><div className="text-xs font-black truncate">{stats.reliquia.title}</div><div className="text-[9px] font-bold">Ano {stats.reliquia.year}</div></div>
+              </MContainer>
+            )}
+            {stats.epico && (
+              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black'}>
+                <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
+                <div><div className="text-xs font-black truncate">{stats.epico.title}</div><div className="text-[9px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho', 'Revista'].includes(stats.epico.type) ? 'Págs' : 'Horas'}</div></div>
+              </MContainer>
+            )}
+          </div>
+
+          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+            <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Top 5 Criadores / Estúdios</div>
+            <div className="flex flex-col">
+              {sortedAuthors.map(([author, count], index) => (
+                <MondrianHBar key={author} label={author} value={count} max={maxAuthor} index={index + 1} />
+              ))}
+              {sortedAuthors.length === 0 && <span className="text-[9px] font-bold opacity-50 uppercase">Sem dados de autores</span>}
+            </div>
+          </MContainer>
+
+          {}
+          {decadesKeys.length > 0 && (
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+              <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-500' : 'border-black'}`}>
+                <span>Linha do Tempo</span> <Calendar className="w-4 h-4" />
+              </div>
+              
+              <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+                {decadesKeys.map((decadeStr, idx) => {
+                  const count = byDecade[decadeStr];
+                  const heightPerc = (count / maxDecade) * 100;
+                  return (
+                    <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                      <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                      <div 
+                        className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-500' : 'border-black'}`}
+                        style={{ height: `${heightPerc}%` }}
+                      ></div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
+                {decadesKeys.map(decadeStr => (
+                  <div key={`label-${decadeStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>
+                ))}
+              </div>
             </MContainer>
           )}
-        </div>
+        </>
       )}
     </div>
   );
