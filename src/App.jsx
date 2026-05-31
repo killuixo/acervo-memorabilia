@@ -1,3 +1,4 @@
+```react
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
@@ -30,9 +31,9 @@ const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
-// Ícones Adicionais para o Dashboard Interativo
 const FilterIcon = (p) => <Icon {...p} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
 const Calendar = (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />;
+const Smartphone = (p) => <Icon {...p} path={<><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></>} />;
 
 // ==========================================
 // 2. DADOS E PLANO DE CLASSIFICAÇÃO
@@ -53,7 +54,6 @@ const CLASS_CODES = {
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
 
 const getMondrianColor = (index, darkMode) => {
-  // Paleta Estrita Mondrian: Branco, Preto, Rosa (Vermelho), Azul Claro, Amarelo.
   const colorsLight = ['bg-rose-400', 'bg-sky-400', 'bg-yellow-400', 'bg-white'];
   const colorsDark = ['bg-rose-800', 'bg-sky-800', 'bg-yellow-600', 'bg-gray-800'];
   return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
@@ -100,7 +100,6 @@ const playChipBeep = (type) => {
 // ==========================================
 // 4. HELPERS DE IMAGEM (RESIZER PARA API)
 // ==========================================
-// Reduz o tamanho da imagem antes de enviar à API do Google, evita lentidão e erros de payload.
 const resizeImageForAPI = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -127,7 +126,6 @@ const resizeImageForAPI = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Retorna Base64 compactado
         resolve(canvas.toDataURL('image/jpeg', 0.8));
       };
       img.onerror = reject;
@@ -141,6 +139,169 @@ const resizeImageForAPI = (file) => {
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
+);
+
+const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
+  let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
+  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black';
+  if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black';
+  if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black';
+  if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
+  if (variant === 'emerald') bgClass = darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400 text-black';
+
+  return (
+    <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
+      {icon && icon} {children}
+    </button>
+  );
+};
+
+const MInput = ({ label, value, onChange, type = "text", placeholder = "", multiline = false, darkMode }) => (
+  <div className="flex flex-col mb-3 w-full">
+    <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
+    {multiline ? (
+      <textarea value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none focus:bg-yellow-100 dark:focus:bg-yellow-900 transition-colors min-h-[80px] resize-none`} />
+    ) : (
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none focus:bg-sky-100 dark:focus:bg-sky-900 transition-colors`} />
+    )}
+  </div>
+);
+
+const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
+        <p className="text-sm font-bold opacity-90">{message}</p>
+        <div className="flex gap-2 mt-4">
+          <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
+          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
+        </div>
+      </MContainer>
+    </div>
+  );
+};
+
+// ==========================================
+// 6. ABAS DA APLICAÇÃO
+// ==========================================
+const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [editedItem, setEditedItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Todos');
+  const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [loadingWiki, setLoadingWiki] = useState(false);
+  const [wikiError, setWikiError] = useState('');
+  const itemsPerPage = 8;
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const titleSearch = (item.title || '').toLowerCase();
+      const authorSearch = (item.author_developer || '').toLowerCase();
+      const query = search.toLowerCase();
+      const matchesSearch = titleSearch.includes(query) || authorSearch.includes(query);
+      
+      let matchesCategory = true;
+      if (activeCategory !== 'Todos') {
+        if (activeSubtype === 'Todos') matchesCategory = CATEGORIES[activeCategory]?.includes(item.type || '');
+        else matchesCategory = (item.type || '') === activeSubtype;
+      }
+      return matchesSearch && matchesCategory;
+    }).sort((a, b) => (b.id || '').localeCompare(a.id || '')); 
+  }, [items, search, activeCategory, activeSubtype]);
+
+  const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
+
+  const handleSelect = (item) => {
+    setSelectedItem(item);
+    setEditedItem({ ...item }); 
+  };
+
+  const updateRatingList = (id, newRating) => {
+    setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item));
+  };
+
+  const saveModifications = () => {
+    setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
+    setSelectedItem(editedItem);
+    playChipBeep('save');
+    onShowToast();
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete));
+      setItemToDelete(null);
+      setSelectedItem(null);
+      setEditedItem(null);
+    }
+  };
+
+  const fetchWikiInfo = async () => {
+    const apiKey = settings.geminiApiKey || ""; 
+    if (!apiKey) {
+      setWikiError("Chave de API ausente (Vá em Ajustes).");
+      playChipBeep('error');
+      return;
+    }
+    setLoadingWiki(true);
+    setWikiError('');
+    try {
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [{ text: `Aja como um historiador, crítico e arquivista especialista. Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title || ''}" (Autor/Estúdio: "${editedItem.author_developer || ''}"). Retorne apenas o texto sem formatação extra.` }]
+        }],
+        generationConfig: { responseMimeType: "text/plain" }
+      };
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (aiText) {
+        setEditedItem({...editedItem, wiki_info: aiText});
+        playChipBeep('success');
+      }
+    } catch (e) {
+      setWikiError(`Erro: ${e.message}`);
+      playChipBeep('error');
+    } finally {
+      setLoadingWiki(false);
+    }
+  };
+
+  if (selectedItem && editedItem) {
+    const isBookOrGame = ['Livro', 'Quadrinho', 'Revista', 'Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4'].includes(editedItem.type);
+
+    return (
+      <div className="flex flex-col h-full pb-20 relative">
+        <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
+        
+        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
+            <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
+          </div>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-emerald-800 border-emerald-500 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'bg-emerald-400 border-black text-black'}`}>Salvar</button>
+        </MContainer>
+
+        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
+          <div className="flex gap-4">
+            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
+              {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
+            </MContainer>
+            <div className="flex flex-col flex-1 justify-between py-1">
+              {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-500 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
+              <MInput label="Título" value={editedItem.title || ''} onChange={e =v className={`border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
 );
 
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
