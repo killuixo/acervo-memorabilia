@@ -31,7 +31,7 @@ const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
-const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
+const Loader = (p) => <Icon {...p} path={<><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>} />;
 
 // ==========================================
 // 2. DADOS E PLANO DE CLASSIFICAÇÃO
@@ -484,7 +484,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   }, [addMode]);
 
   const fetchMultiDatabase = async (barcode) => {
-    setScanStatus({ type: 'info', message: 'Buscando em múltiplos bancos de dados...' });
+    setScanStatus({ type: 'info', message: 'Buscando em bancos de dados...' });
+    
     try {
       const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcode}`);
       const gbData = await gbRes.json();
@@ -525,24 +526,28 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   const handleScanSuccess = (mappedData) => {
     playChipBeep('success'); 
-    setScanStatus({ type: 'success', message: 'SUCESSO: Informações recuperadas da rede!' });
+    setScanStatus({ type: 'success', message: 'Encontrado! Verifique os dados abaixo.' });
     setFormData(prev => ({ ...prev, ...mappedData }));
   };
 
   const handleScanError = () => {
     playChipBeep('error'); 
-    setScanStatus({ type: 'error', message: 'FALHA: Item não encontrado. Preencha manualmente ou use a IA.' });
+    setScanStatus({ type: 'error', message: 'Não encontrado. Preencha manualmente ou use a IA.' });
   };
 
+  // ==========================================
+  // LÓGICA DE PROCESSAMENTO DA IA EXTRAÍDA
+  // ==========================================
   const processAIFile = async (file) => {
+    setAddMode('manual'); // MUDA PARA A TELA DO FORMULÁRIO IMEDIATAMENTE
+    
     if (!settings.geminiApiKey) {
       setScanStatus({ type: 'error', message: 'Chave API do Gemini ausente (Ajustes).' });
-      changeMode('manual');
       return;
     }
 
     setLoadingAi(true);
-    setScanStatus({ type: 'info', message: 'Processando a imagem através da IA...' });
+    setScanStatus({ type: 'info', message: 'Lendo imagem... Extraindo informações da ficha.' });
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -572,12 +577,15 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
           generationConfig: { responseMimeType: "application/json" }
         };
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${settings.geminiApiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
 
         const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
+        
+        if (data.error) {
+           throw new Error(data.error.message);
+        }
 
         const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
@@ -589,20 +597,21 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
             ...prev, title: parsedData.title || '', author_developer: parsedData.author_developer || '', year: parsedData.year?.toString() || '', publisher: parsedData.publisher || '', description: parsedData.description || '', pages_or_time: parsedData.pages_or_time || prev.pages_or_time, type: ALL_TYPES.includes(parsedData.type) ? parsedData.type : 'Livro'
           }));
           playChipBeep('success');
-          setScanStatus({ type: 'success', message: 'SUCESSO: Inteligência Artificial completou os dados!' });
+          setScanStatus({ type: 'success', message: 'Encontrado! Inteligência Artificial completou os dados.' });
         } else {
            throw new Error("Resposta da IA veio vazia.");
         }
       } catch (error) {
+        console.error(error);
         playChipBeep('error');
-        setScanStatus({ type: 'error', message: 'FALHA: A IA não conseguiu interpretar a imagem.' });
+        setScanStatus({ type: 'error', message: 'Não encontrado. A IA não conseguiu ler a imagem.' });
       } finally {
         setLoadingAi(false);
-        setAddMode('manual');
       }
     };
   };
 
+  // Observa arquivos enviados remotamente pelo componente pai
   useEffect(() => {
     if (pendingAIFile) {
       processAIFile(pendingAIFile);
@@ -680,35 +689,34 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
 
       {addMode === 'camera_ai' && (
         <MContainer darkMode={darkMode} className="flex-1 mb-4 p-6 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-           {loadingAi ? (
-             <div className="flex flex-col items-center">
-                <div className="w-12 h-12 border-4 border-black dark:border-white border-t-rose-500 rounded-full animate-spin mb-4"></div>
-                <h3 className="font-black uppercase tracking-widest text-sm mb-2">Processando IA...</h3>
-                <p className="text-[10px] opacity-70">A Inteligência Artificial está lendo os detalhes da imagem e preenchendo sua ficha. Por favor, aguarde alguns segundos.</p>
-             </div>
-           ) : (
-             <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-rose-500 rounded-full flex items-center justify-center mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] border-[3px] border-black text-white">
-                  <Camera className="w-8 h-8" />
-                </div>
-                <h3 className="font-black uppercase tracking-widest text-sm mb-2">Captura em Alta Resolução</h3>
-                <p className="text-[10px] opacity-70 mb-8 max-w-[250px]">Toque no botão abaixo para abrir a câmera original do seu celular. Tire uma foto nítida e bem iluminada da capa ou da ficha catalográfica.</p>
-                
-                <label className="flex items-center justify-center gap-2 px-6 py-4 font-sans text-xs font-bold uppercase tracking-wider border-[3px] border-black bg-rose-400 text-black active:scale-95 transition-transform cursor-pointer shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-rose-500">
-                  <Camera className="w-5 h-5" />
-                  Tirar Nova Foto
-                  <input type="file" accept="image/*" capture="environment" onChange={handleFichaAI} className="hidden" />
-                </label>
-             </div>
-           )}
+           <div className="flex flex-col items-center">
+              <div className="w-16 h-16 bg-rose-500 rounded-full flex items-center justify-center mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] border-[3px] border-black text-white">
+                <Camera className="w-8 h-8" />
+              </div>
+              <h3 className="font-black uppercase tracking-widest text-sm mb-2">Captura em Alta Resolução</h3>
+              <p className="text-[10px] opacity-70 mb-8 max-w-[250px]">Toque no botão abaixo para abrir a câmera original do seu celular. Tire uma foto nítida e bem iluminada da capa ou da ficha catalográfica.</p>
+              
+              {/* BOTÃO MÁGICO NATIVO */}
+              <label className="flex items-center justify-center gap-2 px-6 py-4 font-sans text-xs font-bold uppercase tracking-wider border-[3px] border-black bg-rose-400 text-black active:scale-95 transition-transform cursor-pointer shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-rose-500">
+                <Camera className="w-5 h-5" />
+                Tirar Nova Foto
+                <input type="file" accept="image/*" capture="environment" onChange={handleFichaAI} className="hidden" />
+              </label>
+           </div>
         </MContainer>
       )}
 
       {addMode === 'manual' && (
         <div className="flex-1 overflow-y-auto scrollbar-hide pr-1">
           {scanStatus && (
-            <div className={`p-4 mb-4 flex items-center gap-3 border-[3px] font-black text-[10px] uppercase tracking-widest ${darkMode ? scanStatus.type === 'success' ? 'bg-emerald-800 border-gray-500 text-white' : scanStatus.type === 'error' ? 'bg-rose-800 border-gray-500 text-white' : 'bg-yellow-700 border-gray-500 text-white' : scanStatus.type === 'success' ? 'bg-emerald-400 border-black text-black' : scanStatus.type === 'error' ? 'bg-rose-400 border-black text-black' : 'bg-yellow-400 border-black text-black'}`}>
-              {scanStatus.type === 'error' ? <AlertTriangle className="w-6 h-6 flex-shrink-0" /> : <Info className="w-6 h-6 flex-shrink-0" />}
+            <div className={`p-4 mb-4 flex items-center gap-3 border-[3px] font-black text-[10px] uppercase tracking-widest ${
+              darkMode 
+                ? scanStatus.type === 'success' ? 'bg-emerald-800 border-gray-500 text-white' : scanStatus.type === 'error' ? 'bg-rose-800 border-gray-500 text-white' : 'bg-yellow-700 border-gray-500 text-white'
+                : scanStatus.type === 'success' ? 'bg-emerald-400 border-black text-black' : scanStatus.type === 'error' ? 'bg-rose-400 border-black text-black' : 'bg-yellow-400 border-black text-black'
+            }`}>
+              {scanStatus.type === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0" />}
+              {scanStatus.type === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
+              {scanStatus.type === 'info' && <Loader className="w-6 h-6 flex-shrink-0 animate-spin" />}
               <span className="leading-tight">{scanStatus.message}</span>
             </div>
           )}
