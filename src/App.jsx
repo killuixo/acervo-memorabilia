@@ -51,8 +51,7 @@ const CLASS_CODES = {
 };
 
 const INITIAL_ITEMS = [
-  { id: '1', archive_code: 'LUI-562.1-0001', type: 'Livro', title: 'Neuromancer', author_developer: 'William Gibson', year: '1984', publisher: 'Aleph', status: 'Concluído', rating: 5, pages_or_time: '320', cover_url: 'https://books.google.com/books/content?id=pMytzQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api', description: 'O romance de estreia de William Gibson e o primeiro a ganhar os três principais prêmios de ficção científica.', location: '', notes: '' },
-  { id: '2', archive_code: 'LUI-520-0002', type: 'SNES', title: 'Chrono Trigger', author_developer: 'Square', year: '1995', publisher: 'Square', status: 'Em Andamento', rating: 5, pages_or_time: '40', cover_url: '', description: 'Um grupo de jovens viaja através do tempo para salvar o mundo de um parasita alienígena.', location: '', notes: '' }
+  { id: '1', archive_code: 'LUI-562.1-0001', type: 'Livro', title: 'Neuromancer', author_developer: 'William Gibson', year: '1984', publisher: 'Aleph', status: 'Concluído', rating: 5, pages_or_time: '320', cover_url: 'https://books.google.com/books/content?id=pMytzQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api', description: 'O romance de estreia de William Gibson e o primeiro a ganhar os três principais prêmios de ficção científica.', location: '', notes: '' }
 ];
 
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
@@ -354,8 +353,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   useEffect(() => {
     let isMounted = true;
 
+    // AI CAMERA: Puxando com alta resolução para o Gemini poder ler fichas catalográficas pequenas
     if (addMode === 'camera_ai') {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', advanced: [{ focusMode: 'continuous' }] } })
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } })
         .then(stream => {
           if (isMounted && videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -390,7 +390,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             }
           },
           () => {} 
-        ).catch(() => { if (isMounted) { setHasCameraPermission(false); setAddMode('manual'); } });
+        ).catch(() => {
+          if (isMounted) {
+            setHasCameraPermission(false);
+            setAddMode('manual');
+          }
+        });
       };
 
       if (window.Html5Qrcode) {
@@ -486,15 +491,15 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         contents: [{
           role: "user",
           parts: [
-            { text: `Você é um arquivista especialista. Analise a imagem e identifique o item de mídia.
-Responda APENAS com um objeto JSON válido, sem markdown extra, com as chaves exatas:
+            { text: `Você é um arquivista especialista. Leia ATENTAMENTE TODO O TEXTO visível, incluindo letras minúsculas (fichas catalográficas). Procure especificamente pelo Autor (ex: Espinosa), Título, Ano, Editora e Número de páginas (geralmente antes do 'p.'). 
+Responda ESTRITAMENTE com um objeto JSON válido.
 {
   "type": "Escolha UM entre: ${ALL_TYPES.join(', ')}",
-  "title": "Título",
-  "author_developer": "Autor, artista ou estúdio",
+  "title": "Título identificado",
+  "author_developer": "Autor principal, artista ou estúdio",
   "year": "Ano (4 dígitos)",
   "publisher": "Editora/Gravadora",
-  "pages_or_time": "Se ficha catalográfica, extraia páginas impressas. Se jogo, tempo estimado.",
+  "pages_or_time": "Apenas os números de páginas (se livro/quadrinho) ou horas estimadas (se jogo)",
   "description": "Sinopse de 2 linhas baseada no item."
 }` },
             { inlineData: { mimeType: "image/jpeg", data: base64Image } }
@@ -558,7 +563,7 @@ Responda APENAS com um objeto JSON válido, sem markdown extra, com as chaves ex
     }
 
     playChipBeep('save'); 
-    onShowToast(); // DISPARA O AVISO GLOBAL DISCRETO DE '✓'
+    onShowToast(); 
     
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '' });
     setScanStatus(null);
@@ -596,14 +601,12 @@ Responda APENAS com um objeto JSON válido, sem markdown extra, com as chaves ex
                 </>
               )}
 
-              {addMode === 'camera_ai' && (
-                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-[9px] uppercase font-black tracking-widest bg-black/80 px-4 py-2 text-center rounded-sm z-10 w-11/12">Fotografe Capa ou Ficha Catalográfica</div>
-              )}
-              
+              {/* TELA DE CARREGAMENTO DA IA MELHORADA */}
               {loadingAi && (
-                <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
-                  <div className="w-10 h-10 border-4 border-white border-t-rose-500 rounded-full animate-spin mb-4"></div>
-                  <div className="text-white font-black uppercase tracking-widest text-[10px] text-center animate-pulse">Lendo Imagem...</div>
+                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-sm">
+                  <div className="w-12 h-12 border-4 border-white border-t-rose-500 rounded-full animate-spin mb-4"></div>
+                  <div className="text-white font-black uppercase tracking-widest text-[10px] text-center animate-pulse mb-2">Lendo a Imagem...</div>
+                  <div className="text-gray-400 text-[8px] font-bold uppercase text-center px-6">Extraindo ficha catalográfica e detalhes via Inteligência Artificial</div>
                 </div>
               )}
               
@@ -643,7 +646,7 @@ Responda APENAS com um objeto JSON válido, sem markdown extra, com as chaves ex
               <div className="col-span-3"><MInput darkMode={darkMode} label="Editora / Gravadora" value={formData.publisher} onChange={e => setFormData({...formData, publisher: e.target.value})} /></div>
               <div className="col-span-1"><MInput darkMode={darkMode} label="Págs / Tempo" type="number" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
             </div>
-            
+
             <MInput darkMode={darkMode} label="URL da Capa (Opcional)" value={formData.cover_url} onChange={e => setFormData({...formData, cover_url: e.target.value})} />
             <MInput darkMode={darkMode} label="Localização Física" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="Ex: Estante Sala..." />
             <MInput darkMode={darkMode} label="Descrição / Sinopse" multiline value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
@@ -750,7 +753,7 @@ const DashboardTab = ({ items, darkMode }) => {
   );
 };
 
-const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode }) => {
+const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importData, setImportData] = useState(null);
 
@@ -782,6 +785,11 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     reader.readAsText(file); e.target.value = '';
   };
 
+  const handleSaveSettings = () => {
+    playChipBeep('save');
+    onShowToast();
+  };
+
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative">
       <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
@@ -789,13 +797,20 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
       <MContainer darkMode={darkMode} className="p-4 mb-4 flex justify-between items-center" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <div className="text-xs font-bold uppercase tracking-widest">Aparência</div>
-        <MButton darkMode={darkMode} onClick={() => setDarkMode(!darkMode)} variant="black" className="px-4 py-2">{darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {darkMode ? 'Modo Claro' : 'Modo Escuro'}</MButton>
+        <MButton darkMode={darkMode} onClick={() => setDarkMode(!darkMode)} variant="black" className="px-4 py-2">
+          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {darkMode ? 'Modo Claro' : 'Modo Escuro'}
+        </MButton>
       </MContainer>
 
       <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[3px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}><Library className="w-4 h-4" /> Integrações</div>
         <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings.geminiApiKey} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} />
         <MInput darkMode={darkMode} label="Google Sheets Webhook URL" value={settings.googleSheetsUrl} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} />
+        
+        <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-4">
+          <Check className="w-4 h-4" /> Salvar Chaves e Links
+        </MButton>
+
         {settings.googleSheetsUrl && <a href={settings.googleSheetsUrl} target="_blank" rel="noopener noreferrer" className="block mt-2"><MButton darkMode={darkMode} variant="blue" className="w-full text-[10px]"><ExternalLink className="w-4 h-4" /> Abrir Planilha Online</MButton></a>}
       </MContainer>
 
@@ -822,9 +837,8 @@ export default function App() {
   const [items, setItems] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '' });
   const [isLoaded, setIsLoaded] = useState(false);
-  const [globalToast, setGlobalToast] = useState(false); // ESTADO DO AVISO GLOBAL
+  const [globalToast, setGlobalToast] = useState(false); 
 
-  // Controlador de tempo do aviso de sucesso (✓)
   useEffect(() => {
     if (globalToast) {
       const timer = setTimeout(() => setGlobalToast(false), 2000);
@@ -888,7 +902,6 @@ export default function App() {
     <div className={`min-h-screen ${darkMode ? 'bg-[#121212] text-[#E0E0E0]' : 'bg-white text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <div className={`max-w-md mx-auto h-screen relative flex flex-col border-x-[4px] shadow-2xl overflow-hidden ${darkMode ? 'border-gray-500 bg-[#1a1a1a]' : 'border-black bg-gray-50'}`}>
         
-        {/* AVISO DISCRETO ('✓') */}
         {globalToast && (
           <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
             <div className={`w-12 h-12 border-[3px] border-black bg-emerald-400 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}>
@@ -916,7 +929,7 @@ export default function App() {
           {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} />}
           {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} />}
           {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} />}
-          {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} />}
+          {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={() => setGlobalToast(true)} />}
         </main>
 
         <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-500 bg-gray-900' : 'border-black bg-white'}`}>
