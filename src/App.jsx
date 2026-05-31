@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
-// 1. ÍCONES NATIVOS (Zero Dependências Externas)
+// 1. ÍCONES NATIVOS (Zero Dependências)
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
-  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    {path}
-  </svg>
+  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
 );
 
 const Search = (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
@@ -63,7 +61,7 @@ const getMondrianColor = (index, darkMode) => {
 };
 
 // ==========================================
-// 3. SISTEMA DE ÁUDIO (CHIPTUNE)
+// 3. SISTEMA DE ÁUDIO (CHIPTUNE 8-BIT)
 // ==========================================
 let globalAudioCtx = null;
 
@@ -117,7 +115,7 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// 4. COMPONENTES UI
+// 4. COMPONENTES UI MONDRIAN
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
@@ -321,10 +319,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
 const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast }) => {
   const [scanStatus, setScanStatus] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState(true);
   
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const scannerRef = useRef(null);
   const isProcessingScan = useRef(false);
 
@@ -337,11 +332,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     if (newMode !== 'manual') setScanStatus(null); 
   };
 
-  const cleanupMedia = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
+  const stopScanner = () => {
     if (scannerRef.current) {
       try {
         scannerRef.current.stop().then(() => { scannerRef.current?.clear(); }).catch(() => {});
@@ -350,26 +341,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
+  // Efeito principal para o Leitor de Código de Barras (somente quando ativo)
   useEffect(() => {
     let isMounted = true;
-
-    // AI CAMERA: Puxando com alta resolução para o Gemini poder ler fichas catalográficas pequenas
-    if (addMode === 'camera_ai') {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } })
-        .then(stream => {
-          if (isMounted && videoRef.current) {
-            videoRef.current.srcObject = stream;
-            setHasCameraPermission(true);
-          }
-        })
-        .catch(err => {
-          if (isMounted) {
-            setHasCameraPermission(false);
-            setScanStatus({ type: 'error', message: 'Câmera inacessível.' });
-            setAddMode('manual');
-          }
-        });
-    }
 
     if (addMode === 'barcode') {
       const startScanner = () => {
@@ -381,7 +355,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           (decodedText) => {
             if (isProcessingScan.current) return;
             isProcessingScan.current = true;
-            cleanupMedia(); 
+            stopScanner(); 
             if (isMounted) {
               setAddMode('manual');
               setFormData(prev => ({ ...prev, barcode: decodedText }));
@@ -392,7 +366,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           () => {} 
         ).catch(() => {
           if (isMounted) {
-            setHasCameraPermission(false);
+            setScanStatus({ type: 'error', message: 'Câmera inacessível para o leitor de código de barras.' });
             setAddMode('manual');
           }
         });
@@ -401,21 +375,15 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       if (window.Html5Qrcode) {
         startScanner();
       } else {
-        if (!document.getElementById('html5-qrcode-script')) {
-          const script = document.createElement('script');
-          script.id = 'html5-qrcode-script';
-          script.src = "https://unpkg.com/html5-qrcode";
-          script.onload = startScanner;
-          document.head.appendChild(script);
-        } else {
-          setTimeout(startScanner, 500);
-        }
+        setTimeout(startScanner, 500); // Aguarda o script carregar caso atrase
       }
+    } else {
+      stopScanner();
     }
 
     return () => {
       isMounted = false;
-      cleanupMedia();
+      stopScanner();
     };
   }, [addMode]);
 
@@ -470,29 +438,35 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     setScanStatus({ type: 'error', message: 'FALHA: Item não encontrado. Preencha manualmente ou use a IA.' });
   };
 
-  const captureAndAnalyzeAI = async () => {
+  // ==========================================
+  // O SEGREDO DA IA NO CELULAR: INPUT TYPE FILE (NATIVO)
+  // ==========================================
+  const handleFichaAI = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
     if (!settings.geminiApiKey) {
       setScanStatus({ type: 'error', message: 'Chave API do Gemini ausente (Ajustes).' });
       changeMode('manual');
       return;
     }
-    setLoadingAi(true);
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
-    cleanupMedia();
 
-    try {
-      const payload = {
-        contents: [{
-          role: "user",
-          parts: [
-            { text: `Você é um arquivista especialista. Leia ATENTAMENTE TODO O TEXTO visível, incluindo letras minúsculas (fichas catalográficas). Procure especificamente pelo Autor (ex: Espinosa), Título, Ano, Editora e Número de páginas (geralmente antes do 'p.'). 
-Responda ESTRITAMENTE com um objeto JSON válido.
+    setLoadingAi(true);
+    setScanStatus({ type: 'info', message: 'Processando a imagem através da IA...' });
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result.split(',')[1];
+        
+        const payload = {
+          contents: [{
+            role: "user",
+            parts: [
+              { text: `Você é um arquivista especialista. Leia ATENTAMENTE TODO O TEXTO visível, incluindo letras minúsculas de fichas catalográficas.
+Procure especificamente pelo Autor (ex: Espinosa), Título, Ano, Editora e Número de páginas. 
+Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, apenas o JSON puro):
 {
   "type": "Escolha UM entre: ${ALL_TYPES.join(', ')}",
   "title": "Título identificado",
@@ -502,36 +476,46 @@ Responda ESTRITAMENTE com um objeto JSON válido.
   "pages_or_time": "Apenas os números de páginas (se livro/quadrinho) ou horas estimadas (se jogo)",
   "description": "Sinopse de 2 linhas baseada no item."
 }` },
-            { inlineData: { mimeType: "image/jpeg", data: base64Image } }
-          ]
-        }],
-        generationConfig: { responseMimeType: "application/json" }
-      };
+              { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
+            ]
+          }],
+          generationConfig: { responseMimeType: "application/json" }
+        };
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${settings.geminiApiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-      });
-      const data = await response.json();
-      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (aiText) {
-        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsedData = JSON.parse(jsonMatch[0]);
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        
+        if (data.error) {
+           throw new Error(data.error.message);
+        }
+
+        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (aiText) {
+          const cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const parsedData = JSON.parse(cleanedText);
+          
           setFormData(prev => ({
             ...prev, title: parsedData.title || '', author_developer: parsedData.author_developer || '', year: parsedData.year?.toString() || '', publisher: parsedData.publisher || '', description: parsedData.description || '', pages_or_time: parsedData.pages_or_time || prev.pages_or_time, type: ALL_TYPES.includes(parsedData.type) ? parsedData.type : 'Livro'
           }));
           playChipBeep('success');
           setScanStatus({ type: 'success', message: 'SUCESSO: Inteligência Artificial completou os dados!' });
-        } else { throw new Error("JSON não encontrado"); }
+        } else {
+           throw new Error("Resposta da IA veio vazia.");
+        }
+      } catch (error) {
+        console.error(error);
+        playChipBeep('error');
+        setScanStatus({ type: 'error', message: 'FALHA: A IA não conseguiu interpretar a imagem.' });
+      } finally {
+        setLoadingAi(false);
+        setAddMode('manual');
+        e.target.value = null; // Reseta o input para permitir tirar nova foto logo em seguida
       }
-    } catch (error) {
-      playChipBeep('error');
-      setScanStatus({ type: 'error', message: 'FALHA: A Inteligência Artificial não conseguiu interpretar a imagem.' });
-    } finally {
-      setLoadingAi(false);
-      setAddMode('manual');
-    }
+    };
   };
 
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -574,50 +558,59 @@ Responda ESTRITAMENTE com um objeto JSON válido.
     <div className="flex flex-col h-full pb-20">
       <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar na biblioteca." onConfirm={() => setShowErrorModal(false)} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
 
+      {/* TABS SUPERIORES DO MODO ADICIONAR */}
       <div className="flex gap-2 mb-4">
-        <MButton darkMode={darkMode} variant={addMode === 'manual' ? 'blue' : 'white'} onClick={() => changeMode('manual')} className="flex-1 py-2 text-[10px]"><PlusSquare className="w-4 h-4" /> Manual</MButton>
-        <MButton darkMode={darkMode} variant={addMode === 'barcode' ? 'yellow' : 'white'} onClick={() => changeMode('barcode')} className="flex-1 py-2 text-[10px]"><ScanLine className="w-4 h-4" /> Barcode</MButton>
-        <MButton darkMode={darkMode} variant={addMode === 'camera_ai' ? 'red' : 'white'} onClick={() => changeMode('camera_ai')} className="flex-1 py-2 text-[10px]"><Camera className="w-4 h-4" /> Auto IA</MButton>
+        <MButton darkMode={darkMode} variant={addMode === 'manual' ? 'blue' : 'white'} onClick={() => changeMode('manual')} className="flex-1 py-2 text-[10px]">
+          <PlusSquare className="w-4 h-4" /> Manual
+        </MButton>
+        <MButton darkMode={darkMode} variant={addMode === 'barcode' ? 'yellow' : 'white'} onClick={() => changeMode('barcode')} className="flex-1 py-2 text-[10px]">
+          <ScanLine className="w-4 h-4" /> Barcode
+        </MButton>
+        <MButton darkMode={darkMode} variant={addMode === 'camera_ai' ? 'red' : 'white'} onClick={() => changeMode('camera_ai')} className="flex-1 py-2 text-[10px]">
+          <Camera className="w-4 h-4" /> Auto IA
+        </MButton>
       </div>
 
-      {(addMode === 'camera_ai' || addMode === 'barcode') && (
+      {/* TELA DE BARCODE */}
+      {addMode === 'barcode' && (
         <MContainer darkMode={darkMode} className="flex-1 mb-4 flex flex-col relative overflow-hidden bg-black items-center justify-center">
-          {!hasCameraPermission && !loadingAi && (
-            <div className="text-white text-xs font-bold uppercase p-6 text-center leading-relaxed">Permissão de câmera bloqueada pelo navegador.<br/><br/><MButton darkMode={true} onClick={() => changeMode('manual')} variant="yellow" className="mx-auto mt-4">Ir para o modo Manual</MButton></div>
-          )}
-          
-          {hasCameraPermission && (
-            <>
-              {addMode === 'barcode' && <div id="reader-barcode" className="w-full h-full object-cover"></div>}
-              {addMode === 'camera_ai' && <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />}
-              <canvas ref={canvasRef} className="hidden" />
-              
-              {addMode === 'barcode' && (
-                <>
-                  <div className="absolute inset-0 border-[10px] border-black/30 pointer-events-none" />
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-4 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] pointer-events-none flex flex-col items-center justify-center">
-                     <span className="text-white text-[10px] uppercase font-bold tracking-widest bg-black/80 px-3 py-1 mt-24">Aponte o Código</span>
-                  </div>
-                </>
-              )}
-
-              {/* TELA DE CARREGAMENTO DA IA MELHORADA */}
-              {loadingAi && (
-                <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center backdrop-blur-sm">
-                  <div className="w-12 h-12 border-4 border-white border-t-rose-500 rounded-full animate-spin mb-4"></div>
-                  <div className="text-white font-black uppercase tracking-widest text-[10px] text-center animate-pulse mb-2">Lendo a Imagem...</div>
-                  <div className="text-gray-400 text-[8px] font-bold uppercase text-center px-6">Extraindo ficha catalográfica e detalhes via Inteligência Artificial</div>
-                </div>
-              )}
-              
-              {addMode === 'camera_ai' && !loadingAi && (
-                <button onClick={captureAndAnalyzeAI} className="absolute bottom-6 w-16 h-16 bg-white border-[4px] border-black rounded-full active:bg-rose-300 transition-colors flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)] z-10"><Camera className="w-6 h-6 text-black" /></button>
-              )}
-            </>
-          )}
+          <div id="reader-barcode" className="w-full h-full object-cover"></div>
+          <div className="absolute inset-0 border-[10px] border-black/30 pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-4 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] pointer-events-none flex flex-col items-center justify-center">
+            <span className="text-white text-[10px] uppercase font-bold tracking-widest bg-black/80 px-3 py-1 mt-24">Aponte o Código</span>
+          </div>
         </MContainer>
       )}
 
+      {/* TELA DE AUTO IA COM INPUT FILE NATIVO */}
+      {addMode === 'camera_ai' && (
+        <MContainer darkMode={darkMode} className="flex-1 mb-4 p-6 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+           {loadingAi ? (
+             <div className="flex flex-col items-center">
+                <div className="w-12 h-12 border-4 border-black dark:border-white border-t-rose-500 rounded-full animate-spin mb-4"></div>
+                <h3 className="font-black uppercase tracking-widest text-sm mb-2">Processando IA...</h3>
+                <p className="text-[10px] opacity-70">A Inteligência Artificial está lendo os detalhes da imagem e preenchendo sua ficha. Por favor, aguarde alguns segundos.</p>
+             </div>
+           ) : (
+             <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-rose-500 rounded-full flex items-center justify-center mb-6 shadow-[4px_4px_0px_rgba(0,0,0,1)] border-[3px] border-black text-white">
+                  <Camera className="w-8 h-8" />
+                </div>
+                <h3 className="font-black uppercase tracking-widest text-sm mb-2">Captura em Alta Resolução</h3>
+                <p className="text-[10px] opacity-70 mb-8 max-w-[250px]">Toque no botão abaixo para abrir a câmera original do seu celular. Tire uma foto nítida e bem iluminada da capa ou da ficha catalográfica.</p>
+                
+                {/* BOTÃO MÁGICO NATIVO */}
+                <label className="flex items-center justify-center gap-2 px-6 py-4 font-sans text-xs font-bold uppercase tracking-wider border-[3px] border-black bg-rose-400 text-black active:scale-95 transition-transform cursor-pointer shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-rose-500">
+                  <Camera className="w-5 h-5" />
+                  Abrir Câmera do Celular
+                  <input type="file" accept="image/*" capture="environment" onChange={handleFichaAI} className="hidden" />
+                </label>
+             </div>
+           )}
+        </MContainer>
+      )}
+
+      {/* TELA MANUAL */}
       {addMode === 'manual' && (
         <div className="flex-1 overflow-y-auto scrollbar-hide pr-1">
           {scanStatus && (
@@ -838,6 +831,17 @@ export default function App() {
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '' });
   const [isLoaded, setIsLoaded] = useState(false);
   const [globalToast, setGlobalToast] = useState(false); 
+
+  // Lógica de scripts externos
+  useEffect(() => {
+    if (!document.getElementById('html5-qrcode-script')) {
+      const script = document.createElement('script');
+      script.id = 'html5-qrcode-script';
+      script.src = "https://unpkg.com/html5-qrcode";
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, []);
 
   useEffect(() => {
     if (globalToast) {
