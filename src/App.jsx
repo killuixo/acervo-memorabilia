@@ -2,11 +2,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
-// CONFIGURAÇÕES DO APLICATIVO (Altere aqui!)
+// CONFIGURAÇÕES DO APLICATIVO
 // ==========================================
-// Substitua o link abaixo pelo link "Raw" da sua imagem no GitHub.
-// O aplicativo usará esta imagem automaticamente para o ícone de instalação!
-const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/cat-teste/refs/heads/main/icon-192.png";
+// A imagem abaixo será usada tanto no PWA (Instalação) quanto no Cabeçalho do App!
+const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/cat-teste/main/icon-192.png";
 
 
 // ==========================================
@@ -68,6 +67,290 @@ const usePWA = (iconUrl) => {
     const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
     const manifestUrl = URL.createObjectURL(manifestBlob);
     let manifestLink = document.querySelector('link[rel="manifest"]');
+    if (!manifestLink) {
+      manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      document.head.appendChild(manifestLink);
+    }
+    manifestLink.href = manifestUrl;
+
+    // 2. Criar Service Worker Virtual (Necessário para ser instalável)
+    if ('serviceWorker' in navigator) {
+      const swCode = `self.addEventListener('fetch', (e) => {});`;
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl).catch(() => {});
+    }
+
+    // 3. Capturar o evento de instalação do Chrome/Android
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // 4. Verificar se já está rodando como App
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, [iconUrl]);
+
+  const promptInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    }
+  };
+
+  return { isInstallable: !!installPrompt, promptInstall, isInstalled };
+};
+
+// ==========================================
+// 2. DADOS E PLANO DE CLASSIFICAÇÃO
+// ==========================================
+const CATEGORIES = {
+  'Livros': ['Livro', 'Quadrinho', 'Revista'],
+  'Discos': ['CD', 'Vinil', 'Fita Cassete'],
+  'Vídeo': ['VHS', 'DVD'],
+  'Games': ['Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4']
+};
+const ALL_TYPES = Object.values(CATEGORIES).flat();
+
+const CLASS_CODES = {
+  'Livro': '562.1', 'Quadrinho': '562.2', 'Revista': '562.3', 'CD': '515.1', 'Vinil': '515.2', 'Fita Cassete': '515.3',
+  'VHS': '544.1', 'DVD': '544.2', 'Mega Drive': '520', 'SNES': '520', 'Wii': '520', 'PS1': '520', 'PS2': '520', 'PS4': '520'
+};
+
+const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
+
+const getMondrianColor = (index, darkMode) => {
+  const colorsLight = ['bg-rose-400', 'bg-sky-400', 'bg-yellow-400', 'bg-white'];
+  const colorsDark = ['bg-rose-800', 'bg-sky-800', 'bg-yellow-600', 'bg-gray-800'];
+  return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
+};
+
+// ==========================================
+// 3. SISTEMA DE ÁUDIO (CHIPTUNE 8-BIT)
+// ==========================================
+let globalAudioCtx = null;
+const initAudio = () => {
+  try {
+    if (!globalAudioCtx) { const AudioContext = window.AudioContext || window.webkitAudioContext; if (AudioContext) globalAudioCtx = new AudioContext(); }
+    if (globalAudioCtx && globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+  } catch (e) { }
+};
+
+const playChipBeep = (type) => {
+  try {
+    if (!globalAudioCtx) initAudio();
+    if (!globalAudioCtx) return;
+    if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+    const oscillator = globalAudioCtx.createOscillator();
+    const gainNode = globalAudioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(globalAudioCtx.destination);
+    const now = globalAudioCtx.currentTime;
+
+    if (type === 'success') {
+      oscillator.type = 'square'; oscillator.frequency.setValueAtTime(1046.50, now);
+      gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      oscillator.start(now); oscillator.stop(now + 0.15);
+    } else if (type === 'error') {
+      oscillator.type = 'sawtooth'; oscillator.frequency.setValueAtTime(300, now); oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+      gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      oscillator.start(now); oscillator.stop(now + 0.2);
+    } else if (type === 'save') {
+      oscillator.type = 'square'; oscillator.frequency.setValueAtTime(523.25, now); oscillator.frequency.setValueAtTime(783.99, now + 0.1);
+      gainNode.gain.setValueAtTime(0.04, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      oscillator.start(now); oscillator.stop(now + 0.25);
+    }
+  } catch (e) {}
+};
+
+// ==========================================
+// 4. HELPERS DE IMAGEM (RESIZER PARA API)
+// ==========================================
+const resizeImageForAPI = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const MAX_DIMENSION = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > MAX_DIMENSION) {
+          height *= MAX_DIMENSION / width;
+          width = MAX_DIMENSION;
+        } else if (height > MAX_DIMENSION) {
+          width *= MAX_DIMENSION / height;
+          height = MAX_DIMENSION;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
+
+// ==========================================
+// 5. COMPONENTES UI MONDRIAN
+// ==========================================
+const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
+  <div className={`border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
+);
+
+const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
+  let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
+  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black';
+  if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black';
+  if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black';
+  if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
+  if (variant === 'emerald') bgClass = darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400 text-black';
+
+  return (
+    <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
+      {icon && icon} {children}
+    </button>
+  );
+};
+
+const MInput = ({ label, value, onChange, type = "text", placeholder = "", multiline = false, darkMode }) => (
+  <div className="flex flex-col mb-3 w-full">
+    <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
+    {multiline ? (
+      <textarea value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none focus:bg-yellow-100 dark:focus:bg-yellow-900 transition-colors min-h-[80px] resize-none`} />
+    ) : (
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none focus:bg-sky-100 dark:focus:bg-sky-900 transition-colors`} />
+    )}
+  </div>
+);
+
+const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
+        <p className="text-sm font-bold opacity-90">{message}</p>
+        <div className="flex gap-2 mt-4">
+          <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
+          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
+        </div>
+      </MContainer>
+    </div>
+  );
+};
+
+// ==========================================
+// 6. ABAS DA APLICAÇÃO
+// ==========================================
+
+const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [editedItem, setEditedItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Todos');
+  const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [loadingWiki, setLoadingWiki] = useState(false);
+  const [wikiError, setWikiError] = useState('');
+  const itemsPerPage = 8;
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const titleSearch = (item.title || '').toLowerCase();
+      const authorSearch = (item.author_developer || '').toLowerCase();
+      const query = search.toLowerCase();
+      const matchesSearch = titleSearch.includes(query) || authorSearch.includes(query);
+      
+      let matchesCategory = true;
+      if (activeCategory !== 'Todos') {
+        if (activeSubtype === 'Todos') matchesCategory = CATEGORIES[activeCategory]?.includes(item.type || '');
+        else matchesCategory = (item.type || '') === activeSubtype;
+      }
+      return matchesSearch && matchesCategory;
+    }).sort((a, b) => (b.id || '').localeCompare(a.id || '')); 
+  }, [items, search, activeCategory, activeSubtype]);
+
+  const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
+
+  const handleSelect = (item) => {
+    setSelectedItem(item);
+    setEditedItem({ ...item }); 
+  };
+
+  const updateRatingList = (id, newRating) => {
+    setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item));
+  };
+
+  const saveModifications = () => {
+    setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
+    setSelectedItem(editedItem);
+    playChipBeep('save');
+    onShowToast();
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete));
+      setItemToDelete(null);
+      setSelectedItem(null);
+      setEditedItem(null);
+    }
+  };
+
+  const fetchWikiInfo = async () => {
+    const apiKey = settings.geminiApiKey || ""; 
+    if (!apiKey) {
+      setWikiError("Chave de API ausente (Vá em Ajustes).");
+      playChipBeep('error');
+      return;
+    }
+    setLoadingWiki(true);
+    setWikiError('');
+    try {
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [{ text: `Aja como um historiador, crítico e arquivista especialista. Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title || ''}" (Autor/Estúdio: "${editedItem.author_developer || ''}"). Retorne apenas o texto sem formatação extra.` }]
+        }],
+        generationConfig: { responseMimeType: "text/plain" }
+      };
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (aiText) {
+        setEditedItem({...editedItem, wiki_info: aiText});
+        playChipBeep('success');
+      }
+    } catch (e) {
+      setWikiError(`Erro: ${e.message}`);
+      playChipBeep('error');
+    } finall    let manifestLink = document.querySelector('link[rel="manifest"]');
     if (!manifestLink) {
       manifestLink = document.createElement('link');
       manifestLink.rel = 'manifest';
