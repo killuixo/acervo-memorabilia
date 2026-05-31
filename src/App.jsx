@@ -1,4 +1,3 @@
-```react
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
@@ -1272,6 +1271,3 @@ Retorne EXATAMENTE um objeto JSON válido. Use o seguinte formato exato sem queb
     </div>
   );
 }
-
-
-```
