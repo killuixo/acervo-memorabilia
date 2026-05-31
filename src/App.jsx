@@ -23,7 +23,7 @@ const ChevronLeft = (p) => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
 const ChevronRight = (p) => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
 const X = (p) => <Icon {...p} path={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} />;
 const Check = (p) => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
-const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2-2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
+const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
 const Clock = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
 const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
 const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
@@ -263,7 +263,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
         generationConfig: { responseMimeType: "text/plain" }
       };
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiApiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const data = await response.json();
@@ -382,7 +382,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
     );
   }
 
-  // --- MODO LISTA NORMAL ---
   return (
     <div className="flex flex-col h-full">
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 shadow-md" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -463,7 +462,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
-  // Escuta os resultados da IA global no arquivo raiz
   useEffect(() => {
     const handleAiSuccess = (e) => {
       const data = e.detail;
@@ -776,9 +774,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   const handleExportCSV = () => {
     if (items.length === 0) return;
-    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações'];
+    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
-    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes)]);
+    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes), escape(i.wiki_info)]);
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Memorabilia_Export_${new Date().toISOString().split('T')[0]}.csv`; link.click();
@@ -821,6 +819,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
            if (h === 'URL da Capa') key = 'cover_url';
            if (h === 'Localização') key = 'location';
            if (h === 'Anotações') key = 'notes';
+           if (h === 'Wiki') key = 'wiki_info';
 
            item[key] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
         });
@@ -908,11 +907,11 @@ export default function App() {
   };
 
   // ==============================================================
-  // A MÁGICA RESTAURADA: FILE READER PURO NATIVO (Sem Compressão)
+  // A MÁGICA DA IA (Gemini 1.5 Flash + JSON Robusto)
   // ==============================================================
   const processGlobalAIFile = async (file) => {
     if (!settings.geminiApiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente (Ajustes).'); return; }
-    setAiBoxState('loading'); setAiBoxMessage('Lendo imagem...');
+    setAiBoxState('loading'); setAiBoxMessage('Analisando imagem com IA...');
     
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -923,38 +922,61 @@ export default function App() {
         const payload = {
           contents: [{
             parts: [
-              { text: `Extraia JSON (type, title, author_developer, publisher, year, pages_or_time, description) desta imagem de capa, contracapa, disco ou ficha catalográfica. 
-Se for disco (CD/Vinil), busque logotipos de gravadoras e símbolos de copyright (ex: ℗ 2000) para o ano. 
-Para 'type' escolha UM rigorosamente: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4.
-Retorne APENAS um objeto JSON válido.` },
+              { text: `Extraia dados desta imagem (pode ser capa de CD, vinil, livro, ficha catalográfica ou game).
+Retorne APENAS um JSON válido, sem formatação markdown.
+Chaves obrigatórias:
+"type": "Escolha UM: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4",
+"title": "Título da obra",
+"author_developer": "Autor do livro, banda/artista do CD ou estúdio do game",
+"year": "Ano de lançamento (em CDs procure por símbolos como ℗ ou ©)",
+"publisher": "Editora do livro, gravadora do disco ou distribuidora",
+"pages_or_time": "Apenas números (páginas se livro, minutos se mídia)",
+"description": "Sinopse de 2 linhas sobre a obra."
+Se não achar alguma informação, deixe a string vazia "".` },
               { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
             ]
           }],
           generationConfig: { responseMimeType: "application/json" }
         };
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiApiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error("Chave API inválida ou erro de rede.");
-        const result = await response.json();
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(`Erro API: ${errData.error?.message || response.statusText}`);
+        }
         
+        const result = await response.json();
         if (result.error) throw new Error(result.error.message);
 
-        const aiText = result.candidates[0].content.parts[0].text;
-        const parsedData = JSON.parse(aiText.replace(/```json/gi, '').replace(/```/g, '').trim());
+        const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!aiText) throw new Error("A IA retornou uma resposta vazia.");
+        
+        // Limpeza matemática de JSON
+        let cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const startIndex = cleanedText.indexOf('{');
+        const endIndex = cleanedText.lastIndexOf('}');
+        if (startIndex !== -1 && endIndex !== -1) {
+          cleanedText = cleanedText.substring(startIndex, endIndex + 1);
+        }
+        
+        const parsedData = JSON.parse(cleanedText);
         
         setAddMode('manual');
         setAiBoxState('success');
-        setAiBoxMessage('Encontrado!');
+        setAiBoxMessage('Ficha preenchida pela IA!');
         playChipBeep('success');
         
         const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
         window.dispatchEvent(event);
 
       } catch (error) { 
-        setAiBoxState('error'); setAiBoxMessage('Não encontrado. Preencha manualmente.'); playChipBeep('error');
+        console.error("Erro IA:", error);
+        setAiBoxState('error'); 
+        setAiBoxMessage(`Falha: ${error.message.substring(0, 40)}...`); 
+        playChipBeep('error');
       }
     };
   };
@@ -1028,6 +1050,7 @@ Retorne APENAS um objeto JSON válido.` },
           
           {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
           
+          {/* Lógica de injetar o estado global da IA no formulário Manual */}
           {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} />}
           
           {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} />}
