@@ -142,24 +142,25 @@ function parseCSV(text) {
 }
 
 const normalizeHeader = (header) => {
-  const lower = header.trim().toLowerCase();
+  // Limpa aspas indesejadas, espaços e deixa tudo em minúsculo para leitura infalível
+  const lower = header.replace(/^"|"$/g, '').trim().toLowerCase();
   const map = {
     'id': 'id',
-    'código arquivístico': 'archive_code', 'codigo arquivistico': 'archive_code', 'archive_code': 'archive_code',
-    'tipo': 'type', 'type': 'type',
+    'código arquivístico': 'archive_code', 'codigo arquivistico': 'archive_code', 'código': 'archive_code', 'archive_code': 'archive_code',
+    'tipo': 'type', 'tipo de mídia': 'type', 'type': 'type',
     'título': 'title', 'titulo': 'title', 'title': 'title',
-    'autor/desenvolvedor': 'author_developer', 'autor': 'author_developer', 'author_developer': 'author_developer',
-    'ano': 'year', 'year': 'year',
-    'editora/gravadora': 'publisher', 'editora': 'publisher', 'publisher': 'publisher',
-    'status': 'status',
-    'nota': 'rating', 'rating': 'rating',
-    'páginas/tempo': 'pages_or_time', 'paginas/tempo': 'pages_or_time', 'pages_or_time': 'pages_or_time',
-    'código de barras': 'barcode', 'codigo de barras': 'barcode', 'barcode': 'barcode',
-    'descrição': 'description', 'descricao': 'description', 'description': 'description',
-    'url da capa': 'cover_url', 'cover_url': 'cover_url',
-    'localização': 'location', 'localizacao': 'location', 'location': 'location',
-    'anotações': 'notes', 'anotacoes': 'notes', 'notes': 'notes',
-    'wiki_info': 'wiki_info'
+    'autor/desenvolvedor': 'author_developer', 'autor': 'author_developer', 'artista': 'author_developer', 'desenvolvedor': 'author_developer', 'author_developer': 'author_developer',
+    'ano': 'year', 'ano lançamento': 'year', 'ano de lançamento': 'year', 'data': 'year', 'year': 'year',
+    'editora/gravadora': 'publisher', 'editora': 'publisher', 'gravadora': 'publisher', 'estúdio': 'publisher', 'publisher': 'publisher',
+    'status': 'status', 'status atual': 'status',
+    'nota': 'rating', 'avaliação': 'rating', 'rating': 'rating',
+    'páginas/tempo': 'pages_or_time', 'paginas/tempo': 'pages_or_time', 'páginas': 'pages_or_time', 'tempo': 'pages_or_time', 'pages_or_time': 'pages_or_time',
+    'código de barras': 'barcode', 'codigo de barras': 'barcode', 'barcode': 'barcode', 'isbn': 'barcode',
+    'descrição': 'description', 'descricao': 'description', 'sinopse': 'description', 'description': 'description',
+    'url da capa': 'cover_url', 'url capa': 'cover_url', 'capa': 'cover_url', 'cover_url': 'cover_url',
+    'localização': 'location', 'localizacao': 'location', 'local': 'location', 'location': 'location',
+    'anotações': 'notes', 'anotacoes': 'notes', 'fichamento': 'notes', 'notes': 'notes',
+    'wiki_info': 'wiki_info', 'wiki': 'wiki_info', 'enciclopédia': 'wiki_info'
   };
   return map[lower] || header;
 };
@@ -907,7 +908,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       const parsedRows = parseCSV(evt.target.result);
       if (parsedRows.length < 2) return;
       
-      const headers = parsedRows[0].map(h => h.trim());
+      // Limpa possíveis espaços ou aspas nos cabeçalhos para mapeamento exato
+      const headers = parsedRows[0].map(h => h.replace(/^"|"$/g, '').trim());
       const newItems = [];
       
       for(let i = 1; i < parsedRows.length; i++) {
@@ -917,7 +919,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         
         headers.forEach((h, idx) => { 
            const mappedKey = normalizeHeader(h);
-           item[mappedKey] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
+           // Remove lixo invisível, aspas de Excel e quebras de linha nas pontas
+           item[mappedKey] = row[idx] ? row[idx].replace(/\r$/, '').replace(/^"|"$/g, '').trim() : ''; 
         });
 
         if (item.id || item.title) {
