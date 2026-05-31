@@ -29,7 +29,6 @@ const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0
 const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
 const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />;
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
-const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
 
@@ -60,8 +59,37 @@ const getMondrianColor = (index, darkMode) => {
 };
 
 // ==========================================
-// 3. SISTEMA DE ÁUDIO (CHIPTUNE 8-BIT)
+// 3. COMPRESSOR DE IMAGENS & ÁUDIO 8-BIT
 // ==========================================
+
+// Previne o envio de fotos de 10MB que travam a IA
+const compressImage = (file, maxWidth = 1024) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]); // Qualidade 70%
+      };
+      img.onerror = reject;
+      img.src = event.target.result;
+    };
+    reader.onerror = reject;
+  });
+};
+
 let globalAudioCtx = null;
 const initAudio = () => {
   try {
@@ -99,48 +127,7 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// 4. PARSER DE CSV ROBUSTO E MAPEAMENTO
-// ==========================================
-function parseCSV(str) {
-  const arr = [];
-  let quote = false;
-  let row = 0, col = 0, c = 0;
-  for (; c < str.length; c++) {
-    let cc = str[c], nc = str[c+1];
-    arr[row] = arr[row] || [];
-    arr[row][col] = arr[row][col] || '';
-    if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
-    if (cc === '"') { quote = !quote; continue; }
-    if (cc === ',' && !quote) { ++col; continue; }
-    if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
-    if (cc === '\n' && !quote) { ++row; col = 0; continue; }
-    if (cc === '\r' && !quote) { ++row; col = 0; continue; }
-    arr[row][col] += cc;
-  }
-  return arr;
-}
-
-const HEADER_MAP = {
-  'id': 'id', 'ID': 'id',
-  'archive_code': 'archive_code', 'Código Arquivístico': 'archive_code',
-  'type': 'type', 'Tipo': 'type',
-  'title': 'title', 'Título': 'title',
-  'author_developer': 'author_developer', 'Autor/Desenvolvedor': 'author_developer',
-  'year': 'year', 'Ano': 'year',
-  'publisher': 'publisher', 'Editora/Gravadora': 'publisher',
-  'status': 'status', 'Status': 'status',
-  'rating': 'rating', 'Nota': 'rating',
-  'pages_or_time': 'pages_or_time', 'Páginas/Tempo': 'pages_or_time',
-  'barcode': 'barcode', 'Código de Barras': 'barcode',
-  'description': 'description', 'Descrição': 'description',
-  'cover_url': 'cover_url', 'URL da Capa': 'cover_url',
-  'location': 'location', 'Localização': 'location',
-  'notes': 'notes', 'Anotações': 'notes',
-  'wiki_info': 'wiki_info'
-};
-
-// ==========================================
-// 5. COMPONENTES UI MONDRIAN
+// 4. COMPONENTES UI MONDRIAN
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
@@ -188,7 +175,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 };
 
 // ==========================================
-// 6. ABAS DA APLICAÇÃO
+// 5. ABAS DA APLICAÇÃO
 // ==========================================
 
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
@@ -751,7 +738,7 @@ const DashboardTab = ({ items, darkMode }) => {
           {stats.epico && (
             <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300 text-black'}>
               <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico<br/>(Mais Longo)</div><Flame className="w-5 h-5 opacity-50" /></div>
-              <div><div className="text-sm font-black truncate">{stats.epico.title}</div><div className="text-[10px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho'].includes(stats.epico.type) ? 'Páginas' : 'Horas'}</div></div>
+              <div><div className="text-sm font-black truncate">{stats.epico.title}</div><div className="text-[10px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho', 'Revista'].includes(stats.epico.type) ? 'Páginas' : 'Horas'}</div></div>
             </MContainer>
           )}
           <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
@@ -860,72 +847,104 @@ export default function App() {
   const [globalToast, setGlobalToast] = useState(false); 
 
   const globalFileInputRef = useRef(null);
+
   const [aiBoxState, setAiBoxState] = useState('idle'); 
   const [aiBoxMessage, setAiBoxMessage] = useState('');
 
+  // Comprime as imagens enviadas pela câmera em alta resolução
+  const compressImage = (file, maxWidth = 1200) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const scaleSize = maxWidth / img.width;
+          canvas.width = maxWidth;
+          canvas.height = img.height * scaleSize;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]); 
+        };
+      };
+    });
+  };
+
   const triggerGlobalAI = () => {
-    setActiveTab('add'); setAddMode('manual'); 
+    setActiveTab('add');
+    setAddMode('manual'); 
     if (globalFileInputRef.current) globalFileInputRef.current.click();
   };
 
   const handleGlobalFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); }
+    if (file) {
+      setActiveTab('add');
+      setAddMode('manual');
+      processGlobalAIFile(file);
+    }
     e.target.value = null;
   };
 
   const processGlobalAIFile = async (file) => {
     if (!settings.geminiApiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente (Ajustes).'); return; }
     setAiBoxState('loading'); setAiBoxMessage('Lendo imagem...');
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      try {
-        const base64Data = reader.result.split(',')[1];
-        const payload = {
-          contents: [{
-            role: "user",
-            parts: [
-              { text: `Você é um catalogador arquivista especialista. Analise a imagem detalhadamente. Ela pode ser a capa/disco de um CD ou Vinil, capa/ficha de um Livro, ou caixa de Game.
-1. Se for música (CD/Vinil/Fita), extraia o Nome da Banda/Artista e o Título do Álbum.
-2. Procure por anos de lançamento (frequentemente próximos aos símbolos ℗ ou ©, ex: ℗ 2000).
-3. Identifique a Gravadora / Editora (ex: logotipos como Trama, Ryko, Sony, etc).
-4. Responda ESTRITAMENTE com um objeto JSON válido, sem formatações extras:
+    
+    try {
+      const base64Data = await compressImage(file, 1200);
+      
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [
+            { text: `Você é um arquivista especialista e detetive de metadados. Analise a imagem detalhadamente. Ela pode ser um CD, Vinil, Ficha Catalográfica ou Jogo.
+Regras:
+1. Se for CD/Vinil, extraia o Nome da Banda e o Título do Álbum. Procure símbolos como ℗ e © para achar o ano (ex: ℗ 2000), e logotipos como Trama, Ryko, Sony para a gravadora.
+2. Se for ficha catalográfica de livro, procure o número de páginas, editora, autor e ano.
+3. Responda ESTRITAMENTE com um objeto JSON válido, SEM markdown:
 {
-  "type": "Escolha rigorosamente UM entre: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4",
-  "title": "Nome do Álbum, Título do Livro ou Jogo",
-  "author_developer": "Nome da Banda, Artista, Autor ou Desenvolvedora",
-  "year": "Ano de publicação/lançamento (apenas 4 dígitos, ex: 2000)",
-  "publisher": "Nome da Gravadora, Editora ou Distribuidora",
-  "pages_or_time": "Número de páginas ou tempo impresso (se houver, apenas números)",
-  "description": "Crie uma breve descrição de 2 linhas sobre este item."
+  "type": "Escolha UM: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4",
+  "title": "Título principal",
+  "author_developer": "Banda, Artista, Autor ou Estúdio",
+  "year": "Apenas os 4 dígitos do ano",
+  "publisher": "Gravadora ou Editora",
+  "pages_or_time": "Número de páginas ou duração (apenas números)",
+  "description": "Sinopse curta ou descrição do conteúdo."
 }` },
-              { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
-            ]
-          }],
-          generationConfig: { responseMimeType: "application/json" }
-        };
+            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+          ]
+        }],
+        generationConfig: { responseMimeType: "application/json" }
+      };
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
 
-        const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
 
-        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!aiText) throw new Error("Resposta vazia.");
-        
-        const cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsedData = JSON.parse(cleanedText);
-        
-        setAddMode('manual'); setAiBoxState('success'); setAiBoxMessage('Encontrado!'); playChipBeep('success');
-        const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
-        window.dispatchEvent(event);
-      } catch (error) { 
-        setAiBoxState('error'); setAiBoxMessage('Não encontrado. Preencha manualmente.'); playChipBeep('error');
-      }
-    };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!aiText) throw new Error("Resposta vazia.");
+      
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("JSON não encontrado.");
+      
+      const parsedData = JSON.parse(jsonMatch[0]);
+      
+      setAddMode('manual');
+      setAiBoxState('success');
+      setAiBoxMessage('Encontrado!');
+      playChipBeep('success');
+      
+      const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
+      window.dispatchEvent(event);
+
+    } catch (error) { 
+      setAiBoxState('error'); setAiBoxMessage('Não encontrado. Preencha manualmente.'); playChipBeep('error');
+    }
   };
 
   useEffect(() => {
