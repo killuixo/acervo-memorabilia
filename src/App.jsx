@@ -23,7 +23,7 @@ const ChevronLeft = (p) => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
 const ChevronRight = (p) => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
 const X = (p) => <Icon {...p} path={<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>} />;
 const Check = (p) => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
-const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
+const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2-2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
 const Clock = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
 const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
 const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
@@ -59,37 +59,8 @@ const getMondrianColor = (index, darkMode) => {
 };
 
 // ==========================================
-// 3. COMPRESSOR DE IMAGENS & ÁUDIO 8-BIT
+// 3. SISTEMA DE ÁUDIO (CHIPTUNE 8-BIT)
 // ==========================================
-
-// Previne o envio de fotos de 10MB que travam a IA
-const compressImage = (file, maxWidth = 1024) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]); // Qualidade 70%
-      };
-      img.onerror = reject;
-      img.src = event.target.result;
-    };
-    reader.onerror = reject;
-  });
-};
-
 let globalAudioCtx = null;
 const initAudio = () => {
   try {
@@ -127,7 +98,48 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// 4. COMPONENTES UI MONDRIAN
+// 4. PARSER DE CSV ROBUSTO
+// ==========================================
+function parseCSV(str) {
+  const arr = [];
+  let quote = false;
+  let row = 0, col = 0, c = 0;
+  for (; c < str.length; c++) {
+    let cc = str[c], nc = str[c+1];
+    arr[row] = arr[row] || [];
+    arr[row][col] = arr[row][col] || '';
+    if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
+    if (cc === '"') { quote = !quote; continue; }
+    if (cc === ',' && !quote) { ++col; continue; }
+    if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
+    if (cc === '\n' && !quote) { ++row; col = 0; continue; }
+    if (cc === '\r' && !quote) { ++row; col = 0; continue; }
+    arr[row][col] += cc;
+  }
+  return arr;
+}
+
+const HEADER_MAP = {
+  'id': 'id', 'ID': 'id',
+  'archive_code': 'archive_code', 'Código Arquivístico': 'archive_code',
+  'type': 'type', 'Tipo': 'type',
+  'title': 'title', 'Título': 'title',
+  'author_developer': 'author_developer', 'Autor/Desenvolvedor': 'author_developer',
+  'year': 'year', 'Ano': 'year',
+  'publisher': 'publisher', 'Editora/Gravadora': 'publisher',
+  'status': 'status', 'Status': 'status',
+  'rating': 'rating', 'Nota': 'rating',
+  'pages_or_time': 'pages_or_time', 'Páginas/Tempo': 'pages_or_time',
+  'barcode': 'barcode', 'Código de Barras': 'barcode',
+  'description': 'description', 'Descrição': 'description',
+  'cover_url': 'cover_url', 'URL da Capa': 'cover_url',
+  'location': 'location', 'Localização': 'location',
+  'notes': 'notes', 'Anotações': 'notes',
+  'wiki_info': 'wiki_info'
+};
+
+// ==========================================
+// 5. COMPONENTES UI MONDRIAN
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
@@ -161,7 +173,7 @@ const MInput = ({ label, value, onChange, type = "text", placeholder = "", multi
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm z-[100]">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-4 pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
         <p className="text-sm font-medium opacity-90">{message}</p>
@@ -175,7 +187,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 };
 
 // ==========================================
-// 5. ABAS DA APLICAÇÃO
+// 6. ABAS DA APLICAÇÃO
 // ==========================================
 
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
@@ -451,6 +463,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
+  // Escuta os resultados da IA global no arquivo raiz
   useEffect(() => {
     const handleAiSuccess = (e) => {
       const data = e.detail;
@@ -763,9 +776,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   const handleExportCSV = () => {
     if (items.length === 0) return;
-    const headers = ['id', 'archive_code', 'type', 'title', 'author_developer', 'year', 'publisher', 'status', 'rating', 'pages_or_time', 'barcode', 'description', 'cover_url', 'location', 'notes', 'wiki_info'];
+    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
-    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes), escape(i.wiki_info)]);
+    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes)]);
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Memorabilia_Export_${new Date().toISOString().split('T')[0]}.csv`; link.click();
@@ -776,20 +789,47 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const rows = parseCSV(evt.target.result);
+      const text = evt.target.result;
+      const rows = text.split('\n').map(row => {
+        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        return matches ? matches.map(m => m.replace(/^"|"$/g, '').replace(/""/g, '"')) : [];
+      }).filter(r => r.length > 1);
+
       if (rows.length < 2) return;
-      const headers = rows[0].map(h => h.trim());
+      const headers = rows[0].map(h => h.trim().replace(/\r$/, ''));
       const newItems = [];
+
       for(let i = 1; i < rows.length; i++) {
         const row = rows[i];
         if (row.length === 1 && !row[0].trim()) continue; 
         const item = {};
+        
         headers.forEach((h, idx) => { 
-           const mappedKey = HEADER_MAP[h] || h;
-           item[mappedKey] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
+           let key = h;
+           if (h === 'ID') key = 'id';
+           if (h === 'Código Arquivístico') key = 'archive_code';
+           if (h === 'Tipo') key = 'type';
+           if (h === 'Título') key = 'title';
+           if (h === 'Autor/Desenvolvedor') key = 'author_developer';
+           if (h === 'Ano') key = 'year';
+           if (h === 'Editora/Gravadora') key = 'publisher';
+           if (h === 'Status') key = 'status';
+           if (h === 'Nota') key = 'rating';
+           if (h === 'Páginas/Tempo') key = 'pages_or_time';
+           if (h === 'Código de Barras') key = 'barcode';
+           if (h === 'Descrição') key = 'description';
+           if (h === 'URL da Capa') key = 'cover_url';
+           if (h === 'Localização') key = 'location';
+           if (h === 'Anotações') key = 'notes';
+
+           item[key] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
         });
-        if(item.id || item.title) {
-          if (!item.id) item.id = Date.now().toString() + i;
+
+        if (item.id) {
+          item.rating = parseInt(item.rating) || 0;
+          newItems.push(item);
+        } else if (item.title) {
+          item.id = Date.now().toString() + i;
           item.rating = parseInt(item.rating) || 0;
           newItems.push(item);
         }
@@ -851,27 +891,6 @@ export default function App() {
   const [aiBoxState, setAiBoxState] = useState('idle'); 
   const [aiBoxMessage, setAiBoxMessage] = useState('');
 
-  // Comprime as imagens enviadas pela câmera em alta resolução
-  const compressImage = (file, maxWidth = 1200) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const scaleSize = maxWidth / img.width;
-          canvas.width = maxWidth;
-          canvas.height = img.height * scaleSize;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]); 
-        };
-      };
-    });
-  };
-
   const triggerGlobalAI = () => {
     setActiveTab('add');
     setAddMode('manual'); 
@@ -888,63 +907,56 @@ export default function App() {
     e.target.value = null;
   };
 
+  // ==============================================================
+  // A MÁGICA RESTAURADA: FILE READER PURO NATIVO (Sem Compressão)
+  // ==============================================================
   const processGlobalAIFile = async (file) => {
     if (!settings.geminiApiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente (Ajustes).'); return; }
     setAiBoxState('loading'); setAiBoxMessage('Lendo imagem...');
     
-    try {
-      const base64Data = await compressImage(file, 1200);
-      
-      const payload = {
-        contents: [{
-          role: "user",
-          parts: [
-            { text: `Você é um arquivista especialista e detetive de metadados. Analise a imagem detalhadamente. Ela pode ser um CD, Vinil, Ficha Catalográfica ou Jogo.
-Regras:
-1. Se for CD/Vinil, extraia o Nome da Banda e o Título do Álbum. Procure símbolos como ℗ e © para achar o ano (ex: ℗ 2000), e logotipos como Trama, Ryko, Sony para a gravadora.
-2. Se for ficha catalográfica de livro, procure o número de páginas, editora, autor e ano.
-3. Responda ESTRITAMENTE com um objeto JSON válido, SEM markdown:
-{
-  "type": "Escolha UM: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4",
-  "title": "Título principal",
-  "author_developer": "Banda, Artista, Autor ou Estúdio",
-  "year": "Apenas os 4 dígitos do ano",
-  "publisher": "Gravadora ou Editora",
-  "pages_or_time": "Número de páginas ou duração (apenas números)",
-  "description": "Sinopse curta ou descrição do conteúdo."
-}` },
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-          ]
-        }],
-        generationConfig: { responseMimeType: "application/json" }
-      };
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result.split(',')[1];
+        
+        const payload = {
+          contents: [{
+            parts: [
+              { text: `Extraia JSON (type, title, author_developer, publisher, year, pages_or_time, description) desta imagem de capa, contracapa, disco ou ficha catalográfica. 
+Se for disco (CD/Vinil), busque logotipos de gravadoras e símbolos de copyright (ex: ℗ 2000) para o ano. 
+Para 'type' escolha UM rigorosamente: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4.
+Retorne APENAS um objeto JSON válido.` },
+              { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
+            ]
+          }],
+          generationConfig: { responseMimeType: "application/json" }
+        };
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-      });
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
+        if (!response.ok) throw new Error("Chave API inválida ou erro de rede.");
+        const result = await response.json();
+        
+        if (result.error) throw new Error(result.error.message);
 
-      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!aiText) throw new Error("Resposta vazia.");
-      
-      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("JSON não encontrado.");
-      
-      const parsedData = JSON.parse(jsonMatch[0]);
-      
-      setAddMode('manual');
-      setAiBoxState('success');
-      setAiBoxMessage('Encontrado!');
-      playChipBeep('success');
-      
-      const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
-      window.dispatchEvent(event);
+        const aiText = result.candidates[0].content.parts[0].text;
+        const parsedData = JSON.parse(aiText.replace(/```json/gi, '').replace(/```/g, '').trim());
+        
+        setAddMode('manual');
+        setAiBoxState('success');
+        setAiBoxMessage('Encontrado!');
+        playChipBeep('success');
+        
+        const event = new CustomEvent('aiScanSuccess', { detail: parsedData });
+        window.dispatchEvent(event);
 
-    } catch (error) { 
-      setAiBoxState('error'); setAiBoxMessage('Não encontrado. Preencha manualmente.'); playChipBeep('error');
-    }
+      } catch (error) { 
+        setAiBoxState('error'); setAiBoxMessage('Não encontrado. Preencha manualmente.'); playChipBeep('error');
+      }
+    };
   };
 
   useEffect(() => {
@@ -1013,8 +1025,11 @@ Regras:
 
         <main className="flex-1 overflow-hidden p-3 relative z-0">
           <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
+          
           {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
+          
           {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} />}
+          
           {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} />}
           {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={() => setGlobalToast(true)} />}
         </main>
