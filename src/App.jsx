@@ -29,6 +29,7 @@ const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0
 const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
 const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />;
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
+const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
 
@@ -98,48 +99,7 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// 4. PARSER DE CSV ROBUSTO
-// ==========================================
-function parseCSV(str) {
-  const arr = [];
-  let quote = false;
-  let row = 0, col = 0, c = 0;
-  for (; c < str.length; c++) {
-    let cc = str[c], nc = str[c+1];
-    arr[row] = arr[row] || [];
-    arr[row][col] = arr[row][col] || '';
-    if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
-    if (cc === '"') { quote = !quote; continue; }
-    if (cc === ',' && !quote) { ++col; continue; }
-    if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
-    if (cc === '\n' && !quote) { ++row; col = 0; continue; }
-    if (cc === '\r' && !quote) { ++row; col = 0; continue; }
-    arr[row][col] += cc;
-  }
-  return arr;
-}
-
-const HEADER_MAP = {
-  'id': 'id', 'ID': 'id',
-  'archive_code': 'archive_code', 'Código Arquivístico': 'archive_code',
-  'type': 'type', 'Tipo': 'type',
-  'title': 'title', 'Título': 'title',
-  'author_developer': 'author_developer', 'Autor/Desenvolvedor': 'author_developer',
-  'year': 'year', 'Ano': 'year',
-  'publisher': 'publisher', 'Editora/Gravadora': 'publisher',
-  'status': 'status', 'Status': 'status',
-  'rating': 'rating', 'Nota': 'rating',
-  'pages_or_time': 'pages_or_time', 'Páginas/Tempo': 'pages_or_time',
-  'barcode': 'barcode', 'Código de Barras': 'barcode',
-  'description': 'description', 'Descrição': 'description',
-  'cover_url': 'cover_url', 'URL da Capa': 'cover_url',
-  'location': 'location', 'Localização': 'location',
-  'notes': 'notes', 'Anotações': 'notes',
-  'wiki_info': 'wiki_info'
-};
-
-// ==========================================
-// 5. COMPONENTES UI MONDRIAN
+// 4. COMPONENTES UI MONDRIAN
 // ==========================================
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[3px] ${darkMode ? 'border-gray-500' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
@@ -173,7 +133,7 @@ const MInput = ({ label, value, onChange, type = "text", placeholder = "", multi
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm z-[100]">
       <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-4 pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
         <p className="text-sm font-medium opacity-90">{message}</p>
@@ -187,7 +147,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 };
 
 // ==========================================
-// 6. ABAS DA APLICAÇÃO
+// 5. ABAS DA APLICAÇÃO
 // ==========================================
 
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
@@ -204,11 +164,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      const titleSearch = (item.title || '').toLowerCase();
-      const authorSearch = (item.author_developer || '').toLowerCase();
-      const query = search.toLowerCase();
-      const matchesSearch = titleSearch.includes(query) || authorSearch.includes(query);
-      
+      const matchesSearch = ((item.title || '').toLowerCase().includes(search.toLowerCase()) || (item.author_developer || '').toLowerCase().includes(search.toLowerCase()));
       let matchesCategory = true;
       if (activeCategory !== 'Todos') {
         if (activeSubtype === 'Todos') matchesCategory = CATEGORIES[activeCategory]?.includes(item.type || '');
@@ -248,7 +204,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
   const fetchWikiInfo = async () => {
     if (!settings.geminiApiKey) {
-      setWikiError("Para ativar a pesquisa IA, configure sua Chave de API na aba Ajustes.");
+      setWikiError("Configure a Chave API na aba Ajustes.");
       playChipBeep('error');
       return;
     }
@@ -258,12 +214,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
       const payload = {
         contents: [{
           role: "user",
-          parts: [{ text: `Aja como um historiador, crítico e arquivista especialista. Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title || ''}" (Autor/Estúdio: "${editedItem.author_developer || ''}"). Retorne apenas o texto sem formatação extra.` }]
+          parts: [{ text: `Aja como um historiador e arquivista especialista. Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title || ''}" (Autor/Estúdio: "${editedItem.author_developer || ''}"). Retorne apenas o texto.` }]
         }],
         generationConfig: { responseMimeType: "text/plain" }
       };
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${settings.geminiApiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const data = await response.json();
@@ -416,7 +372,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
                       <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer || '--'}</div>
                     </div>
                     <div className="flex justify-between items-end mt-2">
-                      <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
+                      <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status || 'Na Fila'}</div>
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
@@ -462,6 +418,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
+  // Escuta os resultados da IA global no arquivo raiz
   useEffect(() => {
     const handleAiSuccess = (e) => {
       const data = e.detail;
@@ -749,7 +706,7 @@ const DashboardTab = ({ items, darkMode }) => {
           {stats.epico && (
             <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-300 text-black'}>
               <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico<br/>(Mais Longo)</div><Flame className="w-5 h-5 opacity-50" /></div>
-              <div><div className="text-sm font-black truncate">{stats.epico.title}</div><div className="text-[10px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho', 'Revista'].includes(stats.epico.type) ? 'Páginas' : 'Horas'}</div></div>
+              <div><div className="text-sm font-black truncate">{stats.epico.title}</div><div className="text-[10px] font-bold">{stats.epico.pages_or_time} {['Livro', 'Quadrinho'].includes(stats.epico.type) ? 'Páginas' : 'Horas'}</div></div>
             </MContainer>
           )}
           <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
@@ -906,9 +863,6 @@ export default function App() {
     e.target.value = null;
   };
 
-  // ==============================================================
-  // A MÁGICA DA IA (Gemini 1.5 Flash + JSON Robusto)
-  // ==============================================================
   const processGlobalAIFile = async (file) => {
     if (!settings.geminiApiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente (Ajustes).'); return; }
     setAiBoxState('loading'); setAiBoxMessage('Analisando imagem com IA...');
@@ -922,24 +876,28 @@ export default function App() {
         const payload = {
           contents: [{
             parts: [
-              { text: `Extraia dados desta imagem (pode ser capa de CD, vinil, livro, ficha catalográfica ou game).
-Retorne APENAS um JSON válido, sem formatação markdown.
-Chaves obrigatórias:
-"type": "Escolha UM: Livro, Quadrinho, Revista, CD, Vinil, Fita Cassete, VHS, DVD, Mega Drive, SNES, Wii, PS1, PS2, PS4",
-"title": "Título da obra",
-"author_developer": "Autor do livro, banda/artista do CD ou estúdio do game",
-"year": "Ano de lançamento (em CDs procure por símbolos como ℗ ou ©)",
-"publisher": "Editora do livro, gravadora do disco ou distribuidora",
-"pages_or_time": "Apenas números (páginas se livro, minutos se mídia)",
-"description": "Sinopse de 2 linhas sobre a obra."
-Se não achar alguma informação, deixe a string vazia "".` },
+              { text: `Você é um arquivista especialista catalogando mídias físicas (Livros, CDs, Vinis, DVDs, Jogos).
+Leia TODO O TEXTO da imagem com atenção extrema. Pode ser uma capa, uma ficha catalográfica com letras miúdas, ou a impressão no próprio CD/disco.
+- Se for Livro/Quadrinho: Procure o Título, Autor, Editora, Ano de publicação, e o número de páginas (geralmente antes de "p." ou "páginas").
+- Se for CD/Vinil/Fita: Procure o Nome da Banda/Artista, Título do Álbum, Gravadora (ex: Trama, Sony, EMI) e o Ano (frequentemente ao lado de ℗ ou ©).
+
+Retorne APENAS um objeto JSON válido. Exemplo:
+{
+  "type": "Escolha UM rigorosamente entre: ${ALL_TYPES.join(', ')}",
+  "title": "Título exato",
+  "author_developer": "Autor ou Artista/Banda",
+  "year": "Ano com 4 dígitos",
+  "publisher": "Editora ou Gravadora",
+  "pages_or_time": "Apenas números",
+  "description": "Sinopse super curta de 2 linhas."
+}` },
               { inlineData: { mimeType: file.type || "image/jpeg", data: base64Data } }
             ]
           }],
           generationConfig: { responseMimeType: "application/json" }
         };
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${settings.geminiApiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
 
@@ -954,7 +912,6 @@ Se não achar alguma informação, deixe a string vazia "".` },
         const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!aiText) throw new Error("A IA retornou uma resposta vazia.");
         
-        // Limpeza matemática de JSON
         let cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
         const startIndex = cleanedText.indexOf('{');
         const endIndex = cleanedText.lastIndexOf('}');
@@ -973,9 +930,11 @@ Se não achar alguma informação, deixe a string vazia "".` },
         window.dispatchEvent(event);
 
       } catch (error) { 
+        let errorMsg = 'Falha: Modelo IA indisponível ou imagem não reconhecida.';
+        if(error.message) errorMsg = `Falha: ${error.message.substring(0, 50)}...`;
         console.error("Erro IA:", error);
         setAiBoxState('error'); 
-        setAiBoxMessage(`Falha: ${error.message.substring(0, 40)}...`); 
+        setAiBoxMessage(errorMsg); 
         playChipBeep('error');
       }
     };
