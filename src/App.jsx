@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
-// 1. ÍCONES NATIVOS
+// 1. ÍCONES NATIVOS (Zero Dependências)
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
   <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
@@ -43,6 +43,12 @@ const CATEGORIES = {
   'Games': ['Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4']
 };
 const ALL_TYPES = Object.values(CATEGORIES).flat();
+
+// Função que define se o tipo de mídia suporta 'Status'
+const HAS_STATUS = (type) => {
+  const typesWithStatus = [...CATEGORIES['Livros'], ...CATEGORIES['Games']];
+  return typesWithStatus.includes(type);
+};
 
 const CLASS_CODES = {
   'Livro': '562.1', 'Quadrinho': '562.2', 'Revista': '562.3', 'CD': '515.1', 'Vinil': '515.2', 'Fita Cassete': '515.3',
@@ -248,7 +254,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, selected
 
       let matchesStatus = true;
       if (statusFilter !== 'Todos') {
-        matchesStatus = (item.status || 'Não Iniciado') === statusFilter;
+        // Se a mídia suporta status, verifica. Se não suporta e o filtro é diferente de Todos, oculta.
+        matchesStatus = HAS_STATUS(item.type) && (item.status || 'Não Iniciado') === statusFilter;
       }
 
       return matchesSearch && matchesCategory && matchesStatus;
@@ -364,26 +371,28 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, selected
             <MInput label="Localização" value={editedItem.location || ''} onChange={e => setEditedItem({...editedItem, location: e.target.value})} darkMode={darkMode} />
           </div>
 
-          <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
-            <div className="mb-3">
-              <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status Atual</label>
-              <div className="flex gap-2 flex-wrap">
-                {STATUS_OPTIONS.map(opt => (
-                  <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] active:scale-95 transition-transform ${editedItem.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-500')}`}>
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
+          <div className="flex gap-2 flex-col sm:flex-row">
+            {HAS_STATUS(editedItem.type) && (
+              <MContainer darkMode={darkMode} className="flex-1 p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
+                <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status Atual</label>
+                <div className="flex gap-2 flex-wrap">
+                  {STATUS_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] active:scale-95 transition-transform ${editedItem.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-500')}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </MContainer>
+            )}
+            <MContainer darkMode={darkMode} className="flex-1 p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
               <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Sua Avaliação</label>
               <div className="flex gap-1.5 mt-2">
                 {[1, 2, 3, 4, 5].map(star => (
                   <Star key={star} onClick={() => setEditedItem({...editedItem, rating: star})} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= (editedItem.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-yellow-400 text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
                 ))}
               </div>
-            </div>
-          </MContainer>
+            </MContainer>
+          </div>
 
           <MInput label="Sinopse / Descrição" multiline value={editedItem.description || ''} onChange={e => setEditedItem({...editedItem, description: e.target.value})} darkMode={darkMode} />
           
@@ -479,7 +488,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, selected
                       <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer || '--'}</div>
                     </div>
                     <div className="flex justify-between items-end mt-2">
-                      <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status || 'Não Iniciado'}</div>
+                      {HAS_STATUS(item.type) ? (
+                        <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status || 'Não Iniciado'}</div>
+                      ) : (
+                        <div></div>
+                      )}
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= Number(item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
@@ -627,12 +640,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
-  const handleScanSuccess = (mappedData) => {
-    playChipBeep('success'); 
-    updateStatus('success', 'Informações extraídas com sucesso!');
-    setFormData(prev => ({ ...prev, ...mappedData }));
-  };
-
   const processAIFile = async (file) => {
     if (!settings.geminiApiKey) { updateStatus('error', 'Chave API ausente (Ajustes).'); changeMode('manual'); return; }
     updateStatus('loading', 'Lendo imagem...');
@@ -668,9 +675,10 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
         const parsedData = JSON.parse(jsonMatch[0]);
         const typeMatched = ALL_TYPES.includes(parsedData.type) ? parsedData.type : 'Livro';
-        handleScanSuccess({
-          title: parsedData.title || '', author_developer: parsedData.author_developer || '', year: parsedData.year?.toString() || '', publisher: parsedData.publisher || '', description: parsedData.description || '', pages_or_time: parsedData.pages_or_time || formData.pages_or_time, type: typeMatched
-        });
+        playChipBeep('success'); updateStatus('success', 'Encontrado!');
+        setFormData(prev => ({
+          ...prev, title: parsedData.title || '', author_developer: parsedData.author_developer || '', year: parsedData.year?.toString() || '', publisher: parsedData.publisher || '', description: parsedData.description || '', pages_or_time: parsedData.pages_or_time || formData.pages_or_time, type: typeMatched
+        }));
       } catch (error) { 
         playChipBeep('error'); updateStatus('error', 'Falha ao interpretar imagem.'); 
       } finally { 
@@ -690,6 +698,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const classCode = CLASS_CODES[formData.type] || '000';
     let maxSeq = 0;
     items.forEach(item => {
+      // Procura apenas sequências que pertencem à mesma CLASSE exata (ex: 562.1)
       if(item.archive_code && item.archive_code.includes(`-${classCode}-`)) {
         const seqStr = item.archive_code.split('-').pop();
         const seqNum = parseInt(seqStr, 10);
@@ -768,14 +777,18 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             <MInput darkMode={darkMode} label="Descrição / Sinopse" multiline value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
             <MInput darkMode={darkMode} label="Fichamento e Anotações" multiline value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Suas impressões..." />
 
-            <div className="mb-4">
-              <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>Status Atual</label>
-              <div className="flex gap-2 flex-wrap">
-                {STATUS_OPTIONS.map(opt => (
-                  <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] active:scale-95 transition-transform ${formData.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-500')}`}>{opt}</button>
-                ))}
+            {/* MODO CONDICIONAL: Status só aparece para Livros e Jogos */}
+            {HAS_STATUS(formData.type) && (
+              <div className="mb-4">
+                <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>Status Atual</label>
+                <div className="flex gap-2 flex-wrap">
+                  {STATUS_OPTIONS.map(opt => (
+                    <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] active:scale-95 transition-transform ${formData.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-500')}`}>{opt}</button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+            
             <div className="mb-4">
               <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>Avaliação (Nota)</label>
               <div className={`flex gap-2 p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-white'}`}>
@@ -803,11 +816,15 @@ const DashboardTab = ({ items, darkMode }) => {
     const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
     const validLengths = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
     const epico = validLengths.length > 0 ? validLengths.reduce((a, b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b) : null;
-    const vergonha = items.filter(i => i.status === 'Não Iniciado').length;
+    
+    // Contar apenas itens que POSSUEM status como "Não Iniciados"
+    const vergonha = items.filter(i => HAS_STATUS(i.type) && (i.status === 'Não Iniciado' || !i.status)).length;
+    
     const authors = items.map(i => i.author_developer).filter(Boolean);
     const favorite = authors.length > 0 ? authors.sort((a,b) => authors.filter(v => v===a).length - authors.filter(v => v===b).length).pop() : null;
     return { reliquia, epico, vergonha, favorite };
   };
+
   const stats = getFunStats();
 
   return (
@@ -877,7 +894,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
     const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes), escape(i.wiki_info)]);
-    const csvContent = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
+    const csvContent = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n"); // Usar Ponto e Vírgula
     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Memorabilia_Export_${new Date().toISOString().split('T')[0]}.csv`; link.click();
   };
@@ -887,57 +904,25 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const text = evt.target.result;
-      const delimiter = text.indexOf(';') > -1 && text.indexOf(';') < text.indexOf('\n') ? ';' : ',';
+      const parsedRows = parseCSV(evt.target.result);
+      if (parsedRows.length < 2) return;
       
-      const result = [];
-      let row = [];
-      let inQuotes = false;
-      let currentValue = "";
-      
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const nextChar = text[i + 1];
-        if (char === '"' && inQuotes && nextChar === '"') { currentValue += '"'; i++; }
-        else if (char === '"') { inQuotes = !inQuotes; }
-        else if (char === delimiter && !inQuotes) { row.push(currentValue); currentValue = ""; }
-        else if ((char === '\n' || char === '\r') && !inQuotes) {
-          if (char === '\r' && nextChar === '\n') i++;
-          row.push(currentValue); result.push(row); row = []; currentValue = "";
-        } else { currentValue += char; }
-      }
-      if (currentValue || row.length > 0) { row.push(currentValue); result.push(row); }
-      
-      if (result.length < 2) return;
-      const headers = result[0].map(h => h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+      const headers = parsedRows[0].map(h => h.trim());
       const newItems = [];
-
-      for(let i = 1; i < result.length; i++) {
-        const r = result[i];
-        if (r.length === 1 && !r[0].trim()) continue; 
+      
+      for(let i = 1; i < parsedRows.length; i++) {
+        const row = parsedRows[i];
+        if (row.length === 1 && !row[0].trim()) continue; 
         const item = {};
         
         headers.forEach((h, idx) => { 
-           if (h.includes('id')) item['id'] = r[idx];
-           else if (h.includes('arquiv') || h.includes('archive')) item['archive_code'] = r[idx];
-           else if (h.includes('tipo') || h.includes('type')) item['type'] = r[idx];
-           else if (h.includes('titul') || h.includes('title')) item['title'] = r[idx];
-           else if (h.includes('autor')) item['author_developer'] = r[idx];
-           else if (h.includes('ano') || h.includes('year')) item['year'] = r[idx];
-           else if (h.includes('editora')) item['publisher'] = r[idx];
-           else if (h.includes('status')) item['status'] = r[idx];
-           else if (h.includes('nota') || h.includes('rating')) item['rating'] = parseInt(r[idx]) || 0;
-           else if (h.includes('pagin') || h.includes('tempo')) item['pages_or_time'] = r[idx];
-           else if (h.includes('barras') || h.includes('barcode')) item['barcode'] = r[idx];
-           else if (h.includes('descri')) item['description'] = r[idx];
-           else if (h.includes('capa') || h.includes('url')) item['cover_url'] = r[idx];
-           else if (h.includes('localiz')) item['location'] = r[idx];
-           else if (h.includes('anotac') || h.includes('note')) item['notes'] = r[idx];
-           else if (h.includes('wiki')) item['wiki_info'] = r[idx];
+           const mappedKey = normalizeHeader(h);
+           item[mappedKey] = row[idx] ? row[idx].replace(/\r$/, '') : ''; 
         });
 
         if (item.id || item.title) {
           if (!item.id) item.id = Date.now().toString() + i;
+          item.rating = parseInt(item.rating) || 0;
           newItems.push(item);
         }
       }
@@ -992,7 +977,7 @@ export default function App() {
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '' });
   const [isLoaded, setIsLoaded] = useState(false);
   const [globalToast, setGlobalToast] = useState(false); 
-  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedItemId, setSelectedItemId] = useState(null); // Estado para Forçar reset da aba Biblioteca
 
   const globalFileInputRef = useRef(null);
   const [pendingAIFile, setPendingAIFile] = useState(null);
