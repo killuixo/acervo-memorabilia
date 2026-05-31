@@ -31,6 +31,7 @@ const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
+const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
 
 // ==========================================
 // 2. DADOS E PLANO DE CLASSIFICAÇÃO
@@ -49,7 +50,7 @@ const CLASS_CODES = {
 };
 
 const INITIAL_ITEMS = [
-  { id: '1', archive_code: 'LUI-562.1-0001', type: 'Livro', title: 'Neuromancer', author_developer: 'William Gibson', year: '1984', publisher: 'Aleph', status: 'Concluído', rating: 5, pages_or_time: '320', cover_url: 'https://books.google.com/books/content?id=pMytzQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api', description: 'O romance de estreia de William Gibson e o primeiro a ganhar os três principais prêmios de ficção científica.', location: '', notes: '' }
+  { id: '1', archive_code: 'LUI-562.1-0001', type: 'Livro', title: 'Neuromancer', author_developer: 'William Gibson', year: '1984', publisher: 'Aleph', status: 'Concluído', rating: 5, pages_or_time: '320', cover_url: 'https://books.google.com/books/content?id=pMytzQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api', description: 'O romance de estreia de William Gibson e o primeiro a ganhar os três principais prêmios de ficção científica.', location: '', notes: '', wiki_info: '' }
 ];
 
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
@@ -166,13 +167,16 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 // 5. ABAS DA APLICAÇÃO
 // ==========================================
 
-const LibraryTab = ({ items, setItems, darkMode }) => {
+const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
   const [selectedItem, setSelectedItem] = useState(null);
+  const [editedItem, setEditedItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [loadingWiki, setLoadingWiki] = useState(false);
+  const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 8;
 
   const filteredItems = useMemo(() => {
@@ -190,9 +194,20 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
   const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-  const updateRating = (id, newRating) => {
+  const handleSelect = (item) => {
+    setSelectedItem(item);
+    setEditedItem(item);
+  };
+
+  const updateRatingList = (id, newRating) => {
     setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item));
-    if (selectedItem && selectedItem.id === id) setSelectedItem({ ...selectedItem, rating: newRating });
+  };
+
+  const saveModifications = () => {
+    setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
+    setSelectedItem(editedItem);
+    playChipBeep('save');
+    onShowToast();
   };
 
   const confirmDelete = () => {
@@ -200,65 +215,147 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
       setItems(items.filter(item => item.id !== itemToDelete));
       setItemToDelete(null);
       setSelectedItem(null);
+      setEditedItem(null);
     }
   };
 
-  if (selectedItem) {
+  const fetchWikiInfo = async () => {
+    if (!settings.geminiApiKey) {
+      setWikiError("Para ativar a pesquisa IA, configure sua Chave de API na aba Ajustes.");
+      playChipBeep('error');
+      return;
+    }
+    setLoadingWiki(true);
+    setWikiError('');
+    try {
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [{ text: `Aja como um historiador, crítico e arquivista especialista. Escreva um parágrafo fascinante e direto (máximo 4 linhas) com curiosidades ou contexto sobre a obra "${editedItem.title}" (Autor/Estúdio: "${editedItem.author_developer}"). Retorne apenas o texto.` }]
+        }],
+        generationConfig: { responseMimeType: "text/plain" }
+      };
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.geminiApiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (aiText) {
+        setEditedItem({...editedItem, wiki_info: aiText});
+        playChipBeep('success');
+      }
+    } catch (e) {
+      setWikiError("A Inteligência Artificial falhou ao buscar as informações desta vez.");
+      playChipBeep('error');
+    } finally {
+      setLoadingWiki(false);
+    }
+  };
+
+  if (selectedItem && editedItem) {
     return (
       <div className="flex flex-col h-full pb-20 relative">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${selectedItem.title}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
-        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center gap-3 sticky top-0 z-10 shadow-sm" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-          <button onClick={() => setSelectedItem(null)} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-gray-100'} active:scale-95 transition-transform`}><ChevronLeft className="w-5 h-5" /></button>
-          <div className="font-black uppercase tracking-widest text-[10px] truncate flex-1">Detalhes da Mídia</div>
+        
+        {/* CABEÇALHO DA EDIÇÃO DE FICHA */}
+        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10 shadow-sm" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} active:scale-95 transition-transform`}><ChevronLeft className="w-5 h-5" /></button>
+            <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
+          </div>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[3px] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-transform ${darkMode ? 'bg-emerald-800 border-gray-500 text-white' : 'bg-emerald-400 border-black text-black'}`}>Salvar</button>
         </MContainer>
 
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
+          
           <div className="flex gap-4">
             <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
-              {selectedItem.cover_url ? <img src={selectedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
+              {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
             </MContainer>
-            <div className="flex flex-col flex-1 justify-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1 leading-tight">{selectedItem.type} • {selectedItem.year}</div>
-              {selectedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest mb-2 border-[2px] w-max px-1.5 py-0.5 ${darkMode ? 'border-gray-500 text-gray-300' : 'border-black text-black'}`}>{selectedItem.archive_code}</div>}
-              <div className="text-xl font-black leading-none mb-2">{selectedItem.title}</div>
-              <div className="text-xs font-bold opacity-80 uppercase tracking-wide">{selectedItem.author_developer}</div>
-              <div className="text-[10px] opacity-60 mt-1 uppercase tracking-widest leading-tight">{selectedItem.publisher}</div>
-              {selectedItem.location && <div className="text-[10px] font-bold opacity-80 mt-2 uppercase tracking-widest flex items-center gap-1"><Library className="w-3 h-3" /> Local: {selectedItem.location}</div>}
-              {selectedItem.pages_or_time && <div className={`text-[10px] font-bold w-max px-2 py-1 mt-2 ${darkMode ? 'bg-gray-700 text-white' : 'bg-black text-white'}`}>{selectedItem.pages_or_time} {['Livro', 'Quadrinho'].includes(selectedItem.type) ? 'Páginas' : 'Horas'}</div>}
+            <div className="flex flex-col flex-1 justify-between py-1">
+              {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[2px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-500 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
+              <MInput label="Título" value={editedItem.title} onChange={e => setEditedItem({...editedItem, title: e.target.value})} darkMode={darkMode} />
+              <MInput label="Autor/Artista" value={editedItem.author_developer} onChange={e => setEditedItem({...editedItem, author_developer: e.target.value})} darkMode={darkMode} />
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-300 text-black'}>
-               <div className={`text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 pb-1 ${darkMode ? 'border-gray-500' : 'border-black/20'}`}>Status</div>
-               <div className="text-[10px] font-bold tracking-wider">{selectedItem.status}</div>
-            </MContainer>
-            <MContainer darkMode={darkMode} className="flex-1 p-3 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
-               <div className={`text-[9px] font-black uppercase tracking-widest mb-1 border-b-2 pb-1 ${darkMode ? 'border-gray-500' : 'border-black/20'}`}>Avaliação</div>
-               <div className="flex gap-0.5 mt-1">
-                  {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRating(selectedItem.id, star)} className={`w-4 h-4 cursor-pointer ${star <= selectedItem.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-500' : 'text-gray-500 opacity-30')}`} />)}
-                </div>
-            </MContainer>
+          <div className="grid grid-cols-3 gap-2">
+            <MInput label="Ano" value={editedItem.year} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="number" darkMode={darkMode} />
+            <MInput label="Págs/Tempo" value={editedItem.pages_or_time} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="number" darkMode={darkMode} />
+            <MInput label="Editora" value={editedItem.publisher} onChange={e => setEditedItem({...editedItem, publisher: e.target.value})} darkMode={darkMode} />
           </div>
 
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
-            <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[3px] pb-1 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Descrição / Sinopse</div>
-            <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap text-justify">{selectedItem.description || "Nenhuma descrição disponível."}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <MInput label="URL da Capa" value={editedItem.cover_url} onChange={e => setEditedItem({...editedItem, cover_url: e.target.value})} darkMode={darkMode} />
+            <MInput label="Localização" value={editedItem.location} onChange={e => setEditedItem({...editedItem, location: e.target.value})} darkMode={darkMode} />
+          </div>
+
+          {/* ÁREA DE STATUS E AVALIAÇÃO INTUITIVAS */}
+          <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
+            <div className="mb-3">
+              <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status Atual</label>
+              <div className="flex gap-2 flex-wrap">
+                {STATUS_OPTIONS.map(opt => (
+                  <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] active:scale-95 transition-transform ${editedItem.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-500')}`}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Sua Avaliação</label>
+              <div className="flex gap-1.5 mt-2">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <Star key={star} onClick={() => setEditedItem({...editedItem, rating: star})} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= editedItem.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-yellow-400 text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
+                ))}
+              </div>
+            </div>
           </MContainer>
 
-          {selectedItem.notes && (
-            <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-100 text-black'}>
-              <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[3px] pb-1 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Fichamento / Anotações</div>
-              <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap text-justify">{selectedItem.notes}</p>
-            </MContainer>
-          )}
+          <MInput label="Sinopse / Descrição" multiline value={editedItem.description} onChange={e => setEditedItem({...editedItem, description: e.target.value})} darkMode={darkMode} />
+          
+          <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-yellow-900/30' : 'bg-yellow-100/50'}>
+            <MInput label="Fichamento e Anotações" multiline value={editedItem.notes} onChange={e => setEditedItem({...editedItem, notes: e.target.value})} darkMode={darkMode} />
+          </MContainer>
 
-          <MButton darkMode={darkMode} onClick={() => setItemToDelete(selectedItem.id)} variant="red" className="w-full">Remover da Coleção</MButton>
+          {/* MODO IA: WIKIPEDIA / ENCICLOPÉDIA DA OBRA */}
+          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-purple-900/20 text-white' : 'bg-purple-100 text-black'}>
+            <div className={`flex justify-between items-center mb-3 border-b-[3px] pb-1 ${darkMode ? 'border-purple-800' : 'border-purple-300'}`}>
+               <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Sparkles className="w-3 h-3" /> Enciclopédia (Modo IA)</span>
+            </div>
+            
+            {editedItem.wiki_info ? (
+              <div>
+                <p className="text-xs font-medium leading-relaxed opacity-90 whitespace-pre-wrap text-justify mb-3 italic">"{editedItem.wiki_info}"</p>
+                <button onClick={fetchWikiInfo} className="text-[9px] font-bold uppercase underline opacity-70 hover:opacity-100 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Gerar Nova Pesquisa</button>
+              </div>
+            ) : (
+              <div className="text-center py-2">
+                {loadingWiki ? (
+                  <div className="flex flex-col items-center">
+                    <Sparkles className="w-6 h-6 animate-pulse mb-2 text-purple-500" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest animate-pulse opacity-70">Consultando oráculo digital...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    {wikiError && <span className="text-[9px] font-bold text-red-500 block">{wikiError}</span>}
+                    <MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-purple-600 border-black dark:bg-purple-700 text-white">✨ Pesquisar sobre a Obra</MButton>
+                  </div>
+                )}
+              </div>
+            )}
+          </MContainer>
+
+          <MButton darkMode={darkMode} onClick={() => setItemToDelete(editedItem.id)} variant="red" className="w-full mt-4">Remover da Coleção</MButton>
         </div>
       </div>
     );
   }
 
+  // --- MODO LISTA NORMAL ---
   return (
     <div className="flex flex-col h-full">
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10 shadow-md" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -283,7 +380,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
         ) : (
           <div className="grid grid-cols-1 gap-3">
             {paginatedItems.map((item, idx) => (
-              <div key={item.id} className="flex flex-row h-32 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedItem(item)}>
+              <div key={item.id} className="flex flex-row h-32 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => handleSelect(item)}>
                 <MContainer darkMode={darkMode} className="w-4 border-r-0" colorClass={getMondrianColor(idx, darkMode)} />
                 <MContainer darkMode={darkMode} className="flex-1 flex p-2" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
                   <div className="flex-1 flex flex-col justify-between overflow-hidden">
@@ -295,7 +392,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
                     <div className="flex justify-between items-end mt-2">
                       <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-100 text-black'} font-black uppercase tracking-widest`}>{item.status}</div>
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
-                        {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRating(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= item.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                        {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-4 h-4 cursor-pointer ${star <= item.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
                     </div>
                   </div>
@@ -316,7 +413,7 @@ const LibraryTab = ({ items, setItems, darkMode }) => {
   );
 };
 
-const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast }) => {
+const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast, pendingAIFile, clearPendingAIFile, triggerGlobalAI }) => {
   const [scanStatus, setScanStatus] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
   
@@ -324,7 +421,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   const isProcessingScan = useRef(false);
 
   const [formData, setFormData] = useState({
-    type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: ''
+    type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: ''
   });
 
   const changeMode = (newMode) => {
@@ -341,7 +438,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     }
   };
 
-  // Efeito principal para o Leitor de Código de Barras (somente quando ativo)
   useEffect(() => {
     let isMounted = true;
 
@@ -375,7 +471,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       if (window.Html5Qrcode) {
         startScanner();
       } else {
-        setTimeout(startScanner, 500); // Aguarda o script carregar caso atrase
+        setTimeout(startScanner, 500); 
       }
     } else {
       stopScanner();
@@ -438,13 +534,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     setScanStatus({ type: 'error', message: 'FALHA: Item não encontrado. Preencha manualmente ou use a IA.' });
   };
 
-  // ==========================================
-  // O SEGREDO DA IA NO CELULAR: INPUT TYPE FILE (NATIVO)
-  // ==========================================
-  const handleFichaAI = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
+  const processAIFile = async (file) => {
     if (!settings.geminiApiKey) {
       setScanStatus({ type: 'error', message: 'Chave API do Gemini ausente (Ajustes).' });
       changeMode('manual');
@@ -487,10 +577,7 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
         });
 
         const data = await response.json();
-        
-        if (data.error) {
-           throw new Error(data.error.message);
-        }
+        if (data.error) throw new Error(data.error.message);
 
         const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
@@ -507,15 +594,26 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
            throw new Error("Resposta da IA veio vazia.");
         }
       } catch (error) {
-        console.error(error);
         playChipBeep('error');
         setScanStatus({ type: 'error', message: 'FALHA: A IA não conseguiu interpretar a imagem.' });
       } finally {
         setLoadingAi(false);
         setAddMode('manual');
-        e.target.value = null; // Reseta o input para permitir tirar nova foto logo em seguida
       }
     };
+  };
+
+  useEffect(() => {
+    if (pendingAIFile) {
+      processAIFile(pendingAIFile);
+      clearPendingAIFile();
+    }
+  }, [pendingAIFile]);
+
+  const handleFichaAI = (e) => {
+    const file = e.target.files[0];
+    if (file) processAIFile(file);
+    e.target.value = null; 
   };
 
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -549,7 +647,7 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
     playChipBeep('save'); 
     onShowToast(); 
     
-    setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '' });
+    setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
     setScanStatus(null);
     setActiveTab('library');
   };
@@ -558,7 +656,6 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
     <div className="flex flex-col h-full pb-20">
       <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar na biblioteca." onConfirm={() => setShowErrorModal(false)} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
 
-      {/* TABS SUPERIORES DO MODO ADICIONAR */}
       <div className="flex gap-2 mb-4">
         <MButton darkMode={darkMode} variant={addMode === 'manual' ? 'blue' : 'white'} onClick={() => changeMode('manual')} className="flex-1 py-2 text-[10px]">
           <PlusSquare className="w-4 h-4" /> Manual
@@ -566,12 +663,11 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
         <MButton darkMode={darkMode} variant={addMode === 'barcode' ? 'yellow' : 'white'} onClick={() => changeMode('barcode')} className="flex-1 py-2 text-[10px]">
           <ScanLine className="w-4 h-4" /> Barcode
         </MButton>
-        <MButton darkMode={darkMode} variant={addMode === 'camera_ai' ? 'red' : 'white'} onClick={() => changeMode('camera_ai')} className="flex-1 py-2 text-[10px]">
+        <MButton darkMode={darkMode} variant={addMode === 'camera_ai' ? 'red' : 'white'} onClick={triggerGlobalAI} className="flex-1 py-2 text-[10px]">
           <Camera className="w-4 h-4" /> Auto IA
         </MButton>
       </div>
 
-      {/* TELA DE BARCODE */}
       {addMode === 'barcode' && (
         <MContainer darkMode={darkMode} className="flex-1 mb-4 flex flex-col relative overflow-hidden bg-black items-center justify-center">
           <div id="reader-barcode" className="w-full h-full object-cover"></div>
@@ -582,7 +678,6 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
         </MContainer>
       )}
 
-      {/* TELA DE AUTO IA COM INPUT FILE NATIVO */}
       {addMode === 'camera_ai' && (
         <MContainer darkMode={darkMode} className="flex-1 mb-4 p-6 flex flex-col items-center justify-center text-center" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
            {loadingAi ? (
@@ -599,10 +694,9 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
                 <h3 className="font-black uppercase tracking-widest text-sm mb-2">Captura em Alta Resolução</h3>
                 <p className="text-[10px] opacity-70 mb-8 max-w-[250px]">Toque no botão abaixo para abrir a câmera original do seu celular. Tire uma foto nítida e bem iluminada da capa ou da ficha catalográfica.</p>
                 
-                {/* BOTÃO MÁGICO NATIVO */}
                 <label className="flex items-center justify-center gap-2 px-6 py-4 font-sans text-xs font-bold uppercase tracking-wider border-[3px] border-black bg-rose-400 text-black active:scale-95 transition-transform cursor-pointer shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-rose-500">
                   <Camera className="w-5 h-5" />
-                  Abrir Câmera do Celular
+                  Tirar Nova Foto
                   <input type="file" accept="image/*" capture="environment" onChange={handleFichaAI} className="hidden" />
                 </label>
              </div>
@@ -610,7 +704,6 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
         </MContainer>
       )}
 
-      {/* TELA MANUAL */}
       {addMode === 'manual' && (
         <div className="flex-1 overflow-y-auto scrollbar-hide pr-1">
           {scanStatus && (
@@ -647,15 +740,19 @@ Responda ESTRITAMENTE com um objeto JSON válido (não envie blocos markdown, ap
 
             <div className="mb-4">
               <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>Status Atual</label>
-              <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className={`w-full p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800 text-white' : 'border-black bg-white text-black'} font-sans text-sm outline-none`}>
-                {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
+              <div className="flex gap-2 flex-wrap">
+                {STATUS_OPTIONS.map(opt => (
+                  <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] active:scale-95 transition-transform ${formData.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-500')}`}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="mb-4">
               <label className={`text-[10px] font-bold uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>Avaliação (Nota)</label>
               <div className={`flex gap-2 p-2 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-white'}`}>
-                {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => setFormData({...formData, rating: star})} className={`w-6 h-6 cursor-pointer ${star <= formData.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => setFormData({...formData, rating: star})} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= formData.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
               </div>
             </div>
 
@@ -751,7 +848,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const [importData, setImportData] = useState(null);
 
   const handleExportCSV = () => {
-    const headers = ['id', 'archive_code', 'type', 'title', 'author_developer', 'year', 'publisher', 'status', 'rating', 'pages_or_time', 'barcode', 'description', 'cover_url', 'location', 'notes'];
+    const headers = ['id', 'archive_code', 'type', 'title', 'author_developer', 'year', 'publisher', 'status', 'rating', 'pages_or_time', 'barcode', 'description', 'cover_url', 'location', 'notes', 'wiki_info'];
     const csvContent = [headers.join(','), ...items.map(item => headers.map(h => `"${(item[h] || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `memorabilia_export_${new Date().toISOString().split('T')[0]}.csv`; link.click();
@@ -832,7 +929,27 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [globalToast, setGlobalToast] = useState(false); 
 
-  // Lógica de scripts externos
+  const globalFileInputRef = useRef(null);
+  const [pendingAIFile, setPendingAIFile] = useState(null);
+
+  const triggerGlobalAI = () => {
+    setAddMode('camera_ai');
+    setActiveTab('add');
+    if (globalFileInputRef.current) {
+      globalFileInputRef.current.click();
+    }
+  };
+
+  const handleGlobalFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPendingAIFile(file);
+      setAddMode('camera_ai');
+      setActiveTab('add');
+    }
+    e.target.value = null;
+  };
+
   useEffect(() => {
     if (!document.getElementById('html5-qrcode-script')) {
       const script = document.createElement('script');
@@ -877,8 +994,7 @@ export default function App() {
     isLongPress.current = false;
     pressTimer.current = setTimeout(() => {
       isLongPress.current = true;
-      setAddMode('manual'); 
-      setActiveTab('add');
+      triggerGlobalAI(); 
     }, 500); 
   };
 
@@ -930,8 +1046,10 @@ export default function App() {
         </header>
 
         <main className="flex-1 overflow-hidden p-3 relative z-0">
-          {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} />}
-          {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} />}
+          <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
+          
+          {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
+          {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} pendingAIFile={pendingAIFile} clearPendingAIFile={() => setPendingAIFile(null)} triggerGlobalAI={triggerGlobalAI} />}
           {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} />}
           {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={() => setGlobalToast(true)} />}
         </main>
