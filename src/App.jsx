@@ -103,26 +103,41 @@ const parseTimeStr = (timeStr) => {
 };
 
 // Extrator Dinâmico de Link Web
-const getExternalLink = (type, title, specificLink = '') => {
-  if (specificLink && specificLink.startsWith('http')) return specificLink;
-  if (!title) return '#';
+const getExternalLinkInfo = (type, title, specificLink = '') => {
+  if (specificLink && specificLink.trim().startsWith('http')) return { url: specificLink.trim(), isExact: true };
+  if (!title) return { url: '#', isExact: false };
   const q = encodeURIComponent(title);
-  if (['CD', 'Vinil', 'Fita Cassete'].includes(type)) return `https://www.discogs.com/search?q=${q}&type=all`;
-  if (['Livro', 'Quadrinho', 'Revista'].includes(type)) return `https://www.skoob.com.br/livro/lista/busca:${q}`;
-  return `https://gamefaqs.gamespot.com/search?game=${q}`;
+  if (['CD', 'Vinil', 'Fita Cassete'].includes(type)) return { url: `https://www.discogs.com/search?q=${q}&type=all`, isExact: false };
+  if (['Livro', 'Quadrinho', 'Revista'].includes(type)) return { url: `https://www.skoob.com.br/livro/lista/busca:${q}`, isExact: false };
+  return { url: `https://gamefaqs.gamespot.com/search?game=${q}`, isExact: false };
 };
 
 const processCompletedGamesCSV = (csvText) => {
   const rows = parseCSVText(csvText);
   if (rows.length < 2) return [];
   const headers = rows[0].map(h => normalizeStr(h));
-  const getIdx = (name) => headers.findIndex(h => h === normalizeStr(name));
   
-  const iNome = getIdx('Nome'); const iConsole = getIdx('Console'); const iGenero = getIdx('Gênero');
-  const iTempo = getIdx('Tempo'); const iNota = getIdx('Nota'); const iSuporte = getIdx('Suporte');
-  const iDif = getIdx('Dificuldade'); const iCond = getIdx('Condição'); const iObs = getIdx('Observação');
-  const iInicio = getIdx('Início'); const iFim = getIdx('Fim');
-  const iPrecoPago = getIdx('Preço pago'); const iPrecoSemDesc = getIdx('Preço sem desconto'); const iLink = getIdx('Link');
+  // Busca Difusa pelas colunas na Planilha (Tolerância a Nomes diferentes)
+  const getIdx = (keywords) => {
+    const kws = Array.isArray(keywords) ? keywords : [keywords];
+    const normalizedKws = kws.map(k => normalizeStr(k));
+    return headers.findIndex(h => normalizedKws.some(kw => h.includes(kw)));
+  };
+  
+  const iNome = getIdx(['Nome', 'Título', 'Jogo']); 
+  const iConsole = getIdx(['Console', 'Plataforma']); 
+  const iGenero = getIdx(['Gênero', 'Genero']);
+  const iTempo = getIdx(['Tempo', 'Horas']); 
+  const iNota = getIdx(['Nota', 'Avaliação']); 
+  const iSuporte = getIdx(['Suporte', 'Mídia', 'Midia']);
+  const iDif = getIdx(['Dificuldade']); 
+  const iCond = getIdx(['Condição', 'Condicao', 'Objetivo']); 
+  const iObs = getIdx(['Observação', 'Observacao', 'Comentário']);
+  const iInicio = getIdx(['Início', 'Inicio', 'Começo', 'Data de Início']); 
+  const iFim = getIdx(['Fim', 'Término', 'Termino', 'Conclusão', 'Data Final']);
+  const iPrecoPago = getIdx(['Preço pago', 'Preco pago', 'Valor pago']); 
+  const iPrecoSemDesc = getIdx(['Preço sem desconto', 'Preco sem desconto', 'Valor original', 'Cheio']); 
+  const iLink = getIdx(['Link', 'Url', 'Página web']);
 
   const parsed = [];
   for(let i=1; i<rows.length; i++) {
@@ -245,109 +260,109 @@ const resizeImageForAPI = (file) => {
 };
 
 // ==========================================
-// FUNÇÕES UTILITÁRIAS GLOBAIS
+// 5. COMPONENTES UI MONDRIAN
 // ==========================================
-const parseCSVText = (text) => {
-  const rows = []; let row = []; let inQuotes = false; let val = '';
-  for (let i = 0; i < text.length; i++) {
-    let char = text[i]; let nextChar = text[i + 1];
-    if (char === '"' && inQuotes && nextChar === '"') { val += '"'; i++; } 
-    else if (char === '"') { inQuotes = !inQuotes; } 
-    else if (char === ',' && !inQuotes) { row.push(val); val = ''; } 
-    else if ((char === '\n' || char === '\r') && !inQuotes) {
-      if (char === '\r' && nextChar === '\n') i++;
-      row.push(val); rows.push(row); row = []; val = '';
-    } else { val += char; }
-  }
-  if (val !== '' || row.length > 0) { row.push(val); rows.push(row); }
-  return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
+const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
+  <div className={`border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
+);
+
+const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
+  let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
+  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black';
+  if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black';
+  if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black';
+  if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
+  if (variant === 'emerald') bgClass = darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400 text-black';
+
+  return (
+    <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
+      {icon && icon} {children}
+    </button>
+  );
 };
 
-const normalizeStr = s => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
+const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) => (
+  <div className="flex flex-col mb-3 w-full">
+    <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
+    <div className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans ${emphasize ? 'text-lg text-rose-500 font-black tracking-widest text-center' : 'text-sm font-bold'} ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : ''} truncate`}>
+      {value || '--'}
+    </div>
+  </div>
+);
 
-const parseTimeStr = (timeStr) => {
-  if (!timeStr) return 0;
-  const parts = timeStr.toString().split(':');
-  if (parts.length >= 2) return parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60);
-  return parseFloat(timeStr.toString().replace(',', '.')) || 0;
+const MInput = ({ label, value, onChange, type = "text", placeholder = "", multiline = false, darkMode, readOnly=false }) => (
+  <div className="flex flex-col mb-3 w-full">
+    <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
+    {multiline ? (
+      <textarea readOnly={readOnly} value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-yellow-100 dark:focus:bg-yellow-900'} transition-colors min-h-[80px] resize-none`} />
+    ) : (
+      <input readOnly={readOnly} type={type} value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-sky-100 dark:focus:bg-sky-900'} transition-colors`} />
+    )}
+  </div>
+);
+
+const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
+        <p className="text-sm font-bold opacity-90">{message}</p>
+        <div className="flex gap-2 mt-4">
+          <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
+          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
+        </div>
+      </MContainer>
+    </div>
+  );
 };
 
-// Extrator Dinâmico de Link Web
-const getExternalLinkInfo = (type, title, specificLink = '') => {
-  if (specificLink && specificLink.trim().startsWith('http')) return { url: specificLink.trim(), isExact: true };
-  if (!title) return { url: '#', isExact: false };
-  const q = encodeURIComponent(title);
-  if (['CD', 'Vinil', 'Fita Cassete'].includes(type)) return { url: `https://www.discogs.com/search?q=${q}&type=all`, isExact: false };
-  if (['Livro', 'Quadrinho', 'Revista'].includes(type)) return { url: `https://www.skoob.com.br/livro/lista/busca:${q}`, isExact: false };
-  return { url: `https://gamefaqs.gamespot.com/search?game=${q}`, isExact: false };
-};
+const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v }) => (
+  <div className="flex items-center gap-2 w-full mb-2">
+    <div className="w-16 text-[9px] font-black uppercase tracking-widest truncate" title={label}>{label}</div>
+    <div className={`flex-1 h-5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-gray-800 border-gray-500 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-gray-200 border-black'} flex relative overflow-hidden`}>
+      <div className={`h-full transition-all duration-1000 ${getMondrianColor(index, darkMode)}`} style={{ width: `${max > 0 ? (value / max) * 100 : 0}%` }} />
+      <span className={`absolute inset-0 flex items-center ml-2 text-[10px] font-black ${darkMode ? 'text-white' : 'text-black'} drop-shadow-md`}>{valueFormatter(value)}</span>
+    </div>
+  </div>
+);
 
-const processCompletedGamesCSV = (csvText) => {
-  const rows = parseCSVText(csvText);
-  if (rows.length < 2) return [];
-  const headers = rows[0].map(h => normalizeStr(h));
-  
-  // Busca Difusa pelas colunas na Planilha (Tolerância a Nomes diferentes)
-  const getIdx = (keywords) => {
-    const kws = Array.isArray(keywords) ? keywords : [keywords];
-    const normalizedKws = kws.map(k => normalizeStr(k));
-    return headers.findIndex(h => normalizedKws.some(kw => h.includes(kw)));
-  };
-  
-  const iNome = getIdx(['Nome', 'Título', 'Jogo']); 
-  const iConsole = getIdx(['Console', 'Plataforma']); 
-  const iGenero = getIdx(['Gênero', 'Genero']);
-  const iTempo = getIdx(['Tempo', 'Horas']); 
-  const iNota = getIdx(['Nota', 'Avaliação']); 
-  const iSuporte = getIdx(['Suporte', 'Mídia', 'Midia']);
-  const iDif = getIdx(['Dificuldade']); 
-  const iCond = getIdx(['Condição', 'Condicao', 'Objetivo']); 
-  const iObs = getIdx(['Observação', 'Observacao', 'Comentário']);
-  const iInicio = getIdx(['Início', 'Inicio', 'Começo', 'Data de Início']); 
-  const iFim = getIdx(['Fim', 'Término', 'Termino', 'Conclusão', 'Data Final']);
-  const iPrecoPago = getIdx(['Preço pago', 'Preco pago', 'Valor pago']); 
-  const iPrecoSemDesc = getIdx(['Preço sem desconto', 'Preco sem desconto', 'Valor original', 'Cheio']); 
-  const iLink = getIdx(['Link', 'Url', 'Página web']);
+// ==========================================
+// ABAS DA APLICAÇÃO
+// ==========================================
 
-  const parsed = [];
-  for(let i=1; i<rows.length; i++) {
-    const row = rows[i];
-    if(!row || row.length < 3 || !row[iNome]) continue;
-    
-    let supVal = row[iSuporte] || '';
-    let isFisico = supVal.toLowerCase().includes('físico') || supVal.toLowerCase().includes('fisico') || supVal === 'F';
-    
-    let anoFim = '';
-    if (row[iFim]) { const parts = row[iFim].split('/'); if (parts.length === 3) anoFim = parts[2].split(' ')[0]; }
-    
-    // Tratamento de Moeda para evitar quebras numéricas
-    const cleanMoney = (val) => val ? val.replace('R$', '').trim() : '';
+const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [editedItem, setEditedItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Todos');
+  const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [sortBy, setSortBy] = useState('id');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [loadingWiki, setLoadingWiki] = useState(false);
+  const [wikiError, setWikiError] = useState('');
+  const itemsPerPage = 8;
 
-    parsed.push({
-      id: i.toString(),
-      nome: row[iNome] || 'Desconhecido',
-      console: row[iConsole] || 'Outro',
-      genero: row[iGenero] || 'Outro',
-      tempoHoras: parseTimeStr(row[iTempo]),
-      nota: parseFloat((row[iNota] || '0').replace(',', '.')) || 0,
-      suporteStr: supVal,
-      suporte: isFisico ? 'Físico' : 'Digital',
-      dificuldade: row[iDif] || '--',
-      condicao: row[iCond] || '--',
-      observacao: row[iObs] || '',
-      inicio: row[iInicio] || '--',
-      fim: row[iFim] || '--',
-      anoFim: anoFim,
-      precoPago: cleanMoney(row[iPrecoPago]),
-      precoSemDesc: cleanMoney(row[iPrecoSemDesc]),
-      link: row[iLink] || ''
+  const filteredItems = useMemo(() => {
+    let result = items.filter(item => {
+      const titleSearch = (item.title || '').toLowerCase();
+      const authorSearch = (item.author_developer || '').toLowerCase();
+      const query = search.toLowerCase();
+      const matchesSearch = titleSearch.includes(query) || authorSearch.includes(query);
+      
+      let matchesCategory = true;
+      if (activeCategory !== 'Todos') {
+        if (activeSubtype === 'Todos') matchesCategory = CATEGORIES[activeCategory]?.includes(item.type || '');
+        else matchesCategory = (item.type || '') === activeSubtype;
+      }
+      return matchesSearch && matchesCategory;
     });
-  }
-  return parsed;
-};
 
-// ==========================================
-// PWA ENGINE (Injeção Dinâmica do App)
+    result.sort((a, b) => {
+      let valA = a[sortBy] || '';
+      let valB = b[sortBy] || '';
 
       if (['year', 'rating', 'pages_or_time'].includes(sortBy)) {
         valA = parseFloat(valA) || 0;
