@@ -276,13 +276,13 @@ const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) =>
   </div>
 );
 
-const MInput = ({ label, value, onChange, type = "text", placeholder = "", multiline = false, darkMode, readOnly=false }) => (
+const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly=false }) => (
   <div className="flex flex-col mb-3 w-full">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
     {multiline ? (
-      <textarea readOnly={readOnly} value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-yellow-100 dark:focus:bg-yellow-900'} transition-colors min-h-[80px] resize-none`} />
+      <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-yellow-100 dark:focus:bg-yellow-900'} transition-colors min-h-[80px] resize-none`} />
     ) : (
-      <input readOnly={readOnly} type={type} value={value} onChange={onChange} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-sky-100 dark:focus:bg-sky-900'} transition-colors`} />
+      <input readOnly={readOnly} type={type} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-sky-100 dark:focus:bg-sky-900'} transition-colors`} />
     )}
   </div>
 );
@@ -370,7 +370,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
   const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
-  const updateRatingList = (id, newRating) => { setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item)); };
+  const updateRatingList = (id, newRating) => { 
+    setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item)); 
+    playChipBeep('save'); onShowToast('success'); 
+  };
 
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
@@ -381,6 +384,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     if (itemToDelete) {
       setItems(items.filter(item => item.id !== itemToDelete));
       setItemToDelete(null); setSelectedItem(null); setEditedItem(null);
+      playChipBeep('success'); onShowToast('success');
     }
   };
 
@@ -883,9 +887,9 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           <div className="text-5xl font-black z-10">{totalDash}</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div>
         </MContainer>
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
-          <Ghost className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
-          <div className="text-5xl font-black z-10">{stats.vergonha || 0}</div>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
+          <Clock className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
+          <div className="text-3xl font-black z-10">{stats.vergonha || 0}</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Intocados / Backlog</div>
         </MContainer>
       </div>
@@ -911,7 +915,10 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
             {stats.epico && (
               <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
-                <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.epico.title}</div><div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {[(activeCategories['Livros']||[]).includes(stats.epico.type) ? 'Págs' : 'Horas']}</div></div>
+                <div>
+                   <div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.epico.title}</div>
+                   <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {(activeCategories['Livros']||[]).includes(stats.epico.type) ? 'Págs' : 'Horas'}</div>
+                </div>
               </MContainer>
             )}
           </div>
@@ -943,6 +950,252 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
             </MContainer>
           )}
         </>
+      )}
+    </div>
+  );
+};
+
+// ==========================================
+// COMPONENTE DASHBOARD DE JOGOS ZERADOS
+// ==========================================
+const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMode, onShowToast }) => {
+  const [filterConsole, setFilterConsole] = useState('Todos');
+  const [filterGenre, setFilterGenre] = useState('Todos');
+  const [filterSupport, setFilterSupport] = useState('Todos');
+  const [page, setPage] = useState(0);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const itemsPerPage = 20;
+
+  const handleManualImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const parsed = processCompletedGamesCSV(evt.target.result);
+      if (parsed.length > 0) {
+        setCompletedGames(parsed); playChipBeep('success'); onShowToast('success');
+      } else {
+        playChipBeep('error'); onShowToast('error');
+      }
+    };
+    reader.readAsText(file); e.target.value = null;
+  };
+
+  const filteredGames = useMemo(() => {
+    return completedGames.filter(g => {
+      let mConsole = true, mGenre = true, mSup = true;
+      if(filterConsole !== 'Todos') mConsole = g.console === filterConsole;
+      if(filterGenre !== 'Todos') mGenre = g.genero === filterGenre;
+      if(filterSupport !== 'Todos') mSup = g.suporte === filterSupport;
+      return mConsole && mGenre && mSup;
+    });
+  }, [completedGames, filterConsole, filterGenre, filterSupport]);
+
+  const paginatedGames = filteredGames.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = Math.ceil(filteredGames.length / itemsPerPage) || 1;
+
+  const uniqueConsoles = [...new Set(completedGames.map(g => g.console))].sort();
+  const uniqueGenres = [...new Set(completedGames.map(g => g.genero))].sort();
+
+  const totalJogos = filteredGames.length;
+  const totalHoras = filteredGames.reduce((acc, g) => acc + g.tempoHoras, 0).toFixed(1);
+  const notasValidas = filteredGames.filter(g => g.nota > 0);
+  const mediaNota = notasValidas.length > 0 ? (notasValidas.reduce((a, b) => a + b.nota, 0) / notasValidas.length).toFixed(1) : 0;
+  
+  const fisicosCount = filteredGames.filter(g => g.suporte === 'Físico').length;
+  const fisicoPerc = totalJogos > 0 ? ((fisicosCount / totalJogos) * 100).toFixed(0) : 0;
+
+  const byConsole = filteredGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
+  const topConsoles = Object.entries(byConsole).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxConsole = topConsoles.length > 0 ? topConsoles[0][1] : 1;
+
+  const byGenre = filteredGames.reduce((acc, g) => { acc[g.genero] = (acc[g.genero] || 0) + 1; return acc; }, {});
+  const topGenres = Object.entries(byGenre).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxGenre = topGenres.length > 0 ? topGenres[0][1] : 1;
+
+  const byYear = filteredGames.reduce((acc, g) => {
+    if (g.anoFim) { acc[g.anoFim] = (acc[g.anoFim] || 0) + 1; }
+    return acc;
+  }, {});
+  const yearsKeys = Object.keys(byYear).sort();
+  const maxYear = yearsKeys.length > 0 ? Math.max(...Object.values(byYear)) : 1;
+
+  if (completedGames.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+        <GamepadIcon className="w-16 h-16 mb-4 opacity-20" />
+        <h2 className="text-xl font-black uppercase tracking-widest mb-2">Sem Dados</h2>
+        <p className="text-[10px] font-bold mb-6 opacity-70">Acesse a aba Ajustes para fazer o upload do .CSV atualizado da sua lista de jogos zerados.</p>
+        <label className={`cursor-pointer w-full py-4 text-center border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] text-[10px] font-black uppercase tracking-widest active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-sky-800 border-gray-500 text-white shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black'}`}>
+          📤 Fazer Upload do CSV
+          <input type="file" accept=".csv" className="hidden" onChange={handleManualImport} />
+        </label>
+      </div>
+    );
+  }
+
+  // --- MODO DETALHE ---
+  if (selectedGame) {
+    const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link); 
+    
+    return (
+      <div className="flex flex-col h-full pb-20 relative">
+        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelectedGame(null)} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
+            <div className="font-black uppercase tracking-widest text-[10px] truncate">Registro de Conclusão</div>
+          </div>
+        </MContainer>
+        
+        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
+          <div className="flex gap-4">
+            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex flex-col items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-sky-900' : 'bg-sky-200'}`}>
+               <GamepadIcon className={`w-12 h-12 mb-2 ${darkMode ? 'text-white opacity-40' : 'text-black opacity-30'}`} />
+               <span className="text-[10px] font-black uppercase tracking-widest opacity-60 px-2 text-center">{selectedGame.console}</span>
+            </MContainer>
+            <div className="flex flex-col flex-1 justify-between py-1">
+              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-sky-500 text-sky-300 bg-sky-900' : 'border-black text-black bg-sky-300'}`}>FINALIZADO</div>
+              <MReadOnlyBox label="Nome do Jogo" value={selectedGame.nome} darkMode={darkMode} />
+              <MReadOnlyBox label="Gênero" value={selectedGame.genero} darkMode={darkMode} />
+            </div>
+          </div>
+
+          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${darkMode ? 'bg-gray-800 border-gray-500 text-sky-400' : 'bg-sky-100 border-black text-sky-800'}`}>
+            <ExternalLink className="w-4 h-4" /> {linkInfo.isExact ? "Acessar Link Salvo na Planilha" : `Buscar "${selectedGame.nome}" na Web`}
+          </a>
+
+          <div className="grid grid-cols-2 gap-2">
+            <MReadOnlyBox label="Sua Nota Final" value={`★ ${selectedGame.nota} / 10`} darkMode={darkMode} emphasize={true} />
+            <MReadOnlyBox label="Tempo de Jogo" value={`${selectedGame.tempoHoras.toFixed(1)}h`} darkMode={darkMode} emphasize={true} />
+            <MReadOnlyBox label="Dificuldade Jogado" value={selectedGame.dificuldade} darkMode={darkMode} />
+            <MReadOnlyBox label="Mídia (Suporte)" value={selectedGame.suporteStr || selectedGame.suporte} darkMode={darkMode} />
+            <MReadOnlyBox label="Data de Início" value={selectedGame.inicio} darkMode={darkMode} />
+            <MReadOnlyBox label="Data de Término" value={selectedGame.fim} darkMode={darkMode} />
+          </div>
+
+          {(selectedGame.precoPago || selectedGame.precoSemDesc) && (
+            <MContainer darkMode={darkMode} className="p-3 grid grid-cols-2 gap-2" colorClass={darkMode ? 'bg-rose-900/40 text-white' : 'bg-rose-100 text-black'}>
+               <MReadOnlyBox label="Preço Pago" value={selectedGame.precoPago ? `R$ ${selectedGame.precoPago}` : '--'} darkMode={darkMode} />
+               <MReadOnlyBox label="Preço Sem Desconto" value={selectedGame.precoSemDesc ? `R$ ${selectedGame.precoSemDesc}` : '--'} darkMode={darkMode} />
+            </MContainer>
+          )}
+
+          <MReadOnlyBox label="Condição de Conclusão (Objetivo)" value={selectedGame.condicao} multiline darkMode={darkMode} />
+          <MReadOnlyBox label="Observações Pessoais" value={selectedGame.observacao} multiline darkMode={darkMode} />
+        </div>
+      </div>
+    );
+  }
+
+  // --- MODO DASHBOARD / LISTA ---
+  return (
+    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide">
+      <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
+          <div className="flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros de Zerados</div>
+        </div>
+        <div className="flex gap-2">
+          <select value={filterConsole} onChange={e => { setFilterConsole(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            <option value="Todos">Consoles</option>
+            {uniqueConsoles.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={filterGenre} onChange={e => { setFilterGenre(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            <option value="Todos">Gêneros</option>
+            {uniqueGenres.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={filterSupport} onChange={e => { setFilterSupport(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            <option value="Todos">Mídia</option>
+            <option value="Físico">Física</option>
+            <option value="Digital/Outro">Digital</option>
+          </select>
+        </div>
+      </MContainer>
+
+      {/* BLOCO DE ESTATÍSTICAS */}
+      <div className="grid grid-cols-2 gap-3">
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black'}>
+          <GamepadIcon className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
+          <div className="text-5xl font-black z-10">{totalJogos}</div>
+          <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Jogos Finalizados</div>
+        </MContainer>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
+          <Clock className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
+          <div className="text-3xl font-black z-10">{totalHoras}h</div>
+          <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Total de Horas</div>
+        </MContainer>
+        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
+          <div className="text-2xl font-black z-10">★ {mediaNota}</div>
+          <div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Média Geral / 10</div>
+        </MContainer>
+        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20 relative overflow-hidden" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-black text-white'}>
+          <DiscIcon className={`absolute -right-2 -bottom-2 w-12 h-12 opacity-20`} />
+          <div className="text-2xl font-black z-10">{fisicoPerc}%</div>
+          <div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Mídia Física</div>
+        </MContainer>
+      </div>
+
+      {/* BLOCO DE GRÁFICOS */}
+      <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Consoles Dominantes</div>
+        <div className="flex flex-col">
+          {topConsoles.map(([cons, count], index) => <MondrianHBar key={cons} label={cons} value={count} max={maxConsole} index={index} darkMode={darkMode} />)}
+          {topConsoles.length === 0 && <span className="opacity-50 text-xs">Sem dados.</span>}
+        </div>
+      </MContainer>
+
+      <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Gêneros Favoritos</div>
+        <div className="flex flex-col">
+          {topGenres.map(([gen, count], index) => <MondrianHBar key={gen} label={gen} value={count} max={maxGenre} index={index + 2} darkMode={darkMode} />)}
+          {topGenres.length === 0 && <span className="opacity-50 text-xs">Sem dados.</span>}
+        </div>
+      </MContainer>
+
+      {yearsKeys.length > 0 && (
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+          <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-500' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
+          <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+            {yearsKeys.map((yearStr, idx) => {
+              const count = byYear[yearStr]; const heightPerc = (count / maxYear) * 100;
+              return (
+                <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                  <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                  <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-500' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
+            {yearsKeys.map(yearStr => <div key={`label-${yearStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>)}
+          </div>
+        </MContainer>
+      )}
+
+      {/* BLOCO DA LISTA PAGINADA */}
+      <div className={`text-[10px] font-black uppercase tracking-widest border-b-[4px] pb-2 mt-4 ${darkMode ? 'border-gray-500' : 'border-black'}`}>
+        Lista Completa ({paginatedGames.length} de {filteredGames.length})
+      </div>
+      <div className="flex flex-col gap-3">
+        {paginatedGames.map((g) => (
+          <div key={g.id} onClick={() => setSelectedGame(g)} className={`cursor-pointer p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-gray-800 border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black'} flex justify-between`}>
+             <div className="flex flex-col flex-1 overflow-hidden pr-2">
+                <div className="text-sm font-black truncate">{g.nome}</div>
+                <div className="text-[9px] font-bold uppercase opacity-70 truncate">{g.console} • {g.genero}</div>
+                <div className="text-[8px] font-black mt-1 uppercase text-sky-600 dark:text-sky-400">{g.suporte} ({g.suporteStr})</div>
+             </div>
+             <div className="flex flex-col items-end justify-center min-w-[50px] border-l-[3px] border-current pl-2">
+                <div className="text-[12px] font-black leading-none">★ {g.nota}/10</div>
+                <div className="text-[8px] font-bold mt-1 opacity-70">{g.tempoHoras.toFixed(1)}h</div>
+             </div>
+          </div>
+        ))}
+      </div>
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 mb-4">
+          <MButton darkMode={darkMode} onClick={() => setPage(Math.max(0, page - 1))} className="w-12 h-10" disabled={page === 0}><ChevronLeft className="w-5 h-5" /></MButton>
+          <div className="font-sans text-[10px] font-black uppercase tracking-widest">Página {page + 1} / {totalPages}</div>
+          <MButton darkMode={darkMode} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} className="w-12 h-10" disabled={page === totalPages - 1}><ChevronRight className="w-5 h-5" /></MButton>
+        </div>
       )}
     </div>
   );
@@ -1043,7 +1296,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       userClassCodes: { ...activeClassCodes, [newSubclass.name.trim()]: newSubclass.code.trim() }
     });
     setNewSubclass({ parent: 'Livros', name: '', code: '' });
-    playChipBeep('success'); onShowToast('success');
+    playChipBeep('save'); onShowToast('success');
   };
 
   const handleUpdateCode = (type, newCode) => {
@@ -1079,7 +1332,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           <div className="p-4 flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-black uppercase tracking-widest">Tema Visual</span>
-              <button onClick={() => { setDarkMode(!darkMode); playChipBeep('success'); }} className={`px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-200 text-black'}`}>
+              <button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-200 text-black'}`}>
                 {darkMode ? 'Modo Claro' : 'Modo Escuro'}
               </button>
             </div>
@@ -1098,6 +1351,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                          const newSpeed = 160 - parseInt(e.target.value);
                          setSettings({...settings, marqueeSpeed: newSpeed});
                        }}
+                       onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }}
+                       onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }}
                        className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}
                        style={{ accentColor: '#38bdf8' }}
                      />
@@ -1120,6 +1375,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                        onChange={(e) => {
                          setSettings({...settings, marqueeBrightness: parseInt(e.target.value)});
                        }}
+                       onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }}
+                       onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }}
                        className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}
                        style={{ accentColor: '#facc15' }}
                      />
@@ -1142,7 +1399,14 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </button>
         {openSection === 'arquivologia' && (
           <div className="p-4 flex flex-col gap-4">
-            <MInput darkMode={darkMode} label="Prefixo do Acervo (Suas Iniciais)" value={settings.archivePrefix || ''} onChange={e => setSettings({...settings, archivePrefix: e.target.value.toUpperCase()})} placeholder="Ex: MBU" />
+            <MInput 
+              darkMode={darkMode} 
+              label="Prefixo do Acervo (Suas Iniciais)" 
+              value={settings.archivePrefix || ''} 
+              onChange={e => setSettings({...settings, archivePrefix: e.target.value.toUpperCase()})} 
+              onBlur={() => { playChipBeep('save'); onShowToast('success'); }}
+              placeholder="Ex: MBU" 
+            />
             
             <div className={`p-3 border-[4px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-gray-100'}`}>
               <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Adicionar Nova Subclasse</h4>
@@ -1167,7 +1431,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                     {subs.map(sub => (
                       <div key={sub} className="flex items-center justify-between text-xs font-bold">
                         <span className="opacity-80">{sub}</span>
-                        <input type="text" value={activeClassCodes[sub] || ''} onChange={e => handleUpdateCode(sub, e.target.value)} className={`w-16 p-1 border-[2px] text-center font-mono text-[10px] outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
+                        <input 
+                          type="text" 
+                          value={activeClassCodes[sub] || ''} 
+                          onChange={e => handleUpdateCode(sub, e.target.value)} 
+                          onBlur={() => { playChipBeep('save'); onShowToast('success'); }}
+                          className={`w-16 p-1 border-[2px] text-center font-mono text-[10px] outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} 
+                        />
                       </div>
                     ))}
                   </div>
@@ -1407,16 +1677,6 @@ export default function App() {
       `}</style>
 
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
-        
-        {toast.visible && (
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
-            {toast.type === 'error' ? (
-              <div className={`w-14 h-14 border-[4px] border-black bg-rose-500 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><XIcon className="w-10 h-10" /></div>
-            ) : (
-              <div className={`w-14 h-14 border-[4px] border-black bg-sky-400 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><Check className="w-10 h-10" /></div>
-            )}
-          </div>
-        )}
 
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
@@ -1430,7 +1690,13 @@ export default function App() {
             </div>
             
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
-               <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
+              {toast.visible ? (
+                toast.type === 'error' 
+                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
+                  : <Check className="text-sky-500 w-10 h-10 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] animate-in zoom-in duration-200" />
+              ) : (
+                <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
+              )}
             </div>
 
           </div>
