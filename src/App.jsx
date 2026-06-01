@@ -73,8 +73,9 @@ const Smartphone = (p) => <Icon {...p} path={<><rect width="14" height="20" x="5
 const GamepadIcon = (p) => <Icon {...p} path={<><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></>} />;
 const DiscIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></>} />;
 const MonitorPlay = (p) => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>} />;
-const LinkIcon = (p) => <Icon {...p} path={<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></>} />;
 const XIcon = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+const Zap = (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
+
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS GLOBAIS
@@ -241,7 +242,7 @@ const CLASS_CODES = {
 
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
 
-// Paleta restrita De Stijl / Mondrian: Cores primárias fortes (Rosa/Vermelho, Azul, Amarelo), Preto, Branco e Cinza claro.
+// Paleta restrita De Stijl / Mondrian
 const getMondrianColor = (index, darkMode) => {
   const colorsLight = ['bg-rose-500', 'bg-sky-500', 'bg-yellow-400', 'bg-white'];
   const colorsDark = ['bg-rose-700', 'bg-sky-700', 'bg-yellow-600', 'bg-gray-800'];
@@ -705,6 +706,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   };
 
   const [showErrorModal, setShowErrorModal] = useState(false);
+  
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
     const classCode = CLASS_CODES[formData.type] || '000';
@@ -715,6 +717,17 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const sequence = String(maxSeq + 1).padStart(4, '0');
     const newItem = { ...formData, id: Date.now().toString(), archive_code: `LUI-${classCode}-${sequence}` };
     setItems([newItem, ...items]); 
+    
+    // ENVIANDO COMO TEXT/PLAIN PARA BURLAR O CORS BLOCK DA GOOGLE (Padrão para App Script Web Apps)
+    if (settings.googleSheetsUrl) {
+      fetch(settings.googleSheetsUrl, { 
+        method: 'POST', 
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+        body: JSON.stringify(newItem) 
+      }).catch(err => console.error("Erro ao enviar Google Sheets:", err));
+    }
+    
     playChipBeep('save'); onShowToast('success'); 
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
     updateStatus('idle', ''); resetGlobalAi(); setActiveTab('library');
@@ -940,6 +953,21 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const [selectedGame, setSelectedGame] = useState(null);
   const itemsPerPage = 20;
 
+  const handleManualImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const parsed = processCompletedGamesCSV(evt.target.result);
+      if (parsed.length > 0) {
+        setCompletedGames(parsed); playChipBeep('success'); onShowToast('success');
+      } else {
+        playChipBeep('error'); onShowToast('error');
+      }
+    };
+    reader.readAsText(file); e.target.value = null;
+  };
+
   const filteredGames = useMemo(() => {
     return completedGames.filter(g => {
       let mConsole = true, mGenre = true, mSup = true;
@@ -985,6 +1013,10 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         <GamepadIcon className="w-16 h-16 mb-4 opacity-20" />
         <h2 className="text-xl font-black uppercase tracking-widest mb-2">Sem Dados</h2>
         <p className="text-[10px] font-bold mb-6 opacity-70">Acesse a aba Ajustes para fazer o upload do .CSV atualizado da sua lista de jogos zerados.</p>
+        <label className={`cursor-pointer w-full py-4 text-center border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] text-[10px] font-black uppercase tracking-widest active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-sky-800 border-gray-500 text-white shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black'}`}>
+          📤 Fazer Upload do CSV
+          <input type="file" accept=".csv" className="hidden" onChange={handleManualImport} />
+        </label>
       </div>
     );
   }
@@ -1009,7 +1041,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
                <span className="text-[10px] font-black uppercase tracking-widest opacity-60 px-2 text-center">{selectedGame.console}</span>
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
-              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-yellow-500 text-yellow-300 bg-yellow-900' : 'border-black text-black bg-yellow-400'}`}>FINALIZADO</div>
+              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-sky-500 text-sky-300 bg-sky-900' : 'border-black text-black bg-sky-300'}`}>FINALIZADO</div>
               <MReadOnlyBox label="Nome do Jogo" value={selectedGame.nome} darkMode={darkMode} />
               <MReadOnlyBox label="Gênero" value={selectedGame.genero} darkMode={darkMode} />
             </div>
@@ -1252,24 +1284,82 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </MContainer>
       )}
 
-      <MContainer darkMode={darkMode} className="p-4 mb-4 flex justify-between items-center" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <div className="text-xs font-black uppercase tracking-widest">Aparência</div>
-        <MButton darkMode={darkMode} onClick={() => { setDarkMode(!darkMode); playChipBeep('success'); }} variant="black" className="px-4 py-2">
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {darkMode ? 'Modo Claro' : 'Modo Escuro'}
-        </MButton>
+      {/* BLOCO: APARÊNCIA E VELOCIDADE */}
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <button onClick={() => setOpenSection(openSection === 'aparencia' ? null : 'aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+          <span className="flex items-center gap-2"><Sun className="w-4 h-4" /> Aparência & Interface</span>
+          <span className="text-lg font-mono">{openSection === 'aparencia' ? '−' : '+'}</span>
+        </button>
+        {openSection === 'aparencia' && (
+          <div className="p-4 flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest">Tema Visual</span>
+              <button onClick={() => { setDarkMode(!darkMode); playChipBeep('success'); }} className={`px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-200 text-black'}`}>
+                {darkMode ? 'Modo Claro' : 'Modo Escuro'}
+              </button>
+            </div>
+            
+            <div className="border-t-[4px] border-current pt-3 opacity-90 flex flex-col gap-5">
+               <div>
+                   <div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><MonitorPlay className="w-4 h-4"/> Velocidade do Painel LED</div>
+                   <div className="flex flex-col gap-2 w-full mt-2">
+                     <input
+                       type="range"
+                       min="10"
+                       max="80"
+                       step="1"
+                       value={90 - (settings.marqueeSpeed || 35)}
+                       onChange={(e) => {
+                         const newSpeed = 90 - parseInt(e.target.value);
+                         setSettings({...settings, marqueeSpeed: newSpeed});
+                       }}
+                       className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}
+                       style={{ accentColor: '#38bdf8' }}
+                     />
+                     <div className="flex justify-between text-[8px] font-black uppercase opacity-60">
+                       <span>Lento</span>
+                       <span>Rápido</span>
+                     </div>
+                   </div>
+               </div>
+
+               <div>
+                   <div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Sun className="w-4 h-4"/> Brilho do Letreiro LED</div>
+                   <div className="flex flex-col gap-2 w-full mt-2">
+                     <input
+                       type="range"
+                       min="0"
+                       max="100"
+                       step="5"
+                       value={settings.marqueeBrightness ?? 50}
+                       onChange={(e) => {
+                         setSettings({...settings, marqueeBrightness: parseInt(e.target.value)});
+                       }}
+                       className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}
+                       style={{ accentColor: '#facc15' }}
+                     />
+                     <div className="flex justify-between text-[8px] font-black uppercase opacity-60">
+                       <span>Opaco</span>
+                       <span>Neon Intenso</span>
+                     </div>
+                   </div>
+               </div>
+            </div>
+          </div>
+        )}
       </MContainer>
 
       {/* INTEGRAÇÕES - ACCORDION */}
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'integracoes' ? null : 'integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
-          <span className="flex items-center gap-2"><Library className="w-4 h-4" /> Integrações (Opcional)</span>
-          <span className="text-lg">{openSection === 'integracoes' ? '−' : '+'}</span>
+          <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações (Opcional)</span>
+          <span className="text-lg font-mono">{openSection === 'integracoes' ? '−' : '+'}</span>
         </button>
         {openSection === 'integracoes' && (
           <div className="p-4 flex flex-col gap-3">
             <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings.geminiApiKey} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
             <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Salvar Novos)" value={settings.googleSheetsUrl} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
-            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
+            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
           </div>
         )}
       </MContainer>
@@ -1278,13 +1368,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-sky-900/40 text-white' : 'bg-sky-100 text-black'}>
         <button onClick={() => setOpenSection(openSection === 'sincronizar' ? null : 'sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Sincronizar Jogos Zerados</span>
-          <span className="text-lg">{openSection === 'sincronizar' ? '−' : '+'}</span>
+          <span className="text-lg font-mono">{openSection === 'sincronizar' ? '−' : '+'}</span>
         </button>
         {openSection === 'sincronizar' && (
           <div className="p-4 flex flex-col gap-3">
-            <p className="text-[10px] opacity-80 font-bold leading-relaxed">Faça o upload manual do seu .CSV atualizado de jogos finalizados para atualizar a aba "Zerados".</p>
+            <p className="text-[10px] opacity-80 font-bold leading-relaxed text-justify">Faça o upload manual do seu .CSV atualizado de jogos finalizados para alimentar a aba "Zerados".</p>
             <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-sky-500 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-sky-800 text-white' : 'border-black bg-sky-400 text-black'} `}>
-              <Upload className="w-4 h-4" /> Importar CSV de Jogos Zerados
+              <Upload className="w-4 h-4 flex-shrink-0" /> Importar CSV de Jogos
               <input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} />
             </label>
           </div>
@@ -1295,19 +1385,21 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
         <button onClick={() => setOpenSection(openSection === 'backup' ? null : 'backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local (.CSV Principal)</span>
-          <span className="text-lg">{openSection === 'backup' ? '−' : '+'}</span>
+          <span className="text-lg font-mono">{openSection === 'backup' ? '−' : '+'}</span>
         </button>
         {openSection === 'backup' && (
           <div className="p-4 flex gap-2">
-            <MButton darkMode={darkMode} onClick={handleExportCSV} variant="white" className={`flex-1 text-[10px] ${darkMode?'text-white bg-gray-800 border-gray-600':'text-black'}`}><Download className="w-4 h-4" /> Exportar</MButton>
-            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode?'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white':'border-black bg-white text-black'} `}><Upload className="w-4 h-4" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+            <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white' : 'border-black bg-white text-black'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode?'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white':'border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
           </div>
         )}
       </MContainer>
 
-      <button onClick={() => setShowResetConfirm(true)} className="text-[10px] font-black uppercase tracking-widest text-rose-500 opacity-60 hover:opacity-100 mx-auto block mt-8 mb-4 underline">
-         Resetar Coleção Principal
-      </button>
+      <div className="mt-8 mb-4 text-center">
+        <button onClick={() => setShowResetConfirm(true)} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-rose-500 text-rose-500' : 'border-rose-600 text-rose-600'}`}>
+           ⚠️ Resetar Coleção Principal
+        </button>
+      </div>
     </div>
   );
 };
@@ -1321,7 +1413,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
-  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '' });
+  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', marqueeSpeed: 35, marqueeBrightness: 50 });
   const [isLoaded, setIsLoaded] = useState(false);
   
   // Feedback Global Dinâmico
@@ -1398,11 +1490,8 @@ export default function App() {
 
   useEffect(() => {
     if (isLoaded && items.length > 0 && !hasSuggested.current) {
-      // Filtra apenas suporte físico para sugerir (Livros, CDs, Vinis, Fitas)
       const physicals = items.filter(i => ['Livro', 'Quadrinho', 'Revista', 'CD', 'Vinil', 'Fita Cassete'].includes(i.type));
-      if (physicals.length > 0) {
-        setSuggestion(physicals[Math.floor(Math.random() * physicals.length)]);
-      }
+      if (physicals.length > 0) setSuggestion(physicals[Math.floor(Math.random() * physicals.length)]);
       hasSuggested.current = true;
     }
   }, [isLoaded, items]);
@@ -1423,12 +1512,38 @@ export default function App() {
   const notasJ = completedGames.filter(g => g.nota > 0);
   const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + b.nota, 0) / notasJ.length).toFixed(1) : 0;
   
-  // Calculando dinheiro gasto
   let totalGasto = 0;
   completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(g.precoPago.replace(',','.')); if(!isNaN(p)) totalGasto+=p; } });
 
-  // Painel de Led Dinâmico (Marquee)
-  const marqueeText = `🕹️ ${totalJogos} JOGOS FINALIZADOS   •   ⏱️ TEMPO MÉDIO: ${avgTime}h   •   ⏳ MAIOR TEMPO: ${maxTime}h   •   🏆 NOTA MÉDIA: ★ ${mediaNotaJ} / 10   •   💸 GASTO TOTAL: R$ ${totalGasto.toFixed(2).replace('.',',')}   •   `;
+  // Configurações e Animação do Painel LED Infinito
+  const speed = settings.marqueeSpeed || 35;
+  const glow = (settings.marqueeBrightness ?? 50) / 10;
+  const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
+  const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
+
+  // Animador em SVG Puro do Pacman (dispensa uso de gifs)
+  const PacmanSeparator = () => (
+    <div className="flex items-center gap-2 mx-6 opacity-90 pb-0.5">
+       <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
+         <path fill="#facc15">
+           <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
+         </path>
+       </svg>
+       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
+       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
+       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
+    </div>
+  );
+
+  const MarqueeContent = () => (
+    <div className="flex items-center py-1" style={textShadowStyle}>
+      <span className={`text-sky-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span> <PacmanSeparator />
+      <span className={`text-rose-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span> <PacmanSeparator />
+      <span className={`text-rose-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span> <PacmanSeparator />
+      <span className={`text-yellow-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span> <PacmanSeparator />
+      <span className={`text-sky-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span> <PacmanSeparator />
+    </div>
+  );
 
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
@@ -1448,16 +1563,26 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      {/* CSS para o Marquee de Led e Import da Fonte VCR */}
+      {/* CSS do Letreiro LED / Matrix RGB - 8 Bits Aesthetic */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-        .font-vcr { font-family: 'VT323', monospace; }
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { display: inline-block; white-space: nowrap; animation: marquee 35s linear infinite; }
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        .font-led { font-family: 'Press Start 2P', monospace; }
+        .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; }
+        @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
       `}</style>
 
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
         
+        {toast.visible && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
+            {toast.type === 'error' ? (
+              <div className={`w-14 h-14 border-[4px] border-black bg-rose-500 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><XIcon className="w-10 h-10" /></div>
+            ) : (
+              <div className={`w-14 h-14 border-[4px] border-black bg-sky-400 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><Check className="w-10 h-10" /></div>
+            )}
+          </div>
+        )}
+
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 pr-2">
@@ -1470,13 +1595,7 @@ export default function App() {
             </div>
             
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
-              {toast.visible ? (
-                toast.type === 'error' 
-                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200"/> 
-                  : <Check className="text-sky-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" />
-              ) : (
-                <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
-              )}
+               <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
             </div>
 
           </div>
@@ -1490,18 +1609,19 @@ export default function App() {
               </div>
               <div className="flex justify-between"><span>Págs Add:</span><span>{totalPagesCount}</span></div>
               <div className="flex justify-between"><span>Págs Lidas:</span><span>{readPages}</span></div>
-              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 mt-auto"><span>Média:</span><span>★ {avgRating}</span></div>
+              <div className="flex justify-between text-sky-600 dark:text-sky-400 mt-auto"><span>Média:</span><span>★ {avgRating}</span></div>
             </div>
 
-            {/* Stats: Jogos Zerados (LED Marquee Animado) */}
-            <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-yellow-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-yellow-400'}`}>
-               <div className="p-1.5 border-b-[2px] border-yellow-900/50 pb-0.5 mb-1 opacity-80 flex justify-between">
+            {/* Stats: Jogos Zerados (LED Matrix 8-Bit) */}
+            <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-white'}`}>
+               <div className="p-1.5 border-b-[2px] border-gray-800 pb-0.5 mb-0.5 opacity-80 flex justify-between z-10 bg-black">
                   <span>Jogos Zerados</span><span className="animate-pulse text-rose-500">REC</span>
                </div>
                
-               <div className="flex-1 flex items-center overflow-hidden w-full relative">
-                  <div className="absolute whitespace-nowrap animate-marquee font-vcr text-sm tracking-wider">
-                    {marqueeText} {marqueeText}
+               <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
+                  <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
+                    <MarqueeContent /> 
+                    <MarqueeContent />
                   </div>
                </div>
             </div>
