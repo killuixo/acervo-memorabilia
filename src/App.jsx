@@ -91,6 +91,7 @@ const MonitorPlay = (p) => <Icon {...p} path={<><rect width="20" height="14" x="
 const XIcon = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
 const Zap = (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = (p) => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
+const InfoIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></>} />;
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS GLOBAIS
@@ -200,7 +201,7 @@ const processCompletedGamesCSV = (csvText) => {
 };
 
 // ==========================================
-// PWA ENGINE (Injeção Dinâmica do App)
+// PWA ENGINE E MANUAL
 // ==========================================
 const usePWA = (iconUrl) => {
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -237,6 +238,93 @@ const usePWA = (iconUrl) => {
     if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true); }
   };
   return { isInstallable: !!installPrompt, promptInstall, isInstalled };
+};
+
+const ManualModal = ({ isOpen, onClose, darkMode }) => {
+  const [openSec, setOpenSec] = useState(null);
+  if (!isOpen) return null;
+
+  const toggle = (sec) => { setOpenSec(openSec === sec ? null : sec); playChipBeep('success'); };
+
+  const Section = ({ id, title, children }) => (
+    <MContainer darkMode={darkMode} className="mb-2" colorClass={darkMode ? 'bg-gray-800' : 'bg-gray-100'}>
+      <button onClick={() => toggle(id)} className={`w-full p-3 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-left ${openSec === id ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+        <span>{title}</span>
+        <span className="text-lg font-mono">{openSec === id ? '−' : '+'}</span>
+      </button>
+      {openSec === id && (
+        <div className={`p-4 text-xs font-bold leading-relaxed flex flex-col gap-2 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+          {children}
+        </div>
+      )}
+    </MContainer>
+  );
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm z-[200]">
+      <MContainer darkMode={darkMode} className="w-full max-w-sm max-h-[85vh] flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <div className={`p-3 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-500' : 'border-black'} sticky top-0 bg-inherit z-10`}>
+          <h2 className="font-black uppercase tracking-widest text-sm flex items-center gap-2"><InfoIcon className="w-4 h-4"/> Manual do Usuário</h2>
+          <button onClick={onClose} className="p-1 active:translate-y-0.5"><XIcon className="w-5 h-5"/></button>
+        </div>
+        <div className="p-2 overflow-y-auto flex-1 scrollbar-hide">
+          <Section id="conceito" title="1. O Conceito">
+            <p><strong>Memorabilia</strong> é o seu arquivista de bolso pessoal. Construído com uma filosofia <i>offline-first</i> e design inspirado no Neoplasticismo (De Stijl), o aplicativo garante que seus dados sejam seus. Nada de servidores obscuros: tudo vive no seu dispositivo, com opções de integração pontuais na nuvem sob o seu controle.</p>
+          </Section>
+          <Section id="hud" title="2. A Barra Superior (HUD)">
+            <p>O painel no topo da tela é o seu Centro de Comando.</p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li><strong>Coleção Física:</strong> Exibe o número total de itens catalogados, páginas totais e média de notas da sua coleção.</li>
+              <li><strong>Letreiro LED (Jogos Zerados):</strong> Um painel dot-matrix animado que puxa dados do seu arquivo de jogos finalizados, exibindo em tempo real: Quantidade, Tempo Médio/Maior Tempo, Nota Média e Gasto Total.</li>
+              <li><strong>A Sugestão:</strong> Toda vez que você abre o app, uma obra aleatória da sua estante física é sugerida no cabeçalho.</li>
+            </ul>
+            <p className="opacity-70 mt-2 text-[10px] uppercase tracking-widest">* Toda ação salva com sucesso fará o ícone piscar um ✔️ e emitir um suave bip retrô.</p>
+          </Section>
+          <Section id="add" title="3. Adicionando Itens">
+            <p>Você possui 3 formas de alimentar seu acervo:</p>
+            <ul className="list-decimal pl-4 space-y-1">
+              <li><strong>Manual:</strong> Preencha os campos (Título, Autor, Ano, etc.) por conta própria.</li>
+              <li><strong>Barcode:</strong> Usa a câmera do celular para ler ISBNs e UPCs, consultando bases de dados abertas (Google Books, OpenLibrary, MusicBrainz, UPCItemDB) para preencher a ficha automaticamente.</li>
+              <li><strong>Auto IA (A Magia):</strong> Tire ou envie uma foto da capa/ficha catalográfica. A IA visual extrairá os dados e fará o preenchimento inteligente para você.</li>
+            </ul>
+          </Section>
+          <Section id="library" title="4. Gerenciando a Coleção">
+            <p>Aqui vive a sua biblioteca.</p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li><strong>Busca e Filtros:</strong> Use a barra de pesquisa ou os filtros combinados para achar itens.</li>
+              <li><strong>Ordenação Avançada:</strong> Organize por Ano de Lançamento, Nota, Tamanho ou Adição.</li>
+              <li><strong>Ficha Detalhada:</strong> Clique em um item para editá-lo. Você pode avaliar (1 a 5 estrelas) ou clicar em <i>Buscar na Web</i> para ser enviado de forma inteligente para o Skoob, Discogs ou GameFAQs.</li>
+              <li><strong>Enciclopédia IA:</strong> Clique no botão de IA para que o "oráculo digital" escreva um resumo de curiosidades históricas sobre aquela obra.</li>
+            </ul>
+          </Section>
+          <Section id="stats" title="5. Inteligência Analítica">
+            <p>Um dashboard gerado em tempo real na aba <strong>Geral</strong>.</p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Filtre os gráficos por Status, Classe ou Nota.</li>
+              <li>Descubra qual é <i>A Relíquia</i> (item mais antigo) e <i>O Épico</i> (item mais longo) da sua coleção.</li>
+              <li>Acompanhe seu "Backlog" (itens não iniciados) e a linha do tempo histórica de publicações por década.</li>
+            </ul>
+          </Section>
+          <Section id="zerados" title="6. O Cofre de Conquistas">
+            <p>Diferente da Coleção Física, a aba <strong>Zerados</strong> é alimentada exclusivamente via planilha (arquivos .csv).</p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li><strong>Como funciona:</strong> Na aba Ajustes, faça o upload do seu .csv de jogos finalizados. O app mapeia as colunas e gera um dashboard denso.</li>
+              <li>Visualize gráficos de Consoles, porcentagem de Mídia Física vs Digital, e tenha uma ficha detalhada para cada jogo zerado.</li>
+            </ul>
+          </Section>
+          <Section id="config" title="7. O Motor do Arquivo">
+            <p>Seu painel de controle técnico (Aba <strong>Ajustes</strong>):</p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li><strong>Aparência:</strong> Alterne o Tema e ajuste fisicamente a Velocidade e o Brilho Neon do seu painel de LED.</li>
+              <li><strong>Gestão de Classes (CDD):</strong> Crie seu prefixo de arquivista (ex: LUI) e personalize os códigos decimais para organizar fisicamente os itens.</li>
+              <li><strong>Integrações:</strong> Insira sua chave do Google Gemini ou configure Webhooks do Google Sheets para backup automático na nuvem.</li>
+              <li><strong>Backup Local:</strong> Exporte toda a coleção para .csv ou importe um arquivo antigo.</li>
+            </ul>
+          </Section>
+        </div>
+      </MContainer>
+    </div>
+  );
 };
 
 // ==========================================
@@ -286,22 +374,6 @@ const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "
     )}
   </div>
 );
-
-const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm z-[200]">
-      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
-        <p className="text-sm font-bold opacity-90">{message}</p>
-        <div className="flex gap-2 mt-4">
-          <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
-          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
-        </div>
-      </MContainer>
-    </div>
-  );
-};
 
 const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v }) => (
   <div className="flex items-center gap-2 w-full mb-2">
@@ -403,25 +475,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (aiText) { setEditedItem({...editedItem, wiki_info: aiText}); playChipBeep('success'); onShowToast('success'); }
     } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); onShowToast('error'); } finally { setLoadingWiki(false); }
-  };
-
-  const resizeImageForAPI = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader(); reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image(); img.src = event.target.result;
-        img.onload = () => {
-          const MAX_DIMENSION = 1000; let width = img.width; let height = img.height;
-          if (width > height && width > MAX_DIMENSION) { height *= MAX_DIMENSION / width; width = MAX_DIMENSION; } 
-          else if (height > MAX_DIMENSION) { width *= MAX_DIMENSION / height; height = MAX_DIMENSION; }
-          const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
-          const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        img.onerror = reject;
-      };
-      reader.onerror = reject;
-    });
   };
 
   if (selectedItem && editedItem) {
@@ -1515,6 +1568,7 @@ export default function App() {
   const [completedGames, setCompletedGames] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   
   // Feedback Global Dinâmico
   const [toast, setToast] = useState({ visible: false, type: 'success' });
@@ -1677,11 +1731,25 @@ export default function App() {
       `}</style>
 
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
+        
+        <ManualModal isOpen={showManual} onClose={() => setShowManual(false)} darkMode={darkMode} />
+
+        {toast.visible && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
+            {toast.type === 'error' ? (
+              <div className={`w-14 h-14 border-[4px] border-black bg-rose-500 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><XIcon className="w-10 h-10" /></div>
+            ) : (
+              <div className={`w-14 h-14 border-[4px] border-black bg-sky-400 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><Check className="w-10 h-10" /></div>
+            )}
+          </div>
+        )}
 
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 pr-2">
-              <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
+              <div className="flex items-center gap-2">
+                 <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
+              </div>
               {suggestion && (
                 <div className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-max shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-purple-900 border-purple-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-purple-200 border-black text-black'}`}>
                   <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate max-w-[200px]">Sugestão: {suggestion.title}</span>
@@ -1689,14 +1757,13 @@ export default function App() {
               )}
             </div>
             
-            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
-              {toast.visible ? (
-                toast.type === 'error' 
-                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
-                  : <Check className="text-sky-500 w-10 h-10 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] animate-in zoom-in duration-200" />
-              ) : (
-                <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
-              )}
+            <div className="flex items-start gap-2">
+              <button onClick={() => setShowManual(true)} className="opacity-40 hover:opacity-100 transition-opacity p-1 -mt-1 active:translate-y-0.5">
+                 <InfoIcon className="w-5 h-5" />
+              </button>
+              <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
+                 <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
+              </div>
             </div>
 
           </div>
