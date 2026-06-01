@@ -1378,12 +1378,6 @@ export default function App() {
   // Comportamento para Aba de Zerados (Sempre reseta e vai para a página inicial)
   const handleCompClick = () => { initAudio(); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
 
-  const totalItems = items.length;
-  const validRatings = items.filter(i => i.rating > 0);
-  const avgRating = validRatings.length > 0 ? (validRatings.reduce((acc, i) => acc + i.rating, 0) / validRatings.length) : 0;
-  const totalPages = items.filter(i => ['Livro', 'Quadrinho', 'Revista'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
-  const totalHours = items.filter(i => !['Livro', 'Quadrinho', 'Revista'].includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
-
   if (!isLoaded) return null; 
 
   return (
