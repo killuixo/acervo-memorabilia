@@ -6,20 +6,14 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/cat-teste/main/icon-192.png";
 
 // ==========================================
-// AUDIO ENGINE (Correção do erro dos botões)
+// AUDIO ENGINE E ANIMAÇÕES EXTRAS
 // ==========================================
 let audioCtx = null;
 const initAudio = () => {
   try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-  } catch (e) {
-    console.warn("Áudio não suportado", e);
-  }
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) { console.warn("Áudio não suportado", e); }
 };
 
 const playChipBeep = (type) => {
@@ -27,35 +21,23 @@ const playChipBeep = (type) => {
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
+    osc.connect(gain); gain.connect(audioCtx.destination);
     const now = audioCtx.currentTime;
     
     if (type === 'save' || type === 'success') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.1);
+      osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
     } else if (type === 'error') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(300, now);
-      osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-      osc.start(now);
-      osc.stop(now + 0.2);
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
     }
-  } catch (e) {
-    // ignora erros de áudio silenciosamente
-  }
+  } catch (e) {}
 };
 
 // ==========================================
-// 1. ÍCONES NATIVOS (Zero Dependências)
+// 1. ÍCONES NATIVOS
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
   <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>{path}</svg>
@@ -90,21 +72,15 @@ const Smartphone = (p) => <Icon {...p} path={<><rect width="14" height="20" x="5
 const GamepadIcon = (p) => <Icon {...p} path={<><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></>} />;
 const DiscIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></>} />;
 const MonitorPlay = (p) => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>} />;
-const InfoIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></>} />;
+const LinkIcon = (p) => <Icon {...p} path={<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></>} />;
 
 // ==========================================
-// FUNÇÕES UTILITÁRIAS GLOBAIS (Parsers e Formatação)
+// FUNÇÕES UTILITÁRIAS GLOBAIS
 // ==========================================
 const parseCSVText = (text) => {
-  const rows = [];
-  let row = [];
-  let inQuotes = false;
-  let val = '';
-
+  const rows = []; let row = []; let inQuotes = false; let val = '';
   for (let i = 0; i < text.length; i++) {
-    let char = text[i];
-    let nextChar = text[i + 1];
-
+    let char = text[i]; let nextChar = text[i + 1];
     if (char === '"' && inQuotes && nextChar === '"') { val += '"'; i++; } 
     else if (char === '"') { inQuotes = !inQuotes; } 
     else if (char === ',' && !inQuotes) { row.push(val); val = ''; } 
@@ -113,7 +89,6 @@ const parseCSVText = (text) => {
       row.push(val); rows.push(row); row = []; val = '';
     } else { val += char; }
   }
-  
   if (val !== '' || row.length > 0) { row.push(val); rows.push(row); }
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
 };
@@ -127,7 +102,16 @@ const parseTimeStr = (timeStr) => {
   return parseFloat(timeStr.toString().replace(',', '.')) || 0;
 };
 
-// Nova Função de Processamento Universal para Jogos Zerados (Lê todas as colunas)
+// Extrator Dinâmico de Link Web
+const getExternalLink = (type, title, specificLink = '') => {
+  if (specificLink && specificLink.startsWith('http')) return specificLink;
+  if (!title) return '#';
+  const q = encodeURIComponent(title);
+  if (['CD', 'Vinil', 'Fita Cassete'].includes(type)) return `https://www.discogs.com/search?q=${q}&type=all`;
+  if (['Livro', 'Quadrinho', 'Revista'].includes(type)) return `https://www.skoob.com.br/livro/lista/busca:${q}`;
+  return `https://gamefaqs.gamespot.com/search?game=${q}`;
+};
+
 const processCompletedGamesCSV = (csvText) => {
   const rows = parseCSVText(csvText);
   if (rows.length < 2) return [];
@@ -138,6 +122,7 @@ const processCompletedGamesCSV = (csvText) => {
   const iTempo = getIdx('Tempo'); const iNota = getIdx('Nota'); const iSuporte = getIdx('Suporte');
   const iDif = getIdx('Dificuldade'); const iCond = getIdx('Condição'); const iObs = getIdx('Observação');
   const iInicio = getIdx('Início'); const iFim = getIdx('Fim');
+  const iPrecoPago = getIdx('Preço pago'); const iPrecoSemDesc = getIdx('Preço sem desconto'); const iLink = getIdx('Link');
 
   const parsed = [];
   for(let i=1; i<rows.length; i++) {
@@ -148,11 +133,11 @@ const processCompletedGamesCSV = (csvText) => {
     let isFisico = supVal.toLowerCase().includes('físico') || supVal.toLowerCase().includes('fisico') || supVal === 'F';
     
     let anoFim = '';
-    if (row[iFim]) {
-      const parts = row[iFim].split('/');
-      if (parts.length === 3) anoFim = parts[2].split(' ')[0]; // pega o ano formatado
-    }
+    if (row[iFim]) { const parts = row[iFim].split('/'); if (parts.length === 3) anoFim = parts[2].split(' ')[0]; }
     
+    // Tratamento de Moeda para evitar quebras numéricas
+    const cleanMoney = (val) => val ? val.replace('R$', '').trim() : '';
+
     parsed.push({
       id: i.toString(),
       nome: row[iNome] || 'Desconhecido',
@@ -161,13 +146,16 @@ const processCompletedGamesCSV = (csvText) => {
       tempoHoras: parseTimeStr(row[iTempo]),
       nota: parseFloat((row[iNota] || '0').replace(',', '.')) || 0,
       suporteStr: supVal,
-      suporte: isFisico ? 'Físico' : 'Digital/Outro',
+      suporte: isFisico ? 'Físico' : 'Digital',
       dificuldade: row[iDif] || '--',
       condicao: row[iCond] || '--',
       observacao: row[iObs] || '',
       inicio: row[iInicio] || '--',
       fim: row[iFim] || '--',
-      anoFim: anoFim
+      anoFim: anoFim,
+      precoPago: cleanMoney(row[iPrecoPago]),
+      precoSemDesc: cleanMoney(row[iPrecoSemDesc]),
+      link: row[iLink] || ''
     });
   }
   return parsed;
@@ -278,11 +266,10 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   );
 };
 
-// MInput "Visual" Only for read-only cards (like the Game details)
-const MReadOnlyBox = ({ label, value, multiline, darkMode }) => (
+const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) => (
   <div className="flex flex-col mb-3 w-full">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
-    <div className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : ''}`}>
+    <div className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans ${emphasize ? 'text-lg text-rose-500 font-black tracking-widest text-center' : 'text-sm font-bold'} ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : ''} truncate`}>
       {value || '--'}
     </div>
   </div>
@@ -415,6 +402,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
   if (selectedItem && editedItem) {
     const isBookOrGame = ['Livro', 'Quadrinho', 'Revista', 'Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4'].includes(editedItem.type);
+    const webLink = getExternalLink(editedItem.type, editedItem.title);
+
     return (
       <div className="flex flex-col h-full pb-20 relative">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
@@ -436,6 +425,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
               <MInput label="Autor/Artista" value={editedItem.author_developer || ''} onChange={e => setEditedItem({...editedItem, author_developer: e.target.value})} darkMode={darkMode} />
             </div>
           </div>
+          
+          <a href={webLink} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${darkMode ? 'bg-gray-800 border-gray-500 text-sky-400' : 'bg-sky-100 border-black text-sky-800'}`}>
+            <ExternalLink className="w-4 h-4" /> Buscar "{editedItem.title}" na Web
+          </a>
+
           <div className="grid grid-cols-3 gap-2">
             <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="number" darkMode={darkMode} />
             <MInput label={['Livro', 'Quadrinho', 'Revista'].includes(editedItem.type || '') ? 'Págs' : 'Horas/Min'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="number" darkMode={darkMode} />
@@ -960,7 +954,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const fisicosCount = filteredGames.filter(g => g.suporte === 'Físico').length;
   const fisicoPerc = totalJogos > 0 ? ((fisicosCount / totalJogos) * 100).toFixed(0) : 0;
 
-  // Estatísticas e Gráficos
   const byConsole = filteredGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
   const topConsoles = Object.entries(byConsole).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxConsole = topConsoles.length > 0 ? topConsoles[0][1] : 1;
@@ -992,27 +985,52 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
   // --- MODO DETALHE ---
   if (selectedGame) {
+    const webLink = getExternalLink('PS4', selectedGame.nome, selectedGame.link); // PS4 code used generically for Games in getExternalLink
+    
     return (
       <div className="flex flex-col h-full pb-20 relative">
-        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center gap-3 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-          <button onClick={() => setSelectedGame(null)} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
-          <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes do Jogo</div>
-        </MContainer>
-        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-sky-900 text-white' : 'bg-sky-100 text-black'}>
-            <h2 className="text-xl font-black mb-1">{selectedGame.nome}</h2>
-            <div className="text-[10px] font-bold uppercase tracking-widest opacity-80">{selectedGame.console} • {selectedGame.genero}</div>
-          </MContainer>
-          <div className="grid grid-cols-2 gap-2">
-            <MReadOnlyBox label="Tempo Jogado" value={`${selectedGame.tempoHoras}h`} darkMode={darkMode} />
-            <MReadOnlyBox label="Nota Final" value={`★ ${selectedGame.nota}`} darkMode={darkMode} />
-            <MReadOnlyBox label="Dificuldade" value={selectedGame.dificuldade} darkMode={darkMode} />
-            <MReadOnlyBox label="Mídia / Suporte" value={selectedGame.suporteStr} darkMode={darkMode} />
-            <MReadOnlyBox label="Início" value={selectedGame.inicio} darkMode={darkMode} />
-            <MReadOnlyBox label="Término" value={selectedGame.fim} darkMode={darkMode} />
+        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelectedGame(null)} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
+            <div className="font-black uppercase tracking-widest text-[10px] truncate">Registro de Conclusão</div>
           </div>
-          <MReadOnlyBox label="Condição de Conclusão" value={selectedGame.condicao} multiline darkMode={darkMode} />
-          <MReadOnlyBox label="Observações e Notas" value={selectedGame.observacao} multiline darkMode={darkMode} />
+        </MContainer>
+        
+        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
+          <div className="flex gap-4">
+            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex flex-col items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-sky-900' : 'bg-sky-200'}`}>
+               <GamepadIcon className={`w-12 h-12 mb-2 ${darkMode ? 'text-white opacity-40' : 'text-black opacity-30'}`} />
+               <span className="text-[10px] font-black uppercase tracking-widest opacity-60 px-2 text-center">{selectedGame.console}</span>
+            </MContainer>
+            <div className="flex flex-col flex-1 justify-between py-1">
+              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-emerald-500 text-emerald-300 bg-emerald-900' : 'border-black text-black bg-emerald-200'}`}>FINALIZADO</div>
+              <MReadOnlyBox label="Nome do Jogo" value={selectedGame.nome} darkMode={darkMode} />
+              <MReadOnlyBox label="Gênero" value={selectedGame.genero} darkMode={darkMode} />
+            </div>
+          </div>
+
+          <a href={webLink} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${darkMode ? 'bg-gray-800 border-gray-500 text-sky-400' : 'bg-sky-100 border-black text-sky-800'}`}>
+            <ExternalLink className="w-4 h-4" /> Buscar "{selectedGame.nome}" na Web
+          </a>
+
+          <div className="grid grid-cols-2 gap-2">
+            <MReadOnlyBox label="Sua Nota Final" value={`★ ${selectedGame.nota}`} darkMode={darkMode} emphasize={true} />
+            <MReadOnlyBox label="Tempo de Jogo" value={`${selectedGame.tempoHoras.toFixed(1)}h`} darkMode={darkMode} emphasize={true} />
+            <MReadOnlyBox label="Dificuldade Jogado" value={selectedGame.dificuldade} darkMode={darkMode} />
+            <MReadOnlyBox label="Mídia (Suporte)" value={selectedGame.suporteStr || selectedGame.suporte} darkMode={darkMode} />
+            <MReadOnlyBox label="Data de Início" value={selectedGame.inicio} darkMode={darkMode} />
+            <MReadOnlyBox label="Data de Término" value={selectedGame.fim} darkMode={darkMode} />
+          </div>
+
+          {(selectedGame.precoPago || selectedGame.precoSemDesc) && (
+            <MContainer darkMode={darkMode} className="p-3 grid grid-cols-2 gap-2" colorClass={darkMode ? 'bg-rose-900/40 text-white' : 'bg-rose-100 text-black'}>
+               <MReadOnlyBox label="Preço Pago" value={selectedGame.precoPago ? `R$ ${selectedGame.precoPago}` : '--'} darkMode={darkMode} />
+               <MReadOnlyBox label="Preço Sem Desconto" value={selectedGame.precoSemDesc ? `R$ ${selectedGame.precoSemDesc}` : '--'} darkMode={darkMode} />
+            </MContainer>
+          )}
+
+          <MReadOnlyBox label="Condição de Conclusão (Objetivo)" value={selectedGame.condicao} multiline darkMode={darkMode} />
+          <MReadOnlyBox label="Observações Pessoais" value={selectedGame.observacao} multiline darkMode={darkMode} />
         </div>
       </div>
     );
@@ -1332,7 +1350,6 @@ export default function App() {
   // ==========================================
   const hasSuggested = useRef(false);
   const [suggestion, setSuggestion] = useState(null);
-  const [timeDisplayMode, setTimeDisplayMode] = useState(0); // 0: media, 1: max, 2: min
 
   useEffect(() => {
     if (isLoaded && items.length > 0 && !hasSuggested.current) {
@@ -1348,20 +1365,25 @@ export default function App() {
   // Coleção Stats
   const totalItens = items.length;
   const livros = items.filter(i => ['Livro', 'Quadrinho', 'Revista'].includes(i.type));
-  const totalPages = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const ratedItems = items.filter(i => i.rating > 0);
   const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + i.rating, 0) / ratedItems.length).toFixed(1) : 0;
 
   // Jogos Zerados Stats
   const totalJogos = completedGames.length;
-  const uniqueConsolesCount = new Set(completedGames.map(g => g.console)).size;
   const tempos = completedGames.map(g => g.tempoHoras).filter(t => t > 0);
   const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
   const maxTime = tempos.length > 0 ? Math.max(...tempos).toFixed(1) : 0;
-  const minTime = tempos.length > 0 ? Math.min(...tempos).toFixed(1) : 0;
-  const timeLabels = ['Média', 'Máx', 'Mín'];
-  const timeValues = [avgTime, maxTime, minTime];
+  const notasJ = completedGames.filter(g => g.nota > 0);
+  const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + b.nota, 0) / notasJ.length).toFixed(1) : 0;
+  
+  // Calculando dinheiro gasto
+  let totalGasto = 0;
+  completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(g.precoPago.replace(',','.')); if(!isNaN(p)) totalGasto+=p; } });
+
+  // Painel de Led Dinâmico (Marquee)
+  const marqueeText = `🕹️ ${totalJogos} JOGOS FINALIZADOS   •   ⏱️ TEMPO MÉDIO: ${avgTime}h   •   ⏳ MAIOR TEMPO: ${maxTime}h   •   🏆 NOTA MÉDIA: ★ ${mediaNotaJ}   •   💸 GASTO TOTAL: R$ ${totalGasto.toFixed(2).replace('.',',')}   •   `;
 
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
@@ -1375,13 +1397,18 @@ export default function App() {
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
   const handleLibClick = () => { initAudio(); if (!isLibLongPress.current) { setActiveTab('library'); } };
 
-  // Comportamento para Aba de Zerados (Sempre reseta e vai para a página inicial)
   const handleCompClick = () => { initAudio(); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
 
   if (!isLoaded) return null; 
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
+      {/* CSS para o Marquee de Led */}
+      <style>{`
+        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .animate-marquee { display: inline-block; white-space: nowrap; animation: marquee 20s linear infinite; }
+      `}</style>
+
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
         
         {globalToast && (
@@ -1396,7 +1423,7 @@ export default function App() {
               <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
               {suggestion && (
                 <div className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-max shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-purple-900 border-purple-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-purple-200 border-black text-black'}`}>
-                  <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate max-w-[200px]">Destaque: {suggestion.title}</span>
+                  <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate max-w-[200px]">Sugestão: {suggestion.title}</span>
                 </div>
               )}
             </div>
@@ -1406,27 +1433,28 @@ export default function App() {
           </div>
 
           {/* ESTATÍSTICAS DIRETAS E MINIMALISTAS */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 h-20">
             {/* Stats: Coleção Física */}
             <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
               <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
-                <span>Coleção</span><span>{totalItens} UN</span>
+                <span>Coleção Física</span><span>{totalItens} UN</span>
               </div>
-              <div className="flex justify-between"><span>Págs Add:</span><span>{totalPages}</span></div>
+              <div className="flex justify-between"><span>Págs Add:</span><span>{totalPagesCount}</span></div>
               <div className="flex justify-between"><span>Págs Lidas:</span><span>{readPages}</span></div>
-              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 mt-1"><span>Média:</span><span>★ {avgRating}</span></div>
+              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 mt-auto"><span>Média:</span><span>★ {avgRating}</span></div>
             </div>
 
-            {/* Stats: Jogos Zerados (Clique para alternar o tempo) */}
-            <div onClick={() => { initAudio(); setTimeDisplayMode((m) => (m + 1) % 3); }} className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight cursor-pointer active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
-              <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
-                <span>Zerados</span><span>{totalJogos} UN</span>
-              </div>
-              <div className="flex justify-between"><span>Consoles:</span><span>{uniqueConsolesCount}</span></div>
-              <div className="flex flex-col text-sky-600 dark:text-sky-400 mt-auto pt-1 border-t-[2px] border-dashed border-current">
-                <div className="flex justify-between"><span>Tempo {timeLabels[timeDisplayMode]}:</span><span>{timeValues[timeDisplayMode]}h</span></div>
-                <div className="text-[6px] text-right opacity-50 mt-0.5">(Tocar para Alternar)</div>
-              </div>
+            {/* Stats: Jogos Zerados (LED Marquee Animado) */}
+            <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-emerald-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-emerald-400'}`}>
+               <div className="p-1.5 border-b-[2px] border-emerald-900/50 pb-0.5 mb-1 opacity-80 flex justify-between">
+                  <span>Banco de Dados</span><span className="animate-pulse">REC</span>
+               </div>
+               
+               <div className="flex-1 flex items-center overflow-hidden w-full relative">
+                  <div className="absolute whitespace-nowrap animate-marquee font-mono text-[9px]">
+                    {marqueeText} {marqueeText}
+                  </div>
+               </div>
             </div>
           </div>
         </header>
