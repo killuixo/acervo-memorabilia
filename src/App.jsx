@@ -226,7 +226,7 @@ const ALL_TYPES = Object.values(CATEGORIES).flat();
 
 const CLASS_CODES = {
   'Livro': '562.1', 'Quadrinho': '562.2', 'Revista': '562.3', 'CD': '515.1', 'Vinil': '515.2', 'Fita Cassete': '515.3',
-  'VHS': '544.1', 'DVD': '544.2', 'Mega Drive': '522.1', 'SNES': '522.2', 'Wii': '522.3', 'PS1': '522.4', 'PS2': '522.5', 'PS4': '522.6'
+  'VHS': '544.1', 'DVD': '544.2', 'Mega Drive': '520', 'SNES': '520', 'Wii': '520', 'PS1': '520', 'PS2': '520', 'PS4': '520'
 };
 
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
@@ -337,12 +337,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [sortBy, setSortBy] = useState('id');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 8;
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    let result = items.filter(item => {
       const titleSearch = (item.title || '').toLowerCase();
       const authorSearch = (item.author_developer || '').toLowerCase();
       const query = search.toLowerCase();
@@ -354,8 +356,27 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
         else matchesCategory = (item.type || '') === activeSubtype;
       }
       return matchesSearch && matchesCategory;
-    }).sort((a, b) => (b.id || '').localeCompare(a.id || '')); 
-  }, [items, search, activeCategory, activeSubtype]);
+    });
+
+    result.sort((a, b) => {
+      let valA = a[sortBy] || '';
+      let valB = b[sortBy] || '';
+
+      if (['year', 'rating', 'pages_or_time'].includes(sortBy)) {
+        valA = parseFloat(valA) || 0;
+        valB = parseFloat(valB) || 0;
+        return sortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+
+      valA = String(valA).toLowerCase();
+      valB = String(valB).toLowerCase();
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [items, search, activeCategory, activeSubtype, sortBy, sortOrder]);
 
   const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
@@ -486,6 +507,24 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
           <Search className={`absolute left-3 top-3 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
           <input type="text" placeholder="Buscar Título ou Autor..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-9 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none`} />
         </div>
+        
+        {/* NOVOS FILTROS DE ORDENAÇÃO AVANÇADA */}
+        <div className="flex gap-2 items-center">
+          <FilterIcon className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={`flex-1 p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-[9px] font-black uppercase tracking-widest outline-none`}>
+            <option value="id">Data de Adição</option>
+            <option value="title">Título</option>
+            <option value="author_developer">Autor / Estúdio</option>
+            <option value="year">Ano de Lançamento</option>
+            <option value="publisher">Editora / Gravadora</option>
+            <option value="rating">Sua Nota / Avaliação</option>
+            <option value="pages_or_time">Tamanho (Págs/Tempo)</option>
+          </select>
+          <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')} className={`w-8 h-8 flex items-center justify-center border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            {sortOrder === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
+
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {['Todos', ...Object.keys(CATEGORIES)].map(cat => <button key={cat} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeCategory === cat ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
         </div>
@@ -1288,6 +1327,42 @@ export default function App() {
     }
   }, [isLoaded, settings.completedGamesUrl]);
 
+  // ==========================================
+  // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
+  // ==========================================
+  const hasSuggested = useRef(false);
+  const [suggestion, setSuggestion] = useState(null);
+  const [timeDisplayMode, setTimeDisplayMode] = useState(0); // 0: media, 1: max, 2: min
+
+  useEffect(() => {
+    if (isLoaded && items.length > 0 && !hasSuggested.current) {
+      // Filtra apenas suporte físico para sugerir (Livros, CDs, Vinis, Fitas)
+      const physicals = items.filter(i => ['Livro', 'Quadrinho', 'Revista', 'CD', 'Vinil', 'Fita Cassete'].includes(i.type));
+      if (physicals.length > 0) {
+        setSuggestion(physicals[Math.floor(Math.random() * physicals.length)]);
+      }
+      hasSuggested.current = true;
+    }
+  }, [isLoaded, items]);
+
+  // Coleção Stats
+  const totalItens = items.length;
+  const livros = items.filter(i => ['Livro', 'Quadrinho', 'Revista'].includes(i.type));
+  const totalPages = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const ratedItems = items.filter(i => i.rating > 0);
+  const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + i.rating, 0) / ratedItems.length).toFixed(1) : 0;
+
+  // Jogos Zerados Stats
+  const totalJogos = completedGames.length;
+  const uniqueConsolesCount = new Set(completedGames.map(g => g.console)).size;
+  const tempos = completedGames.map(g => g.tempoHoras).filter(t => t > 0);
+  const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
+  const maxTime = tempos.length > 0 ? Math.max(...tempos).toFixed(1) : 0;
+  const minTime = tempos.length > 0 ? Math.min(...tempos).toFixed(1) : 0;
+  const timeLabels = ['Média', 'Máx', 'Mín'];
+  const timeValues = [avgTime, maxTime, minTime];
+
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
 
@@ -1321,16 +1396,44 @@ export default function App() {
           </div>
         )}
 
-        <header className={`flex-none p-3 border-b-[4px] z-20 flex justify-between items-center ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
-          <div className="flex flex-col flex-1 pr-2">
-            <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
-            <div className={`flex gap-2 text-[9px] font-black tracking-widest mt-1.5 uppercase ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>
-              <span>{items.length} <span className="opacity-60">UN</span></span>
-              <span>{completedGames.length} <span className="opacity-60">ZERADOS</span></span>
+        <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
+          <div className="flex justify-between items-start">
+            <div className="flex flex-col flex-1 pr-2">
+              <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
+              {suggestion && (
+                <div className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-max shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-purple-900 border-purple-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-purple-200 border-black text-black'}`}>
+                  <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate max-w-[200px]">Destaque: {suggestion.title}</span>
+                </div>
+              )}
+            </div>
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
+              <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
             </div>
           </div>
-          <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
-            <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
+
+          {/* ESTATÍSTICAS DIRETAS E MINIMALISTAS */}
+          <div className="flex gap-2">
+            {/* Stats: Coleção Física */}
+            <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
+              <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
+                <span>Coleção</span><span>{totalItens} UN</span>
+              </div>
+              <div className="flex justify-between"><span>Págs Add:</span><span>{totalPages}</span></div>
+              <div className="flex justify-between"><span>Págs Lidas:</span><span>{readPages}</span></div>
+              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 mt-1"><span>Média:</span><span>★ {avgRating}</span></div>
+            </div>
+
+            {/* Stats: Jogos Zerados (Clique para alternar o tempo) */}
+            <div onClick={() => { initAudio(); setTimeDisplayMode((m) => (m + 1) % 3); }} className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight cursor-pointer active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
+              <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
+                <span>Zerados</span><span>{totalJogos} UN</span>
+              </div>
+              <div className="flex justify-between"><span>Consoles:</span><span>{uniqueConsolesCount}</span></div>
+              <div className="flex flex-col text-sky-600 dark:text-sky-400 mt-auto pt-1 border-t-[2px] border-dashed border-current">
+                <div className="flex justify-between"><span>Tempo {timeLabels[timeDisplayMode]}:</span><span>{timeValues[timeDisplayMode]}h</span></div>
+                <div className="text-[6px] text-right opacity-50 mt-0.5">(Tocar para Alternar)</div>
+              </div>
+            </div>
           </div>
         </header>
 
