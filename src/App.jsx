@@ -6,6 +6,55 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/cat-teste/main/icon-192.png";
 
 // ==========================================
+// AUDIO ENGINE (Correção do erro dos botões)
+// ==========================================
+let audioCtx = null;
+const initAudio = () => {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  } catch (e) {
+    console.warn("Áudio não suportado", e);
+  }
+};
+
+const playChipBeep = (type) => {
+  try {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    const now = audioCtx.currentTime;
+    
+    if (type === 'save' || type === 'success') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (type === 'error') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+  } catch (e) {
+    // ignora erros de áudio silenciosamente
+  }
+};
+
+// ==========================================
 // 1. ÍCONES NATIVOS (Zero Dependências)
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
