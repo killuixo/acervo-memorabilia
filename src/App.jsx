@@ -24,13 +24,14 @@ const playChipBeep = (type) => {
     osc.connect(gain); gain.connect(audioCtx.destination);
     const now = audioCtx.currentTime;
     
+    // Som suavizado usando onda senoidal (sine)
     if (type === 'save' || type === 'success') {
-      osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
-      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       osc.start(now); osc.stop(now + 0.1);
     } else if (type === 'error') {
-      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
-      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
       osc.start(now); osc.stop(now + 0.2);
     }
   } catch (e) {}
@@ -73,11 +74,14 @@ const GamepadIcon = (p) => <Icon {...p} path={<><rect x="2" y="6" width="20" hei
 const DiscIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></>} />;
 const MonitorPlay = (p) => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>} />;
 const LinkIcon = (p) => <Icon {...p} path={<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></>} />;
+const XIcon = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS GLOBAIS
 // ==========================================
-const parseCSVText = (text) => {
+const parseCSVText = (rawText) => {
+  // Remove BOM se existir, para garantir leitura precisa da primeira coluna
+  const text = rawText.replace(/^\uFEFF/, '');
   const rows = []; let row = []; let inQuotes = false; let val = '';
   for (let i = 0; i < text.length; i++) {
     let char = text[i]; let nextChar = text[i + 1];
@@ -97,9 +101,12 @@ const normalizeStr = s => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, "")
 
 const parseTimeStr = (timeStr) => {
   if (!timeStr) return 0;
-  const parts = timeStr.toString().split(':');
-  if (parts.length >= 2) return parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60);
-  return parseFloat(timeStr.toString().replace(',', '.')) || 0;
+  const str = String(timeStr).trim();
+  if (str.includes(':')) {
+    const parts = str.split(':');
+    return parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60);
+  }
+  return parseFloat(str.replace(',', '.')) || 0;
 };
 
 // Extrator Dinâmico de Link Web
@@ -117,60 +124,63 @@ const processCompletedGamesCSV = (csvText) => {
   if (rows.length < 2) return [];
   const headers = rows[0].map(h => normalizeStr(h));
   
-  // Busca Difusa pelas colunas na Planilha (Tolerância a Nomes diferentes)
+  // Busca Difusa pelas colunas na Planilha (Garante match exato ignorando espaços, acentos, etc.)
   const getIdx = (keywords) => {
     const kws = Array.isArray(keywords) ? keywords : [keywords];
     const normalizedKws = kws.map(k => normalizeStr(k));
-    return headers.findIndex(h => normalizedKws.some(kw => h.includes(kw)));
+    return headers.findIndex(h => normalizedKws.some(kw => h === kw || h.includes(kw)));
   };
   
-  const iNome = getIdx(['Nome', 'Título', 'Jogo']); 
-  const iConsole = getIdx(['Console', 'Plataforma']); 
-  const iGenero = getIdx(['Gênero', 'Genero']);
-  const iTempo = getIdx(['Tempo', 'Horas']); 
-  const iNota = getIdx(['Nota', 'Avaliação']); 
-  const iSuporte = getIdx(['Suporte', 'Mídia', 'Midia']);
-  const iDif = getIdx(['Dificuldade']); 
-  const iCond = getIdx(['Condição', 'Condicao', 'Objetivo']); 
-  const iObs = getIdx(['Observação', 'Observacao', 'Comentário']);
-  const iInicio = getIdx(['Início', 'Inicio', 'Começo', 'Data de Início']); 
-  const iFim = getIdx(['Fim', 'Término', 'Termino', 'Conclusão', 'Data Final']);
-  const iPrecoPago = getIdx(['Preço pago', 'Preco pago', 'Valor pago']); 
-  const iPrecoSemDesc = getIdx(['Preço sem desconto', 'Preco sem desconto', 'Valor original', 'Cheio']); 
-  const iLink = getIdx(['Link', 'Url', 'Página web']);
+  const iNome = getIdx(['nome', 'título', 'jogo']); 
+  const iConsole = getIdx(['console', 'plataforma']); 
+  const iGenero = getIdx(['gênero', 'genero']);
+  const iTempo = getIdx(['tempo', 'horas']); 
+  const iNota = getIdx(['nota', 'avaliação']); 
+  const iSuporte = getIdx(['suporte', 'mídia', 'midia']);
+  const iDif = getIdx(['dificuldade']); 
+  const iCond = getIdx(['condição', 'condicao', 'objetivo']); 
+  const iObs = getIdx(['observação', 'observacao', 'comentário']);
+  const iInicio = getIdx(['início', 'inicio', 'começo', 'data de início']); 
+  const iFim = getIdx(['fim', 'término', 'termino', 'conclusão', 'data final']);
+  const iPrecoPago = getIdx(['preço pago', 'preco pago', 'valor pago']); 
+  const iPrecoSemDesc = getIdx(['preço sem desconto', 'preco sem desconto', 'valor original', 'cheio']); 
+  const iLink = getIdx(['link', 'url', 'página web']);
+
+  const safeGet = (row, idx) => idx >= 0 && row[idx] ? row[idx].trim() : '';
 
   const parsed = [];
   for(let i=1; i<rows.length; i++) {
     const row = rows[i];
-    if(!row || row.length < 3 || !row[iNome]) continue;
+    if(!row || row.length < 3 || !safeGet(row, iNome)) continue;
     
-    let supVal = row[iSuporte] || '';
+    let supVal = safeGet(row, iSuporte);
     let isFisico = supVal.toLowerCase().includes('físico') || supVal.toLowerCase().includes('fisico') || supVal === 'F';
     
     let anoFim = '';
-    if (row[iFim]) { const parts = row[iFim].split('/'); if (parts.length === 3) anoFim = parts[2].split(' ')[0]; }
+    const rawFim = safeGet(row, iFim);
+    if (rawFim) { const parts = rawFim.split('/'); if (parts.length === 3) anoFim = parts[2].split(' ')[0]; }
     
-    // Tratamento de Moeda para evitar quebras numéricas
-    const cleanMoney = (val) => val ? val.replace('R$', '').trim() : '';
+    // Removemos R$ e cuidamos de formatações
+    const cleanMoney = (val) => val ? val.replace(/R\$\s?/gi, '').trim() : '';
 
     parsed.push({
       id: i.toString(),
-      nome: row[iNome] || 'Desconhecido',
-      console: row[iConsole] || 'Outro',
-      genero: row[iGenero] || 'Outro',
-      tempoHoras: parseTimeStr(row[iTempo]),
-      nota: parseFloat((row[iNota] || '0').replace(',', '.')) || 0,
+      nome: safeGet(row, iNome) || 'Desconhecido',
+      console: safeGet(row, iConsole) || 'Outro',
+      genero: safeGet(row, iGenero) || 'Outro',
+      tempoHoras: parseTimeStr(safeGet(row, iTempo)),
+      nota: parseFloat((safeGet(row, iNota) || '0').replace(',', '.')) || 0,
       suporteStr: supVal,
       suporte: isFisico ? 'Físico' : 'Digital',
-      dificuldade: row[iDif] || '--',
-      condicao: row[iCond] || '--',
-      observacao: row[iObs] || '',
-      inicio: row[iInicio] || '--',
-      fim: row[iFim] || '--',
+      dificuldade: safeGet(row, iDif) || '--',
+      condicao: safeGet(row, iCond) || '--',
+      observacao: safeGet(row, iObs) || '',
+      inicio: safeGet(row, iInicio) || '--',
+      fim: rawFim || '--',
       anoFim: anoFim,
-      precoPago: cleanMoney(row[iPrecoPago]),
-      precoSemDesc: cleanMoney(row[iPrecoSemDesc]),
-      link: row[iLink] || ''
+      precoPago: cleanMoney(safeGet(row, iPrecoPago)),
+      precoSemDesc: cleanMoney(safeGet(row, iPrecoSemDesc)),
+      link: safeGet(row, iLink) || ''
     });
   }
   return parsed;
@@ -282,9 +292,9 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
 };
 
 const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) => (
-  <div className="flex flex-col mb-3 w-full">
+  <div className="flex flex-col mb-3 w-full overflow-hidden">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
-    <div className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans ${emphasize ? 'text-lg text-rose-500 font-black tracking-widest text-center' : 'text-sm font-bold'} ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : ''} truncate`}>
+    <div className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans ${emphasize ? 'text-lg text-rose-500 font-black tracking-widest text-center' : 'text-sm font-bold'} ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : 'truncate'}`}>
       {value || '--'}
     </div>
   </div>
@@ -388,7 +398,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
-    setSelectedItem(editedItem); playChipBeep('save'); onShowToast();
+    setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success');
   };
 
   const confirmDelete = () => {
@@ -400,7 +410,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
 
   const fetchWikiInfo = async () => {
     const apiKey = settings.geminiApiKey || ""; 
-    if (!apiKey) { setWikiError("Chave de API ausente (Vá em Ajustes)."); playChipBeep('error'); return; }
+    if (!apiKey) { setWikiError("Chave de API ausente (Vá em Ajustes)."); playChipBeep('error'); onShowToast('error'); return; }
     setLoadingWiki(true); setWikiError('');
     try {
       const payload = {
@@ -411,8 +421,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
       const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (aiText) { setEditedItem({...editedItem, wiki_info: aiText}); playChipBeep('success'); }
-    } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); } finally { setLoadingWiki(false); }
+      if (aiText) { setEditedItem({...editedItem, wiki_info: aiText}); playChipBeep('success'); onShowToast('success'); }
+    } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); onShowToast('error'); } finally { setLoadingWiki(false); }
   };
 
   if (selectedItem && editedItem) {
@@ -709,7 +719,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const newItem = { ...formData, id: Date.now().toString(), archive_code: `LUI-${classCode}-${sequence}` };
     setItems([newItem, ...items]); 
     if (settings.googleSheetsUrl) fetch(settings.googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newItem) }).catch(() => {});
-    playChipBeep('save'); onShowToast(); 
+    playChipBeep('save'); onShowToast('success'); 
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
     updateStatus('idle', ''); resetGlobalAi(); setActiveTab('library');
   };
@@ -940,7 +950,11 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     const reader = new FileReader();
     reader.onload = (evt) => {
       const parsed = processCompletedGamesCSV(evt.target.result);
-      setCompletedGames(parsed); playChipBeep('success'); onShowToast();
+      if (parsed.length > 0) {
+        setCompletedGames(parsed); playChipBeep('success'); onShowToast('success');
+      } else {
+        playChipBeep('error'); onShowToast('error');
+      }
     };
     reader.readAsText(file); e.target.value = null;
   };
@@ -989,9 +1003,9 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
         <GamepadIcon className="w-16 h-16 mb-4 opacity-20" />
         <h2 className="text-xl font-black uppercase tracking-widest mb-2">Sem Dados</h2>
-        <p className="text-[10px] font-bold mb-6 opacity-70">Sua planilha de jogos finalizados não está carregada. Acesse a aba Ajustes para colar a URL do seu Google Sheets ou faça o upload manual do CSV.</p>
+        <p className="text-[10px] font-bold mb-6 opacity-70">Acesse a aba Ajustes para fazer o upload do .CSV atualizado da sua lista de jogos zerados.</p>
         <label className={`cursor-pointer w-full py-4 text-center border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] text-[10px] font-black uppercase tracking-widest active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-sky-800 border-gray-500 text-white shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black'}`}>
-          📤 Fazer Upload do CSV Local
+          📤 Fazer Upload do CSV
           <input type="file" accept=".csv" className="hidden" onChange={handleManualImport} />
         </label>
       </div>
@@ -1029,7 +1043,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           </a>
 
           <div className="grid grid-cols-2 gap-2">
-            <MReadOnlyBox label="Sua Nota Final" value={`★ ${selectedGame.nota}`} darkMode={darkMode} emphasize={true} />
+            <MReadOnlyBox label="Sua Nota Final" value={`★ ${selectedGame.nota} / 10`} darkMode={darkMode} emphasize={true} />
             <MReadOnlyBox label="Tempo de Jogo" value={`${selectedGame.tempoHoras.toFixed(1)}h`} darkMode={darkMode} emphasize={true} />
             <MReadOnlyBox label="Dificuldade Jogado" value={selectedGame.dificuldade} darkMode={darkMode} />
             <MReadOnlyBox label="Mídia (Suporte)" value={selectedGame.suporteStr || selectedGame.suporte} darkMode={darkMode} />
@@ -1093,7 +1107,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         </MContainer>
         <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
           <div className="text-2xl font-black z-10">★ {mediaNota}</div>
-          <div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Média Geral</div>
+          <div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Média Geral / 10</div>
         </MContainer>
         <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20 relative overflow-hidden" colorClass={darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400 text-black'}>
           <DiscIcon className={`absolute -right-2 -bottom-2 w-12 h-12 opacity-20`} />
@@ -1152,7 +1166,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
                 <div className="text-[8px] font-black mt-1 uppercase text-emerald-600 dark:text-emerald-400">{g.suporte} ({g.suporteStr})</div>
              </div>
              <div className="flex flex-col items-end justify-center min-w-[50px] border-l-[3px] border-current pl-2">
-                <div className="text-[12px] font-black leading-none">★ {g.nota}</div>
+                <div className="text-[12px] font-black leading-none">★ {g.nota}/10</div>
                 <div className="text-[8px] font-bold mt-1 opacity-70">{g.tempoHoras.toFixed(1)}h</div>
              </div>
           </div>
@@ -1231,12 +1245,27 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     e.target.value = null;
   };
 
-  const handleSaveSettings = () => { playChipBeep('save'); onShowToast(); };
+  const handleImportCompletedCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const parsed = processCompletedGamesCSV(evt.target.result);
+      if (parsed.length > 0) {
+        setCompletedGames(parsed); playChipBeep('success'); onShowToast('success');
+      } else {
+        playChipBeep('error'); onShowToast('error');
+      }
+    };
+    reader.readAsText(file); e.target.value = null;
+  };
+
+  const handleSaveSettings = () => { playChipBeep('save'); onShowToast('success'); };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative">
-      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca principal? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
-      <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir Coleção" />
+      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca principal? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('success'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
+      <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('success'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir Coleção" />
 
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-emerald-500 bg-emerald-100 dark:bg-emerald-900" colorClass="border-emerald-500">
@@ -1251,7 +1280,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
       <MContainer darkMode={darkMode} className="p-4 mb-4 flex justify-between items-center" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <div className="text-xs font-black uppercase tracking-widest">Aparência</div>
-        <MButton darkMode={darkMode} onClick={() => setDarkMode(!darkMode)} variant="black" className="px-4 py-2">
+        <MButton darkMode={darkMode} onClick={() => { setDarkMode(!darkMode); playChipBeep('success'); }} variant="black" className="px-4 py-2">
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} {darkMode ? 'Modo Claro' : 'Modo Escuro'}
         </MButton>
       </MContainer>
@@ -1260,8 +1289,16 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}><Library className="w-4 h-4" /> Integrações (Opcional)</div>
         <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings.geminiApiKey} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
         <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Salvar Novos)" value={settings.googleSheetsUrl} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
-        <MInput darkMode={darkMode} label="Google Sheets CSV URL (Jogos Zerados)" value={settings.completedGamesUrl || ''} onChange={e => setSettings({...settings, completedGamesUrl: e.target.value})} placeholder="Link do 'Publicar na Web > CSV'..." />
         <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-4"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
+      </MContainer>
+
+      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-emerald-900/40 text-white' : 'bg-emerald-100 text-black'}>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Sincronizar Jogos Zerados</div>
+        <p className="text-[10px] mb-3 opacity-80 font-bold">Faça o upload manual do seu .CSV atualizado de jogos finalizados para atualizar a aba "Zerados".</p>
+        <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-emerald-500 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-emerald-800 text-white' : 'border-black bg-emerald-400 text-black'} `}>
+          <Upload className="w-4 h-4" /> Importar CSV de Jogos Zerados
+          <input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} />
+        </label>
       </MContainer>
 
       <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
@@ -1286,9 +1323,11 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
-  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', completedGamesUrl: '' });
+  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '' });
   const [isLoaded, setIsLoaded] = useState(false);
-  const [globalToast, setGlobalToast] = useState(false); 
+  
+  // Feedback Global Dinâmico
+  const [toast, setToast] = useState({ visible: false, type: 'success' });
   const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
   
   // Chaves para forçar reset ao clicar nos botões do menu
@@ -1320,8 +1359,8 @@ export default function App() {
       const start = cleanedText.indexOf('{'); const end = cleanedText.lastIndexOf('}');
       if (start !== -1 && end !== -1) cleanedText = cleanedText.substring(start, end + 1);
       const parsedData = JSON.parse(cleanedText);
-      setAiBoxState('success'); setAiBoxMessage('Informações extraídas com IA!'); playChipBeep('success'); setScannedAIData(parsedData);
-    } catch (error) { console.error("Erro IA:", error); setAiBoxState('error'); setAiBoxMessage(`Falha na IA: ${error.message}`); playChipBeep('error'); }
+      setAiBoxState('success'); setAiBoxMessage('Informações extraídas com IA!'); playChipBeep('success'); setScannedAIData(parsedData); showToast('success');
+    } catch (error) { console.error("Erro IA:", error); setAiBoxState('error'); setAiBoxMessage(`Falha na IA: ${error.message}`); playChipBeep('error'); showToast('error'); }
   };
 
   useEffect(() => {
@@ -1333,7 +1372,10 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { if (globalToast) { const timer = setTimeout(() => setGlobalToast(false), 2000); return () => clearTimeout(timer); } }, [globalToast]);
+  const showToast = (type = 'success') => {
+    setToast({ visible: true, type });
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000);
+  };
 
   // Carregamento Inicial
   useEffect(() => {
@@ -1349,16 +1391,6 @@ export default function App() {
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, isLoaded]);
-
-  // Sincronização Automática Jogos Zerados
-  useEffect(() => {
-    if (isLoaded && settings.completedGamesUrl && settings.completedGamesUrl.startsWith('http')) {
-      fetch(settings.completedGamesUrl).then(res => res.text()).then(csvText => {
-        const parsed = processCompletedGamesCSV(csvText);
-        if (parsed.length > 0) setCompletedGames(parsed);
-      }).catch(err => console.error("Falha ao sincronizar:", err));
-    }
-  }, [isLoaded, settings.completedGamesUrl]);
 
   // ==========================================
   // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
@@ -1398,7 +1430,7 @@ export default function App() {
   completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(g.precoPago.replace(',','.')); if(!isNaN(p)) totalGasto+=p; } });
 
   // Painel de Led Dinâmico (Marquee)
-  const marqueeText = `🕹️ ${totalJogos} JOGOS FINALIZADOS   •   ⏱️ TEMPO MÉDIO: ${avgTime}h   •   ⏳ MAIOR TEMPO: ${maxTime}h   •   🏆 NOTA MÉDIA: ★ ${mediaNotaJ}   •   💸 GASTO TOTAL: R$ ${totalGasto.toFixed(2).replace('.',',')}   •   `;
+  const marqueeText = `🕹️ ${totalJogos} JOGOS FINALIZADOS   •   ⏱️ TEMPO MÉDIO: ${avgTime}h   •   ⏳ MAIOR TEMPO: ${maxTime}h   •   🏆 NOTA MÉDIA: ★ ${mediaNotaJ} / 10   •   💸 GASTO TOTAL: R$ ${totalGasto.toFixed(2).replace('.',',')}   •   `;
 
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
@@ -1421,17 +1453,11 @@ export default function App() {
       {/* CSS para o Marquee de Led */}
       <style>{`
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { display: inline-block; white-space: nowrap; animation: marquee 35s linear infinite; }
+        .animate-marquee { display: inline-block; white-space: nowrap; animation: marquee 80s linear infinite; }
       `}</style>
 
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
         
-        {globalToast && (
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
-            <div className={`w-14 h-14 border-[4px] border-black bg-emerald-400 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><Check className="w-10 h-10" /></div>
-          </div>
-        )}
-
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 pr-2">
@@ -1442,9 +1468,17 @@ export default function App() {
                 </div>
               )}
             </div>
-            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
-              <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
+            
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300">
+              {toast.visible ? (
+                toast.type === 'error' 
+                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md"/> 
+                  : <Check className="text-emerald-500 w-10 h-10 drop-shadow-md" />
+              ) : (
+                <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
+              )}
             </div>
+
           </div>
 
           {/* ESTATÍSTICAS DIRETAS E MINIMALISTAS */}
@@ -1466,7 +1500,7 @@ export default function App() {
                </div>
                
                <div className="flex-1 flex items-center overflow-hidden w-full relative">
-                  <div className="absolute whitespace-nowrap animate-marquee font-mono text-sm tracking-wider">
+                  <div className="absolute whitespace-nowrap animate-marquee font-mono text-sm tracking-wider font-bold">
                     {marqueeText} {marqueeText}
                   </div>
                </div>
@@ -1477,11 +1511,11 @@ export default function App() {
         <main className="flex-1 overflow-hidden p-3 relative z-0">
           <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
           
-          {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={() => setGlobalToast(true)} />}
-          {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={() => setGlobalToast(true)} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} />}
+          {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} />}
+          {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} />}
           {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} />}
-          {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={() => setGlobalToast(true)} />}
-          {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={() => setGlobalToast(true)} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} />}
+          {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
+          {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} />}
         </main>
 
         <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
