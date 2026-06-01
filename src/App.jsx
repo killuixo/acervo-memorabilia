@@ -80,7 +80,6 @@ const XIcon = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><
 // FUNÇÕES UTILITÁRIAS GLOBAIS
 // ==========================================
 const parseCSVText = (rawText) => {
-  // Remove BOM se existir, para garantir leitura precisa da primeira coluna
   const text = rawText.replace(/^\uFEFF/, '');
   const rows = []; let row = []; let inQuotes = false; let val = '';
   for (let i = 0; i < text.length; i++) {
@@ -124,7 +123,6 @@ const processCompletedGamesCSV = (csvText) => {
   if (rows.length < 2) return [];
   const headers = rows[0].map(h => normalizeStr(h));
   
-  // Busca Difusa pelas colunas na Planilha (Garante match exato ignorando espaços, acentos, etc.)
   const getIdx = (keywords) => {
     const kws = Array.isArray(keywords) ? keywords : [keywords];
     const normalizedKws = kws.map(k => normalizeStr(k));
@@ -160,7 +158,6 @@ const processCompletedGamesCSV = (csvText) => {
     const rawFim = safeGet(row, iFim);
     if (rawFim) { const parts = rawFim.split('/'); if (parts.length === 3) anoFim = parts[2].split(' ')[0]; }
     
-    // Removemos R$ e cuidamos de formatações
     const cleanMoney = (val) => val ? val.replace(/R\$\s?/gi, '').trim() : '';
 
     parsed.push({
@@ -227,7 +224,7 @@ const usePWA = (iconUrl) => {
 };
 
 // ==========================================
-// 2. DADOS E PLANO DE CLASSIFICAÇÃO
+// 2. DADOS E PLANO DE CLASSIFICAÇÃO (Mondrian)
 // ==========================================
 const CATEGORIES = {
   'Livros': ['Livro', 'Quadrinho', 'Revista'],
@@ -244,9 +241,10 @@ const CLASS_CODES = {
 
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
 
+// Paleta restrita De Stijl / Mondrian: Cores primárias fortes (Rosa/Vermelho, Azul, Amarelo), Preto, Branco e Cinza claro.
 const getMondrianColor = (index, darkMode) => {
-  const colorsLight = ['bg-rose-400', 'bg-sky-400', 'bg-yellow-400', 'bg-white'];
-  const colorsDark = ['bg-rose-800', 'bg-sky-800', 'bg-yellow-600', 'bg-gray-800'];
+  const colorsLight = ['bg-rose-500', 'bg-sky-500', 'bg-yellow-400', 'bg-white'];
+  const colorsDark = ['bg-rose-700', 'bg-sky-700', 'bg-yellow-600', 'bg-gray-800'];
   return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
 };
 
@@ -278,11 +276,10 @@ const MContainer = ({ children, className = '', colorClass = '', darkMode }) => 
 
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
   let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
-  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black';
+  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black';
   if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black';
   if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black';
   if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
-  if (variant === 'emerald') bgClass = darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400 text-black';
 
   return (
     <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
@@ -437,7 +434,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-emerald-800 border-emerald-500 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'bg-emerald-400 border-black text-black'}`}>Salvar</button>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-sky-800 border-sky-500 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black'}`}>Salvar</button>
         </MContainer>
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4">
@@ -470,7 +467,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-sky-700 border-sky-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </MContainer>
@@ -506,7 +503,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
-                    {wikiError && <span className="text-[9px] font-bold text-red-600 block break-words whitespace-pre-wrap">{wikiError}</span>}
+                    {wikiError && <span className="text-[9px] font-bold text-rose-500 block break-words whitespace-pre-wrap">{wikiError}</span>}
                     <MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-purple-600 border-black dark:bg-purple-700 text-white">✨ Pesquisar sobre a Obra</MButton>
                   </div>
                 )}
@@ -571,7 +568,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast }) => {
                     </div>
                     <div className="flex justify-between items-end mt-auto">
                       {['Livro', 'Quadrinho', 'Revista', 'Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4'].includes(item.type) ? (
-                        <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-500 bg-gray-900 text-gray-300' : 'border-black bg-yellow-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
+                        <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-500 bg-sky-900 text-sky-300' : 'border-black bg-yellow-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
                       ) : <div></div>}
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
@@ -718,7 +715,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const sequence = String(maxSeq + 1).padStart(4, '0');
     const newItem = { ...formData, id: Date.now().toString(), archive_code: `LUI-${classCode}-${sequence}` };
     setItems([newItem, ...items]); 
-    if (settings.googleSheetsUrl) fetch(settings.googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newItem) }).catch(() => {});
     playChipBeep('save'); onShowToast('success'); 
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
     updateStatus('idle', ''); resetGlobalAi(); setActiveTab('library');
@@ -735,7 +731,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         <MButton darkMode={darkMode} variant="red" onClick={triggerGlobalAI} className="flex-1 py-2 text-[10px]"><Camera className="w-4 h-4" /> Auto IA</MButton>
       </div>
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-yellow-700 border-yellow-500 text-white' : 'bg-yellow-400 border-black text-black') : displayBoxState === 'success' ? (darkMode ? 'bg-emerald-800 border-emerald-500 text-white' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-rose-800 border-rose-500 text-white' : 'bg-rose-400 border-black text-black')}`}>
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-yellow-700 border-yellow-500 text-white' : 'bg-yellow-400 border-black text-black') : displayBoxState === 'success' ? (darkMode ? 'bg-sky-800 border-sky-500 text-white' : 'bg-sky-400 border-black text-black') : (darkMode ? 'bg-rose-800 border-rose-500 text-white' : 'bg-rose-400 border-black text-black')}`}>
           {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-sm animate-spin flex-shrink-0" />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
@@ -779,7 +775,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-emerald-700 border-emerald-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-emerald-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-sky-700 border-sky-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </div>
@@ -894,7 +890,7 @@ const DashboardTab = ({ items, darkMode }) => {
               </MContainer>
             )}
             {stats.epico && (
-              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black'}>
+              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
                 <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.epico.title}</div><div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {['Livro', 'Quadrinho', 'Revista'].includes(stats.epico.type) ? 'Págs' : 'Horas'}</div></div>
               </MContainer>
@@ -944,21 +940,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const [selectedGame, setSelectedGame] = useState(null);
   const itemsPerPage = 20;
 
-  const handleManualImport = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const parsed = processCompletedGamesCSV(evt.target.result);
-      if (parsed.length > 0) {
-        setCompletedGames(parsed); playChipBeep('success'); onShowToast('success');
-      } else {
-        playChipBeep('error'); onShowToast('error');
-      }
-    };
-    reader.readAsText(file); e.target.value = null;
-  };
-
   const filteredGames = useMemo(() => {
     return completedGames.filter(g => {
       let mConsole = true, mGenre = true, mSup = true;
@@ -1004,17 +985,13 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         <GamepadIcon className="w-16 h-16 mb-4 opacity-20" />
         <h2 className="text-xl font-black uppercase tracking-widest mb-2">Sem Dados</h2>
         <p className="text-[10px] font-bold mb-6 opacity-70">Acesse a aba Ajustes para fazer o upload do .CSV atualizado da sua lista de jogos zerados.</p>
-        <label className={`cursor-pointer w-full py-4 text-center border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] text-[10px] font-black uppercase tracking-widest active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-sky-800 border-gray-500 text-white shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black'}`}>
-          📤 Fazer Upload do CSV
-          <input type="file" accept=".csv" className="hidden" onChange={handleManualImport} />
-        </label>
       </div>
     );
   }
 
   // --- MODO DETALHE ---
   if (selectedGame) {
-    const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link); // PS4 code used generically for Games in getExternalLink
+    const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link); 
     
     return (
       <div className="flex flex-col h-full pb-20 relative">
@@ -1032,7 +1009,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
                <span className="text-[10px] font-black uppercase tracking-widest opacity-60 px-2 text-center">{selectedGame.console}</span>
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
-              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-emerald-500 text-emerald-300 bg-emerald-900' : 'border-black text-black bg-emerald-200'}`}>FINALIZADO</div>
+              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-yellow-500 text-yellow-300 bg-yellow-900' : 'border-black text-black bg-yellow-400'}`}>FINALIZADO</div>
               <MReadOnlyBox label="Nome do Jogo" value={selectedGame.nome} darkMode={darkMode} />
               <MReadOnlyBox label="Gênero" value={selectedGame.genero} darkMode={darkMode} />
             </div>
@@ -1071,10 +1048,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
           <div className="flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros de Zerados</div>
-          <label className="cursor-pointer underline opacity-70 hover:opacity-100 flex items-center gap-1">
-             <Upload className="w-3 h-3" /> <span className="text-[8px]">Recarregar CSV</span>
-             <input type="file" accept=".csv" className="hidden" onChange={handleManualImport} />
-          </label>
         </div>
         <div className="flex gap-2">
           <select value={filterConsole} onChange={e => { setFilterConsole(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
@@ -1100,7 +1073,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           <div className="text-5xl font-black z-10">{totalJogos}</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Jogos Finalizados</div>
         </MContainer>
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black'}>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
           <Clock className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
           <div className="text-3xl font-black z-10">{totalHoras}h</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Total de Horas</div>
@@ -1109,7 +1082,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           <div className="text-2xl font-black z-10">★ {mediaNota}</div>
           <div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Média Geral / 10</div>
         </MContainer>
-        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20 relative overflow-hidden" colorClass={darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400 text-black'}>
+        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20 relative overflow-hidden" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-black text-white'}>
           <DiscIcon className={`absolute -right-2 -bottom-2 w-12 h-12 opacity-20`} />
           <div className="text-2xl font-black z-10">{fisicoPerc}%</div>
           <div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Mídia Física</div>
@@ -1163,7 +1136,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
              <div className="flex flex-col flex-1 overflow-hidden pr-2">
                 <div className="text-sm font-black truncate">{g.nome}</div>
                 <div className="text-[9px] font-bold uppercase opacity-70 truncate">{g.console} • {g.genero}</div>
-                <div className="text-[8px] font-black mt-1 uppercase text-emerald-600 dark:text-emerald-400">{g.suporte} ({g.suporteStr})</div>
+                <div className="text-[8px] font-black mt-1 uppercase text-sky-600 dark:text-sky-400">{g.suporte} ({g.suporteStr})</div>
              </div>
              <div className="flex flex-col items-end justify-center min-w-[50px] border-l-[3px] border-current pl-2">
                 <div className="text-[12px] font-black leading-none">★ {g.nota}/10</div>
@@ -1186,6 +1159,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, completedGames, setCompletedGames }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importData, setImportData] = useState(null);
+  const [openSection, setOpenSection] = useState(null);
 
   const handleExportCSV = () => {
     if (items.length === 0) return;
@@ -1268,11 +1242,11 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('success'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir Coleção" />
 
       {pwa.isInstallable && !pwa.isInstalled && (
-        <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-emerald-500 bg-emerald-100 dark:bg-emerald-900" colorClass="border-emerald-500">
-          <Smartphone className="w-8 h-8 mb-2 text-emerald-600 dark:text-emerald-400" />
-          <h3 className="font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 text-lg mb-1">Instalar App</h3>
-          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-3 px-2">Adicione o Memorabilia à tela inicial para abri-lo como aplicativo nativo.</p>
-          <MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="emerald" className="w-full py-4 text-sm font-black text-black">
+        <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-sky-500 bg-sky-100 dark:bg-sky-900" colorClass="border-sky-500">
+          <Smartphone className="w-8 h-8 mb-2 text-sky-600 dark:text-sky-400" />
+          <h3 className="font-black uppercase tracking-widest text-sky-700 dark:text-sky-300 text-lg mb-1">Instalar App</h3>
+          <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 mb-3 px-2">Adicione o Memorabilia à tela inicial para abri-lo como aplicativo nativo.</p>
+          <MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="blue" className="w-full py-4 text-sm font-black text-black">
             📲 Instalar Agora
           </MButton>
         </MContainer>
@@ -1285,31 +1259,55 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </MButton>
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}><Library className="w-4 h-4" /> Integrações (Opcional)</div>
-        <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings.geminiApiKey} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
-        <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Salvar Novos)" value={settings.googleSheetsUrl} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
-        <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-4"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
+      {/* INTEGRAÇÕES - ACCORDION */}
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <button onClick={() => setOpenSection(openSection === 'integracoes' ? null : 'integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+          <span className="flex items-center gap-2"><Library className="w-4 h-4" /> Integrações (Opcional)</span>
+          <span className="text-lg">{openSection === 'integracoes' ? '−' : '+'}</span>
+        </button>
+        {openSection === 'integracoes' && (
+          <div className="p-4 flex flex-col gap-3">
+            <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings.geminiApiKey} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
+            <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Salvar Novos)" value={settings.googleSheetsUrl} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
+            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
+          </div>
+        )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-emerald-900/40 text-white' : 'bg-emerald-100 text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Sincronizar Jogos Zerados</div>
-        <p className="text-[10px] mb-3 opacity-80 font-bold">Faça o upload manual do seu .CSV atualizado de jogos finalizados para atualizar a aba "Zerados".</p>
-        <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-emerald-500 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-emerald-800 text-white' : 'border-black bg-emerald-400 text-black'} `}>
-          <Upload className="w-4 h-4" /> Importar CSV de Jogos Zerados
-          <input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} />
-        </label>
+      {/* SINCRONIZAR - ACCORDION */}
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-sky-900/40 text-white' : 'bg-sky-100 text-black'}>
+        <button onClick={() => setOpenSection(openSection === 'sincronizar' ? null : 'sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+          <span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Sincronizar Jogos Zerados</span>
+          <span className="text-lg">{openSection === 'sincronizar' ? '−' : '+'}</span>
+        </button>
+        {openSection === 'sincronizar' && (
+          <div className="p-4 flex flex-col gap-3">
+            <p className="text-[10px] opacity-80 font-bold leading-relaxed">Faça o upload manual do seu .CSV atualizado de jogos finalizados para atualizar a aba "Zerados".</p>
+            <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-sky-500 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-sky-800 text-white' : 'border-black bg-sky-400 text-black'} `}>
+              <Upload className="w-4 h-4" /> Importar CSV de Jogos Zerados
+              <input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} />
+            </label>
+          </div>
+        )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="p-4 mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Backup Local (.CSV Principal)</div>
-        <div className="flex gap-2">
-          <MButton darkMode={darkMode} onClick={handleExportCSV} variant="white" className={`flex-1 text-[10px] ${darkMode?'text-white bg-gray-800 border-gray-600':'text-black'}`}><Download className="w-4 h-4" /> Exportar</MButton>
-          <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode?'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white':'border-black bg-white text-black'} `}><Upload className="w-4 h-4" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
-        </div>
+      {/* BACKUP - ACCORDION */}
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
+        <button onClick={() => setOpenSection(openSection === 'backup' ? null : 'backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+          <span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local (.CSV Principal)</span>
+          <span className="text-lg">{openSection === 'backup' ? '−' : '+'}</span>
+        </button>
+        {openSection === 'backup' && (
+          <div className="p-4 flex gap-2">
+            <MButton darkMode={darkMode} onClick={handleExportCSV} variant="white" className={`flex-1 text-[10px] ${darkMode?'text-white bg-gray-800 border-gray-600':'text-black'}`}><Download className="w-4 h-4" /> Exportar</MButton>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode?'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white':'border-black bg-white text-black'} `}><Upload className="w-4 h-4" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+          </div>
+        )}
       </MContainer>
 
-      <MButton darkMode={darkMode} onClick={() => setShowResetConfirm(true)} variant="red" className="w-full">Resetar Coleção Principal</MButton>
+      <button onClick={() => setShowResetConfirm(true)} className="text-[10px] font-black uppercase tracking-widest text-rose-500 opacity-60 hover:opacity-100 mx-auto block mt-8 mb-4 underline">
+         Resetar Coleção Principal
+      </button>
     </div>
   );
 };
@@ -1450,10 +1448,12 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      {/* CSS para o Marquee de Led */}
+      {/* CSS para o Marquee de Led e Import da Fonte VCR */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        .font-vcr { font-family: 'VT323', monospace; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .animate-marquee { display: inline-block; white-space: nowrap; animation: marquee 80s linear infinite; }
+        .animate-marquee { display: inline-block; white-space: nowrap; animation: marquee 35s linear infinite; }
       `}</style>
 
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
@@ -1469,13 +1469,13 @@ export default function App() {
               )}
             </div>
             
-            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300">
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
               {toast.visible ? (
                 toast.type === 'error' 
-                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md"/> 
-                  : <Check className="text-emerald-500 w-10 h-10 drop-shadow-md" />
+                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200"/> 
+                  : <Check className="text-sky-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" />
               ) : (
-                <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
+                <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
               )}
             </div>
 
@@ -1494,13 +1494,13 @@ export default function App() {
             </div>
 
             {/* Stats: Jogos Zerados (LED Marquee Animado) */}
-            <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-emerald-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-emerald-400'}`}>
-               <div className="p-1.5 border-b-[2px] border-emerald-900/50 pb-0.5 mb-1 opacity-80 flex justify-between">
-                  <span>Banco de Dados</span><span className="animate-pulse">REC</span>
+            <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-yellow-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-yellow-400'}`}>
+               <div className="p-1.5 border-b-[2px] border-yellow-900/50 pb-0.5 mb-1 opacity-80 flex justify-between">
+                  <span>Jogos Zerados</span><span className="animate-pulse text-rose-500">REC</span>
                </div>
                
                <div className="flex-1 flex items-center overflow-hidden w-full relative">
-                  <div className="absolute whitespace-nowrap animate-marquee font-mono text-sm tracking-wider font-bold">
+                  <div className="absolute whitespace-nowrap animate-marquee font-vcr text-sm tracking-wider">
                     {marqueeText} {marqueeText}
                   </div>
                </div>
@@ -1522,7 +1522,7 @@ export default function App() {
           <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
           <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
           <button onClick={() => { initAudio(); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
-          <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-emerald-800 text-white' : 'bg-emerald-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
+          <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
           <button onClick={() => { initAudio(); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
         </nav>
 
