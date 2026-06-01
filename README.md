@@ -1,6 +1,6 @@
 # MEMORABILIA
 
-Organizador de Coleção em Suportes Físicos
+Organizador de coleção em suportes físicos
 
 Livro, Quadrinho, CD, Vinil, Cassete, Games (Mega Drive, SNES, Wii, PS1, PS2 e PS4)
 
@@ -8,7 +8,7 @@ Escrito com Gemini - Canvas.
 
 Sistema Progressive Web App desenvolvido em React para catalogação, gestão e análise métrica de acervos físicos. 
 
-O design implementa uma interface utilitarista inspirada no Neoplasticismo (Mondrian).
+O design implementa uma interface utilitarista inspirada no Neoplasticismo de Mondrian.
 
 ## Funcionalidades
 
