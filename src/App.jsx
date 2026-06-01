@@ -91,7 +91,6 @@ const MonitorPlay = (p) => <Icon {...p} path={<><rect width="20" height="14" x="
 const XIcon = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
 const Zap = (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = (p) => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
-const InfoIcon = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></>} />;
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS GLOBAIS
@@ -201,7 +200,7 @@ const processCompletedGamesCSV = (csvText) => {
 };
 
 // ==========================================
-// PWA ENGINE E MANUAL
+// PWA ENGINE (Injeção Dinâmica do App)
 // ==========================================
 const usePWA = (iconUrl) => {
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -238,93 +237,6 @@ const usePWA = (iconUrl) => {
     if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true); }
   };
   return { isInstallable: !!installPrompt, promptInstall, isInstalled };
-};
-
-const ManualModal = ({ isOpen, onClose, darkMode }) => {
-  const [openSec, setOpenSec] = useState(null);
-  if (!isOpen) return null;
-
-  const toggle = (sec) => { setOpenSec(openSec === sec ? null : sec); playChipBeep('success'); };
-
-  const Section = ({ id, title, children }) => (
-    <MContainer darkMode={darkMode} className="mb-2" colorClass={darkMode ? 'bg-gray-800' : 'bg-gray-100'}>
-      <button onClick={() => toggle(id)} className={`w-full p-3 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-left ${openSec === id ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
-        <span>{title}</span>
-        <span className="text-lg font-mono">{openSec === id ? '−' : '+'}</span>
-      </button>
-      {openSec === id && (
-        <div className={`p-4 text-xs font-bold leading-relaxed flex flex-col gap-2 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-          {children}
-        </div>
-      )}
-    </MContainer>
-  );
-
-  return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm z-[200]">
-      <MContainer darkMode={darkMode} className="w-full max-w-sm max-h-[85vh] flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <div className={`p-3 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-500' : 'border-black'} sticky top-0 bg-inherit z-10`}>
-          <h2 className="font-black uppercase tracking-widest text-sm flex items-center gap-2"><InfoIcon className="w-4 h-4"/> Manual do Usuário</h2>
-          <button onClick={onClose} className="p-1 active:translate-y-0.5"><XIcon className="w-5 h-5"/></button>
-        </div>
-        <div className="p-2 overflow-y-auto flex-1 scrollbar-hide">
-          <Section id="conceito" title="1. O Conceito">
-            <p><strong>Memorabilia</strong> é o seu arquivista de bolso pessoal. Construído com uma filosofia <i>offline-first</i> e design inspirado no Neoplasticismo (De Stijl), o aplicativo garante que seus dados sejam seus. Nada de servidores obscuros: tudo vive no seu dispositivo, com opções de integração pontuais na nuvem sob o seu controle.</p>
-          </Section>
-          <Section id="hud" title="2. A Barra Superior (HUD)">
-            <p>O painel no topo da tela é o seu Centro de Comando.</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li><strong>Coleção Física:</strong> Exibe o número total de itens catalogados, páginas totais e média de notas da sua coleção.</li>
-              <li><strong>Letreiro LED (Jogos Zerados):</strong> Um painel dot-matrix animado que puxa dados do seu arquivo de jogos finalizados, exibindo em tempo real: Quantidade, Tempo Médio/Maior Tempo, Nota Média e Gasto Total.</li>
-              <li><strong>A Sugestão:</strong> Toda vez que você abre o app, uma obra aleatória da sua estante física é sugerida no cabeçalho.</li>
-            </ul>
-            <p className="opacity-70 mt-2 text-[10px] uppercase tracking-widest">* Toda ação salva com sucesso fará o ícone piscar um ✔️ e emitir um suave bip retrô.</p>
-          </Section>
-          <Section id="add" title="3. Adicionando Itens">
-            <p>Você possui 3 formas de alimentar seu acervo:</p>
-            <ul className="list-decimal pl-4 space-y-1">
-              <li><strong>Manual:</strong> Preencha os campos (Título, Autor, Ano, etc.) por conta própria.</li>
-              <li><strong>Barcode:</strong> Usa a câmera do celular para ler ISBNs e UPCs, consultando bases de dados abertas (Google Books, OpenLibrary, MusicBrainz, UPCItemDB) para preencher a ficha automaticamente.</li>
-              <li><strong>Auto IA (A Magia):</strong> Tire ou envie uma foto da capa/ficha catalográfica. A IA visual extrairá os dados e fará o preenchimento inteligente para você.</li>
-            </ul>
-          </Section>
-          <Section id="library" title="4. Gerenciando a Coleção">
-            <p>Aqui vive a sua biblioteca.</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li><strong>Busca e Filtros:</strong> Use a barra de pesquisa ou os filtros combinados para achar itens.</li>
-              <li><strong>Ordenação Avançada:</strong> Organize por Ano de Lançamento, Nota, Tamanho ou Adição.</li>
-              <li><strong>Ficha Detalhada:</strong> Clique em um item para editá-lo. Você pode avaliar (1 a 5 estrelas) ou clicar em <i>Buscar na Web</i> para ser enviado de forma inteligente para o Skoob, Discogs ou GameFAQs.</li>
-              <li><strong>Enciclopédia IA:</strong> Clique no botão de IA para que o "oráculo digital" escreva um resumo de curiosidades históricas sobre aquela obra.</li>
-            </ul>
-          </Section>
-          <Section id="stats" title="5. Inteligência Analítica">
-            <p>Um dashboard gerado em tempo real na aba <strong>Geral</strong>.</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Filtre os gráficos por Status, Classe ou Nota.</li>
-              <li>Descubra qual é <i>A Relíquia</i> (item mais antigo) e <i>O Épico</i> (item mais longo) da sua coleção.</li>
-              <li>Acompanhe seu "Backlog" (itens não iniciados) e a linha do tempo histórica de publicações por década.</li>
-            </ul>
-          </Section>
-          <Section id="zerados" title="6. O Cofre de Conquistas">
-            <p>Diferente da Coleção Física, a aba <strong>Zerados</strong> é alimentada exclusivamente via planilha (arquivos .csv).</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li><strong>Como funciona:</strong> Na aba Ajustes, faça o upload do seu .csv de jogos finalizados. O app mapeia as colunas e gera um dashboard denso.</li>
-              <li>Visualize gráficos de Consoles, porcentagem de Mídia Física vs Digital, e tenha uma ficha detalhada para cada jogo zerado.</li>
-            </ul>
-          </Section>
-          <Section id="config" title="7. O Motor do Arquivo">
-            <p>Seu painel de controle técnico (Aba <strong>Ajustes</strong>):</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li><strong>Aparência:</strong> Alterne o Tema e ajuste fisicamente a Velocidade e o Brilho Neon do seu painel de LED.</li>
-              <li><strong>Gestão de Classes (CDD):</strong> Crie seu prefixo de arquivista (ex: LUI) e personalize os códigos decimais para organizar fisicamente os itens.</li>
-              <li><strong>Integrações:</strong> Insira sua chave do Google Gemini ou configure Webhooks do Google Sheets para backup automático na nuvem.</li>
-              <li><strong>Backup Local:</strong> Exporte toda a coleção para .csv ou importe um arquivo antigo.</li>
-            </ul>
-          </Section>
-        </div>
-      </MContainer>
-    </div>
-  );
 };
 
 // ==========================================
@@ -374,6 +286,22 @@ const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "
     )}
   </div>
 );
+
+const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm z-[200]">
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
+        <p className="text-sm font-bold opacity-90">{message}</p>
+        <div className="flex gap-2 mt-4">
+          <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
+          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
+        </div>
+      </MContainer>
+    </div>
+  );
+};
 
 const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v }) => (
   <div className="flex items-center gap-2 w-full mb-2">
@@ -461,7 +389,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   };
 
   const fetchWikiInfo = async () => {
-    const apiKey = settings.geminiApiKey || ""; 
+    const apiKey = settings?.geminiApiKey || ""; 
     if (!apiKey) { setWikiError("Chave de API ausente (Vá em Ajustes)."); playChipBeep('error'); onShowToast('error'); return; }
     setLoadingWiki(true); setWikiError('');
     try {
@@ -596,9 +524,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {['Todos', ...Object.keys(activeCategories)].map(cat => <button key={cat} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeCategory === cat ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
+          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={cat} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeCategory === cat ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
         </div>
-        {activeCategory !== 'Todos' && activeCategories[activeCategory]?.length > 1 && (
+        {activeCategory !== 'Todos' && activeCategories[activeCategory] && activeCategories[activeCategory].length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             <button onClick={() => { setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeSubtype === 'Todos' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
             {activeCategories[activeCategory].map(type => <button key={type} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeSubtype === type ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
@@ -764,7 +692,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
     
     const classCode = activeClassCodes[formData.type] || '000';
-    const prefix = settings.archivePrefix ? settings.archivePrefix.trim().toUpperCase() : 'MBU';
+    const prefix = settings?.archivePrefix ? settings.archivePrefix.trim().toUpperCase() : 'MBU';
     
     let maxSeq = 0;
     items.forEach(item => {
@@ -782,7 +710,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     
     setItems([newItem, ...items]); 
     
-    if (settings.googleSheetsUrl) {
+    if (settings?.googleSheetsUrl) {
       fetch(settings.googleSheetsUrl, { 
         method: 'POST', 
         mode: 'no-cors', 
@@ -830,7 +758,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             <div className="mb-4">
               <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Formato Específico</label>
               <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm outline-none font-black`}>
-                {Object.entries(activeCategories).map(([cat, subs]) => (<optgroup label={`--- ${cat.toUpperCase()} ---`} key={cat}>{subs.map(sub => <option key={sub} value={sub}>{sub}</option>)}</optgroup>))}
+                {Object.entries(activeCategories || {}).map(([cat, subs]) => (<optgroup label={`--- ${cat.toUpperCase()} ---`} key={cat}>{(Array.isArray(subs) ? subs : []).map(sub => <option key={sub} value={sub}>{sub}</option>)}</optgroup>))}
               </select>
             </div>
             <div className="grid grid-cols-4 gap-2 mb-2 w-full">
@@ -921,7 +849,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         <div className="flex gap-2">
           <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
             <option value="Todas">Tudo</option>
-            {Object.keys(activeCategories).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            {Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
             <option value="Todos">Status</option>
@@ -940,9 +868,9 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           <div className="text-5xl font-black z-10">{totalDash}</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div>
         </MContainer>
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
-          <Clock className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
-          <div className="text-3xl font-black z-10">{stats.vergonha || 0}</div>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}>
+          <Ghost className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
+          <div className="text-5xl font-black z-10">{stats.vergonha || 0}</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Intocados / Backlog</div>
         </MContainer>
       </div>
@@ -970,7 +898,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
                 <div>
                    <div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.epico.title}</div>
-                   <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {(activeCategories['Livros']||[]).includes(stats.epico.type) ? 'Págs' : 'Horas'}</div>
+                   <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {((activeCategories['Livros']||[]).includes(stats.epico.type)) ? 'Págs' : 'Horas'}</div>
                 </div>
               </MContainer>
             )}
@@ -1339,6 +1267,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     if (!newSubclass.name || !newSubclass.code) { playChipBeep('error'); onShowToast('error'); return; }
     
     const updatedCats = { ...activeCategories };
+    if (!updatedCats[newSubclass.parent]) {
+      updatedCats[newSubclass.parent] = [];
+    }
     if (!updatedCats[newSubclass.parent].includes(newSubclass.name.trim())) {
       updatedCats[newSubclass.parent] = [...updatedCats[newSubclass.parent], newSubclass.name.trim()];
     }
@@ -1399,7 +1330,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                        min="10"
                        max="150"
                        step="1"
-                       value={160 - (settings.marqueeSpeed || 35)}
+                       value={160 - (Number(settings?.marqueeSpeed) || 35)}
                        onChange={(e) => {
                          const newSpeed = 160 - parseInt(e.target.value);
                          setSettings({...settings, marqueeSpeed: newSpeed});
@@ -1424,7 +1355,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                        min="0"
                        max="100"
                        step="5"
-                       value={settings.marqueeBrightness ?? 50}
+                       value={Number(settings?.marqueeBrightness) ?? 50}
                        onChange={(e) => {
                          setSettings({...settings, marqueeBrightness: parseInt(e.target.value)});
                        }}
@@ -1455,7 +1386,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
             <MInput 
               darkMode={darkMode} 
               label="Prefixo do Acervo (Suas Iniciais)" 
-              value={settings.archivePrefix || ''} 
+              value={settings?.archivePrefix || ''} 
               onChange={e => setSettings({...settings, archivePrefix: e.target.value.toUpperCase()})} 
               onBlur={() => { playChipBeep('save'); onShowToast('success'); }}
               placeholder="Ex: MBU" 
@@ -1465,7 +1396,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Adicionar Nova Subclasse</h4>
               <div className="flex flex-col gap-2">
                 <select value={newSubclass.parent} onChange={e => setNewSubclass({...newSubclass, parent: e.target.value})} className={`w-full p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`}>
-                  {Object.keys(activeCategories).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  {Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <div className="flex gap-2">
                   <input type="text" placeholder="Nome (Ex: Master System)" value={newSubclass.name} onChange={e => setNewSubclass({...newSubclass, name: e.target.value})} className={`flex-1 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
@@ -1477,16 +1408,16 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
             <div className="mt-2">
               <h4 className="text-[10px] font-black uppercase tracking-widest mb-3">Tabela de Códigos (CDD)</h4>
-              {Object.entries(activeCategories).map(([cat, subs]) => (
+              {Object.entries(activeCategories || {}).map(([cat, subs]) => (
                 <div key={cat} className="mb-3">
                   <div className={`text-[9px] font-black uppercase tracking-widest bg-black text-white px-2 py-1 inline-block mb-1`}>{cat}</div>
                   <div className="flex flex-col gap-1 pl-2">
-                    {subs.map(sub => (
+                    {(Array.isArray(subs) ? subs : []).map(sub => (
                       <div key={sub} className="flex items-center justify-between text-xs font-bold">
                         <span className="opacity-80">{sub}</span>
                         <input 
                           type="text" 
-                          value={activeClassCodes[sub] || ''} 
+                          value={activeClassCodes?.[sub] || ''} 
                           onChange={e => handleUpdateCode(sub, e.target.value)} 
                           onBlur={() => { playChipBeep('save'); onShowToast('success'); }}
                           className={`w-16 p-1 border-[2px] text-center font-mono text-[10px] outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} 
@@ -1510,8 +1441,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </button>
         {openSection === 'integracoes' && (
           <div className="p-4 flex flex-col gap-3">
-            <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings.geminiApiKey} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
-            <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Salvar Novos)" value={settings.googleSheetsUrl} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
+            <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
+            <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Salvar Novos)" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
             <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
           </div>
         )}
@@ -1568,7 +1499,6 @@ export default function App() {
   const [completedGames, setCompletedGames] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
   const [isLoaded, setIsLoaded] = useState(false);
-  const [showManual, setShowManual] = useState(false);
   
   // Feedback Global Dinâmico
   const [toast, setToast] = useState({ visible: false, type: 'success' });
@@ -1585,16 +1515,16 @@ export default function App() {
   const [aiBoxMessage, setAiBoxMessage] = useState('');
   const [scannedAIData, setScannedAIData] = useState(null);
 
-  // Derivação Dinâmica da Arquivologia
-  const activeCategories = settings.userCategories || DEFAULT_CATEGORIES;
-  const activeClassCodes = settings.userClassCodes || DEFAULT_CLASS_CODES;
+  // Derivação Dinâmica da Arquivologia ULTRA SEGURA
+  const activeCategories = (settings?.userCategories && typeof settings.userCategories === 'object' && !Array.isArray(settings.userCategories)) ? settings.userCategories : DEFAULT_CATEGORIES;
+  const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
   const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
   const handleGlobalFileChange = (e) => { const file = e.target.files[0]; if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); } e.target.value = null; };
 
   const processGlobalAIFile = async (file) => {
-    const apiKey = settings.geminiApiKey || "";
+    const apiKey = settings?.geminiApiKey || "";
     if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente. Adicione-a na aba Ajustes.'); return; }
     setAiBoxState('loading'); setAiBoxMessage('Processando e analisando imagem...');
     try {
@@ -1630,7 +1560,7 @@ export default function App() {
   useEffect(() => {
     const savedTheme = localStorage.getItem('memorabilia_theme'); if (savedTheme === 'dark') setDarkMode(true);
     const savedItems = localStorage.getItem('memorabilia_items'); if (savedItems) setItems(JSON.parse(savedItems)); else setItems([]);
-    const savedSettings = localStorage.getItem('memorabilia_settings'); if (savedSettings) setSettings(JSON.parse(savedSettings));
+    const savedSettings = localStorage.getItem('memorabilia_settings'); if (savedSettings) setSettings(JSON.parse(savedSettings) || {});
     const savedCompleted = localStorage.getItem('memorabilia_completed'); if (savedCompleted) setCompletedGames(JSON.parse(savedCompleted));
     setIsLoaded(true);
   }, []);
@@ -1672,11 +1602,11 @@ export default function App() {
   const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + b.nota, 0) / notasJ.length).toFixed(1) : 0;
   
   let totalGasto = 0;
-  completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(g.precoPago.replace(',','.')); if(!isNaN(p)) totalGasto+=p; } });
+  completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(String(g.precoPago).replace(',','.')); if(!isNaN(p)) totalGasto+=p; } });
 
   // Configurações e Animação do Painel LED Infinito
-  const speed = settings.marqueeSpeed || 35;
-  const glow = (settings.marqueeBrightness ?? 50) / 10;
+  const speed = settings?.marqueeSpeed || 35;
+  const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
@@ -1731,15 +1661,11 @@ export default function App() {
       `}</style>
 
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
-        
-        <ManualModal isOpen={showManual} onClose={() => setShowManual(false)} darkMode={darkMode} />
 
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 pr-2">
-              <div className="flex items-center gap-2">
-                 <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
-              </div>
+              <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
               {suggestion && (
                 <div className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-max shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-purple-900 border-purple-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-purple-200 border-black text-black'}`}>
                   <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate max-w-[200px]">Sugestão: {suggestion.title}</span>
@@ -1747,19 +1673,14 @@ export default function App() {
               )}
             </div>
             
-            <div className="flex items-start gap-2">
-              <button onClick={() => setShowManual(true)} className="opacity-40 hover:opacity-100 transition-opacity p-1 -mt-1 active:translate-y-0.5">
-                 <InfoIcon className="w-5 h-5" />
-              </button>
-              <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
-                {toast.visible ? (
-                  toast.type === 'error' 
-                    ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
-                    : <Check className="text-sky-500 w-10 h-10 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] animate-in zoom-in duration-200" />
-                ) : (
-                  <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
-                )}
-              </div>
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
+              {toast.visible ? (
+                toast.type === 'error' 
+                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
+                  : <Check className="text-sky-500 w-10 h-10 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] animate-in zoom-in duration-200" />
+              ) : (
+                <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
+              )}
             </div>
 
           </div>
