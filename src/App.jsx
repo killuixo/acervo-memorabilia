@@ -226,7 +226,7 @@ const ALL_TYPES = Object.values(CATEGORIES).flat();
 
 const CLASS_CODES = {
   'Livro': '562.1', 'Quadrinho': '562.2', 'Revista': '562.3', 'CD': '515.1', 'Vinil': '515.2', 'Fita Cassete': '515.3',
-  'VHS': '544.1', 'DVD': '544.2', 'Mega Drive': '520', 'SNES': '520', 'Wii': '520', 'PS1': '520', 'PS2': '520', 'PS4': '520'
+  'VHS': '544.1', 'DVD': '544.2', 'Mega Drive': '522.1', 'SNES': '522.2', 'Wii': '522.3', 'PS1': '522.4', 'PS2': '522.5', 'PS4': '522.6'
 };
 
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
