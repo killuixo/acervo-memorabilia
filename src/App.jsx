@@ -1734,16 +1734,6 @@ export default function App() {
         
         <ManualModal isOpen={showManual} onClose={() => setShowManual(false)} darkMode={darkMode} />
 
-        {toast.visible && (
-          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-300">
-            {toast.type === 'error' ? (
-              <div className={`w-14 h-14 border-[4px] border-black bg-rose-500 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><XIcon className="w-10 h-10" /></div>
-            ) : (
-              <div className={`w-14 h-14 border-[4px] border-black bg-sky-400 text-black flex items-center justify-center shadow-[4px_4px_0px_rgba(0,0,0,1)]`}><Check className="w-10 h-10" /></div>
-            )}
-          </div>
-        )}
-
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 pr-2">
@@ -1762,7 +1752,13 @@ export default function App() {
                  <InfoIcon className="w-5 h-5" />
               </button>
               <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
-                 <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain" />
+                {toast.visible ? (
+                  toast.type === 'error' 
+                    ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
+                    : <Check className="text-sky-500 w-10 h-10 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] animate-in zoom-in duration-200" />
+                ) : (
+                  <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
+                )}
               </div>
             </div>
 
