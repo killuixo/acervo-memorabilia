@@ -346,8 +346,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 8;
+  
   const filteredItems = useMemo(() => {
-    let result = items.filter(item => {
+    // CORREÇÃO 1: Mapear os itens para lembrar sua posição original na planilha/array
+    // Isso é essencial porque o ID gerado (UUID) é aleatório e ordená-lo alfabeticamente bagunça a linha do tempo.
+    let result = items.map((item, index) => ({ ...item, _originalIndex: index })).filter(item => {
       const titleSearch = (item.title || '').toLowerCase();
       const authorSearch = (item.author_developer || '').toLowerCase();
       const query = search.toLowerCase();
@@ -362,6 +365,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     });
 
     result.sort((a, b) => {
+      // CORREÇÃO 2: Se for ordenação por 'Adição' (id), usar a ordem real do array (posição/linha)
+      if (sortBy === 'id') {
+        return sortOrder === 'asc' 
+          ? a._originalIndex - b._originalIndex 
+          : b._originalIndex - a._originalIndex;
+      }
+
       let valA = a[sortBy] || '';
       let valB = b[sortBy] || '';
 
@@ -391,7 +401,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   };
 
   const saveModifications = () => {
-    setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
+    // Remover _originalIndex antes de salvar para não poluir o dado real
+    const itemToSave = { ...editedItem };
+    delete itemToSave._originalIndex;
+    
+    setItems(items.map(i => i.id === editedItem.id ? itemToSave : i));
     setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success');
   };
 
@@ -723,9 +737,11 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     });
     
     const sequence = String(maxSeq + 1).padStart(4, '0');
-    // CORREÇÃO: Usando randomUUID para garantir IDs únicos
     const newItem = { ...formData, id: crypto.randomUUID(), archive_code: `${prefix}-${classCode}-${sequence}` };
-    setItems([newItem, ...items]); 
+    
+    // CORREÇÃO: Garante que os novos itens sejam salvos no FINAL do array, 
+    // replicando o comportamento de inserção do CSV (mantendo a consistência dos dados)
+    setItems([...items, newItem]); 
     
     if (settings?.googleSheetsUrl) {
       fetch(settings.googleSheetsUrl, { 
