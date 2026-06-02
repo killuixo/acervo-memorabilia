@@ -22,7 +22,7 @@ const DEFAULT_CLASS_CODES = {
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
 
 // ==========================================
-// AUDIO ENGINE E ANIMAÇÕES EXTRAS
+// AUDIO ENGINE E UTILITÁRIOS SEGUROS
 // ==========================================
 let audioCtx = null;
 const initAudio = () => {
@@ -52,10 +52,17 @@ const playChipBeep = (type) => {
   } catch (e) {}
 };
 
-// ==========================================
-// FUNÇÕES UTILITÁRIAS GLOBAIS (CORRIGIDAS)
-// ==========================================
+// Gerador de ID à prova de falhas (Evita crash de crypto.randomUUID em iframes sem permissão)
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    try { return crypto.randomUUID(); } catch(e) {}
+  }
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
 
+// ==========================================
+// FUNÇÕES UTILITÁRIAS GLOBAIS
+// ==========================================
 const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -159,7 +166,7 @@ const processCompletedGamesCSV = (csvText) => {
     const cleanMoney = (val) => val ? val.replace(/R\$\s?/gi, '').trim() : '';
 
     parsed.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       nome: safeGet(row, iNome) || 'Desconhecido',
       console: safeGet(row, iConsole) || 'Outro',
       genero: safeGet(row, iGenero) || 'Outro',
@@ -341,15 +348,19 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [activeSubtype, setActiveSubtype] = useState('Todos');
+  
+  // Define o padrão para a aba: Ordenar por 'id' (Adição cronológica) e de forma 'desc' (Descendente = Mais novos primeiro)
   const [sortBy, setSortBy] = useState('id');
   const [sortOrder, setSortOrder] = useState('desc');
+  
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 8;
   
   const filteredItems = useMemo(() => {
-    // CORREÇÃO 1: Mapear os itens para lembrar sua posição original na planilha/array
-    // Isso é essencial porque o ID gerado (UUID) é aleatório e ordená-lo alfabeticamente bagunça a linha do tempo.
+    // 1. Mapeamos os itens antes de filtrar para gravar seu índice cronológico original na matriz.
+    // Como a lógica de salvamento e importação empurra itens novos sempre pro final, 
+    // um índice MAIOR significa uma adição mais RECENTE.
     let result = items.map((item, index) => ({ ...item, _originalIndex: index })).filter(item => {
       const titleSearch = (item.title || '').toLowerCase();
       const authorSearch = (item.author_developer || '').toLowerCase();
@@ -365,11 +376,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     });
 
     result.sort((a, b) => {
-      // CORREÇÃO 2: Se for ordenação por 'Adição' (id), usar a ordem real do array (posição/linha)
+      // 2. Aqui garantimos a ordenação correta por Adição baseada na matriz pura.
       if (sortBy === 'id') {
         return sortOrder === 'asc' 
-          ? a._originalIndex - b._originalIndex 
-          : b._originalIndex - a._originalIndex;
+          ? a._originalIndex - b._originalIndex  // Crescente: Mais antigos primeiro
+          : b._originalIndex - a._originalIndex; // Decrescente (Padrão): Mais recentes primeiro
       }
 
       let valA = a[sortBy] || '';
@@ -401,10 +412,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   };
 
   const saveModifications = () => {
-    // Remover _originalIndex antes de salvar para não poluir o dado real
     const itemToSave = { ...editedItem };
-    delete itemToSave._originalIndex;
-    
+    delete itemToSave._originalIndex; // Limpamos a sujeira temporária
     setItems(items.map(i => i.id === editedItem.id ? itemToSave : i));
     setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success');
   };
@@ -719,6 +728,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   };
 
   const [showErrorModal, setShowErrorModal] = useState(false);
+  
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
     
@@ -737,10 +747,11 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     });
     
     const sequence = String(maxSeq + 1).padStart(4, '0');
-    const newItem = { ...formData, id: crypto.randomUUID(), archive_code: `${prefix}-${classCode}-${sequence}` };
+    // Utilizamos o generateId à prova de falhas em vez do randomUUID direto
+    const newItem = { ...formData, id: generateId(), archive_code: `${prefix}-${classCode}-${sequence}` };
     
-    // CORREÇÃO: Garante que os novos itens sejam salvos no FINAL do array, 
-    // replicando o comportamento de inserção do CSV (mantendo a consistência dos dados)
+    // AQUI ESTAVA O BUG FATAL DE POSIÇÃO NA LISTA!
+    // A ordem correta do Spread Syntax deve jogar o item NO FINAL do array (para manter a cronologia das planilhas)
     setItems([...items, newItem]); 
     
     if (settings?.googleSheetsUrl) {
@@ -1260,7 +1271,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           item[key] = currentRow[idx] ? currentRow[idx].trim() : '';
         });
         if (item.id) { item.rating = parseInt(item.rating) || 0; newItems.push(item); } 
-        else if (item.title) { item.id = crypto.randomUUID(); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
+        else if (item.title) { item.id = generateId(); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
       }
       if (newItems.length > 0) setImportData(newItems);
       }; 
@@ -1516,18 +1527,16 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 // ==========================================
 export default function App() {
   const [activeTab, setActiveTab] = useState('library');
-  const [addMode, setAddMode] = useState('barcode');
+  const [addMode, setAddMode] = useState('manual'); // Iniciando como manual para não puxar a câmera e travar o Preview
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // Feedback Global Dinâmico
   const [toast, setToast] = useState({ visible: false, type: 'success' });
   const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
   
-  // Chaves para forçar reset ao clicar nos botões do menu
   const [libraryResetKey, setLibraryResetKey] = useState(0);
   const [completedResetKey, setCompletedResetKey] = useState(0);
 
@@ -1538,7 +1547,6 @@ export default function App() {
   const [aiBoxMessage, setAiBoxMessage] = useState('');
   const [scannedAIData, setScannedAIData] = useState(null);
   
-  // Derivação Dinâmica da Arquivologia ULTRA SEGURA
   const activeCategories = (settings?.userCategories && typeof settings.userCategories === 'object' && !Array.isArray(settings.userCategories)) ? settings.userCategories : DEFAULT_CATEGORIES;
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
@@ -1582,24 +1590,34 @@ export default function App() {
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000);
   };
   
-  // Carregamento Inicial
   useEffect(() => {
-    const savedTheme = localStorage.getItem('memorabilia_theme'); if (savedTheme === 'dark') setDarkMode(true);
-    const savedItems = localStorage.getItem('memorabilia_items'); if (savedItems) setItems(JSON.parse(savedItems)); else setItems([]);
-    const savedSettings = localStorage.getItem('memorabilia_settings'); if (savedSettings) setSettings(JSON.parse(savedSettings) || {});
-    const savedCompleted = localStorage.getItem('memorabilia_completed'); if (savedCompleted) setCompletedGames(JSON.parse(savedCompleted));
+    const savedTheme = localStorage.getItem('memorabilia_theme'); 
+    if (savedTheme === 'dark') setDarkMode(true);
+    
+    // Tratamento de erro nos storages pra evitar tela branca
+    try {
+      const savedItems = localStorage.getItem('memorabilia_items'); 
+      if (savedItems) setItems(JSON.parse(savedItems)); else setItems([]);
+    } catch(e) { setItems([]); }
+
+    try {
+      const savedSettings = localStorage.getItem('memorabilia_settings'); 
+      if (savedSettings) setSettings(JSON.parse(savedSettings) || {});
+    } catch(e) {}
+
+    try {
+      const savedCompleted = localStorage.getItem('memorabilia_completed'); 
+      if (savedCompleted) setCompletedGames(JSON.parse(savedCompleted));
+    } catch(e) { setCompletedGames([]); }
+
     setIsLoaded(true);
   }, []);
   
-  // Salvamento Automático
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, isLoaded]);
   
-  // ==========================================
-  // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
-  // ==========================================
   const hasSuggested = useRef(false);
   const [suggestion, setSuggestion] = useState(null);
 
@@ -1611,7 +1629,6 @@ export default function App() {
     }
   }, [isLoaded, items, activeCategories]);
   
-  // Coleção Stats
   const totalItens = items.length;
   const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
@@ -1619,7 +1636,6 @@ export default function App() {
   const ratedItems = items.filter(i => i.rating > 0);
   const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + i.rating, 0) / ratedItems.length).toFixed(1) : 0;
 
-  // Jogos Zerados Stats
   const totalJogos = completedGames.length;
   const tempos = completedGames.map(g => g.tempoHoras).filter(t => t > 0);
   const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
@@ -1627,17 +1643,14 @@ export default function App() {
   const notasJ = completedGames.filter(g => g.nota > 0);
   const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + b.nota, 0) / notasJ.length).toFixed(1) : 0;
   
-  // CORREÇÃO: Limpando caracteres para soma
   let totalGasto = 0;
   completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(String(g.precoPago).replace(/\./g, '').replace(',', '.')); if(!isNaN(p)) totalGasto+=p; } });
   
-  // Configurações e Animação do Painel LED Infinito
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
-  // Animador em SVG Puro do Pacman (dispensa uso de gifs)
   const PacmanSeparator = () => (
     <div className="flex items-center gap-2 mx-6 opacity-90 pb-0.5">
        <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
@@ -1679,7 +1692,6 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      {/* CSS do Letreiro LED / Matrix RGB - 8 Bits Aesthetic */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         .font-led { font-family: 'Press Start 2P', monospace; }
@@ -1711,9 +1723,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* ESTATÍSTICAS DIRETAS E MINIMALISTAS */}
           <div className="flex gap-2 h-20">
-            {/* Stats: Coleção Física */}
              <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
               <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
                 <span>Coleção Física</span><span>{totalItens} UN</span>
@@ -1723,7 +1733,6 @@ export default function App() {
               <div className="flex justify-between text-sky-600 dark:text-sky-400 mt-auto"><span>Média:</span><span>★ {avgRating}</span></div>
             </div>
 
-            {/* Stats: Jogos Zerados (LED Matrix 8-Bit) */}
             <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-white'}`}>
                <div className="p-1.5 border-b-[2px] border-gray-800 pb-0.5 mb-0.5 opacity-80 flex justify-between z-10 bg-black">
                   <span>Jogos Zerados</span><span className="animate-pulse text-rose-500">REC</span>
