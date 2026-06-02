@@ -56,7 +56,6 @@ const playChipBeep = (type) => {
 // FUNÇÕES UTILITÁRIAS GLOBAIS (CORRIGIDAS)
 // ==========================================
 
-// Função que faltava para a IA funcionar (redimensionar imagem da câmera)
 const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -71,7 +70,7 @@ const resizeImageForAPI = (file, maxWidth = 800) => {
         canvas.height = img.height * scaleSize;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Retorna JPG comprimido
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
       img.onerror = error => reject(error);
     };
@@ -160,7 +159,7 @@ const processCompletedGamesCSV = (csvText) => {
     const cleanMoney = (val) => val ? val.replace(/R\$\s?/gi, '').trim() : '';
 
     parsed.push({
-      id: crypto.randomUUID(), // Usando gerador seguro
+      id: crypto.randomUUID(),
       nome: safeGet(row, iNome) || 'Desconhecido',
       console: safeGet(row, iConsole) || 'Outro',
       genero: safeGet(row, iGenero) || 'Outro',
@@ -208,6 +207,7 @@ const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><
 const Clock = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
 const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
 const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
+const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />;
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
@@ -236,6 +236,7 @@ const usePWA = (iconUrl) => {
     };
     const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
     const manifestUrl = URL.createObjectURL(manifestBlob);
+    
     let manifestLink = document.querySelector('link[rel="manifest"]');
     if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
     manifestLink.href = manifestUrl;
@@ -251,7 +252,6 @@ const usePWA = (iconUrl) => {
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, [iconUrl]);
-
   const promptInstall = async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
@@ -269,18 +269,15 @@ const getMondrianColor = (index, darkMode) => {
   const colorsDark = ['bg-rose-700', 'bg-sky-700', 'bg-yellow-600', 'bg-gray-800'];
   return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
 };
-
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
 );
-
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
   let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
   if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black';
   if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black';
   if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black';
   if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
-
   return (
     <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
       {icon && icon} {children}
@@ -296,7 +293,6 @@ const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) =>
     </div>
   </div>
 );
-
 const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly=false }) => (
   <div className="flex flex-col mb-3 w-full">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
@@ -307,7 +303,6 @@ const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "
     )}
   </div>
 );
-
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
@@ -351,7 +346,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 8;
-
   const filteredItems = useMemo(() => {
     let result = items.filter(item => {
       const titleSearch = (item.title || '').toLowerCase();
@@ -392,7 +386,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
   const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, newRating) => { 
-    setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item)); 
+    setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item));
     playChipBeep('save'); onShowToast('success'); 
   };
 
@@ -481,7 +475,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <div className="flex gap-1.5 mt-2">
                 {[1, 2, 3, 4, 5].map(star => (
                   <Star key={star} onClick={() => setEditedItem({...editedItem, rating: star})} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= (editedItem.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
-                ))}
+                 ))}
               </div>
             </MContainer>
           </div>
@@ -499,7 +493,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 <button onClick={fetchWikiInfo} className="text-[9px] font-black uppercase tracking-widest underline opacity-70 hover:opacity-100 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Gerar Nova Pesquisa</button>
               </div>
             ) : (
-              <div className="text-center py-2">
+             <div className="text-center py-2">
                 {loadingWiki ? (
                   <div className="flex flex-col items-center">
                     <Sparkles className="w-6 h-6 animate-pulse mb-2 text-purple-600" />
@@ -523,25 +517,25 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   return (
     <div className="flex flex-col h-full">
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-        <div className="relative">
-          <Search className={`absolute left-3 top-3 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
-          <input type="text" placeholder="Buscar Título ou Autor..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-9 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none`} />
-        </div>
-        
-        <div className="flex gap-2 items-center">
-          <FilterIcon className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={`flex-1 p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-[9px] font-black uppercase tracking-widest outline-none`}>
-            <option value="id">Data de Adição</option>
-            <option value="title">Título</option>
-            <option value="author_developer">Autor / Estúdio</option>
-            <option value="year">Ano de Lançamento</option>
-            <option value="publisher">Editora / Gravadora</option>
-            <option value="rating">Sua Nota / Avaliação</option>
-            <option value="pages_or_time">Tamanho (Págs/Tempo)</option>
-          </select>
-          <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')} className={`w-8 h-8 flex items-center justify-center border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
-            {sortOrder === 'asc' ? '↑' : '↓'}
-          </button>
+        <div className="flex gap-2 w-full items-center">
+          <div className="relative flex-1">
+            <Search className={`absolute left-2.5 top-2.5 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
+            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-8 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-xs font-bold outline-none`} />
+          </div>
+          
+          <div className="flex gap-1 items-center flex-shrink-0">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={`w-[85px] p-2 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}>
+              <option value="id">Adição</option>
+              <option value="title">Título</option>
+              <option value="author_developer">Autor</option>
+              <option value="year">Ano</option>
+              <option value="rating">Nota</option>
+              <option value="pages_or_time">Tamanho</option>
+            </select>
+            <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')} className={`w-8 h-[34px] flex items-center justify-center border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -574,10 +568,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                         <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-500 bg-sky-900 text-sky-300' : 'border-black bg-yellow-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
                       ) : <div></div>}
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
-                        {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
                     </div>
-                  </div>
+                 </div>
                 </MContainer>
               </div>
             ))}
@@ -596,14 +590,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 };
 
 const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast, triggerGlobalAI, globalAiState, globalAiMessage, resetGlobalAi, scannedAIData, setScannedAIData, isHtml5QrcodeLoaded, activeCategories, activeClassCodes, allTypes }) => {
-  const [scanBox, setScanBox] = useState({ state: 'idle', message: '' }); 
+  const [scanBox, setScanBox] = useState({ state: 'idle', message: '' });
   const scannerRef = useRef(null);
   const isProcessingScan = useRef(false);
   const [formData, setFormData] = useState({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
-
   const updateStatus = (state, message) => setScanBox({ state, message });
   const changeMode = (newMode) => { setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); } };
-
+  
   useEffect(() => {
     if (scannedAIData) {
        setFormData(prev => ({ 
@@ -612,10 +605,10 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       setScannedAIData(null); 
     }
   }, [scannedAIData, setScannedAIData, allTypes]);
-
+  
   const displayBoxState = globalAiState !== 'idle' ? globalAiState : scanBox.state;
   const displayBoxMessage = globalAiState !== 'idle' ? globalAiMessage : scanBox.message;
-
+  
   useEffect(() => {
     let isMounted = true;
     let scannerInstance = null;
@@ -647,7 +640,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   }, [addMode, isHtml5QrcodeLoaded]);
 
   const fetchMultiDatabase = async (barcode) => {
-    const cleanCode = barcode.replace(/[-\s]/g, ""); 
+    const cleanCode = barcode.replace(/[-\s]/g, "");
     updateStatus('loading', 'Buscando nos bancos de dados...');
     try {
       let foundItem = { barcode: cleanCode, title: '', author_developer: '', publisher: '', year: '', pages_or_time: '', type: 'Livro', cover_url: '', description: '' };
@@ -655,9 +648,10 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
       if (!found && cleanCode.length >= 10 && cleanCode.length <= 13) {
         try {
-          const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`); const upcData = await upcRes.json();
+          const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
+          const upcData = await upcRes.json();
           if (upcData.items && upcData.items.length > 0) {
-            const item = upcData.items[0]; 
+            const item = upcData.items[0];
             foundItem = { ...foundItem, title: item.title || "", publisher: item.brand || item.publisher || "", cover_url: item.images?.length > 0 ? item.images[0] : "", };
             const cat = (item.category || "").toLowerCase(); const tit = (item.title || "").toLowerCase();
             if (cat.includes('music') || tit.includes(' cd') || tit.includes('album')) foundItem.type = 'CD';
@@ -670,7 +664,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
       if (!found && (!cleanCode.startsWith("978") && !cleanCode.startsWith("979"))) {
         try {
-          const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json`); const mbData = await mbRes.json();
+          const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json`);
+          const mbData = await mbRes.json();
           if (mbData.releases && mbData.releases.length > 0) {
             const release = mbData.releases[0];
             foundItem = { ...foundItem, title: release.title || "", author_developer: release["artist-credit"] ? release["artist-credit"].map(a => a.name).join(", ") : "", publisher: release.label ? release.label : (release["label-info"]?.length > 0 && release["label-info"][0].label ? release["label-info"][0].label.name : ""), year: release.date ? release.date.substring(0, 4) : "", type: 'CD', cover_url: `https://coverartarchive.org/release/${release.id}/front` };
@@ -681,7 +676,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
       if (!found) {
         try {
-          const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`); const gbData = await gbRes.json();
+          const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
+          const gbData = await gbRes.json();
           if (gbData.items && gbData.items.length > 0) {
             const info = gbData.items[0].volumeInfo;
             foundItem = { ...foundItem, title: info.title || "", author_developer: info.authors ? info.authors.join(", ") : "", publisher: info.publisher || "", year: info.publishedDate ? info.publishedDate.substring(0, 4) : "", pages_or_time: info.pageCount?.toString() || "", cover_url: info.imageLinks?.thumbnail?.replace("http://", "https://") || "", description: info.description || "", type: 'Livro' };
@@ -693,7 +689,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
       if (!found) {
         try {
-          const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`); const olData = await olRes.json();
+          const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
+          const olData = await olRes.json();
           if (olData[`ISBN:${cleanCode}`]) {
             const info = olData[`ISBN:${cleanCode}`];
             foundItem = { ...foundItem, title: info.title || '', author_developer: info.authors?.map(a => a.name).join(', ') || '', year: info.publish_date ? info.publish_date.substring(0, 4) : '', publisher: info.publishers?.map(p => p.name).join(', ') || '', pages_or_time: info.number_of_pages?.toString() || '', description: info.subtitle || '', cover_url: `https://covers.openlibrary.org/b/isbn/${cleanCode}-L.jpg`, type: 'Livro' };
@@ -708,7 +705,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   };
 
   const [showErrorModal, setShowErrorModal] = useState(false);
-  
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
     
@@ -729,7 +725,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const sequence = String(maxSeq + 1).padStart(4, '0');
     // CORREÇÃO: Usando randomUUID para garantir IDs únicos
     const newItem = { ...formData, id: crypto.randomUUID(), archive_code: `${prefix}-${classCode}-${sequence}` };
-    
     setItems([newItem, ...items]); 
     
     if (settings?.googleSheetsUrl) {
@@ -741,13 +736,13 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       }).catch(err => console.error("Erro ao enviar Google Sheets:", err));
     }
     
-    playChipBeep('save'); onShowToast('success'); 
+    playChipBeep('save'); onShowToast('success');
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
     updateStatus('idle', ''); resetGlobalAi(); setActiveTab('library');
   };
 
   const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(formData.type);
-
+  
   return (
     <div className="flex flex-col h-full pb-20">
       <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar." onConfirm={() => setShowErrorModal(false)} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
@@ -824,7 +819,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterCat, setFilterCat] = useState('Todas');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterRating, setFilterRating] = useState('Todas');
-
   const dashItems = useMemo(() => {
     return items.filter(item => {
       let mCat = true, mStatus = true, mRating = true;
@@ -834,16 +828,13 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       return mCat && mStatus && mRating;
     });
   }, [items, filterCat, filterStatus, filterRating, activeCategories]);
-
   const totalDash = dashItems.length;
   const byType = dashItems.reduce((acc, i) => { acc[i.type || 'Outro'] = (acc[i.type || 'Outro'] || 0) + 1; return acc; }, {});
   const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
-
   const byAuthor = dashItems.reduce((acc, i) => { if (i.author_developer) { acc[i.author_developer] = (acc[i.author_developer] || 0) + 1; } return acc; }, {});
   const sortedAuthors = Object.entries(byAuthor).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
-
   const byDecade = dashItems.reduce((acc, i) => {
     const year = parseInt(i.year);
     if (!isNaN(year) && year > 1800) { const decade = Math.floor(year / 10) * 10; acc[decade] = (acc[decade] || 0) + 1; }
@@ -851,7 +842,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   }, {});
   const decadesKeys = Object.keys(byDecade).sort();
   const maxDecade = decadesKeys.length > 0 ? Math.max(...Object.values(byDecade)) : 1;
-
   const stats = useMemo(() => {
     if (totalDash === 0) return {};
     const validYears = dashItems.filter(i => i.year && !isNaN(parseInt(i.year)));
@@ -902,20 +892,20 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       {totalDash > 0 && (
         <>
           <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-            <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Formatos Populares</div>
+             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Formatos Populares</div>
             <div className="flex flex-col">
               {sortedTypes.map(([type, count], index) => <MondrianHBar key={type} label={type} value={count} max={maxType} index={index} darkMode={darkMode} />)}
             </div>
           </MContainer>
 
           <div className="grid grid-cols-2 gap-3">
-            {stats.reliquia && (
+             {stats.reliquia && (
               <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div>
                 <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.reliquia.title}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year}</div></div>
               </MContainer>
             )}
-            {stats.epico && (
+             {stats.epico && (
               <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
                 <div>
@@ -943,7 +933,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
                     <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
                       <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
                       <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-500' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
-                    </div>
+                   </div>
                   );
                 })}
               </div>
@@ -952,7 +942,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
               </div>
             </MContainer>
           )}
-        </>
+       </>
       )}
     </div>
   );
@@ -981,7 +971,8 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         playChipBeep('error'); onShowToast('error');
       }
     };
-    reader.readAsText(file); e.target.value = null;
+    reader.readAsText(file);
+    e.target.value = null;
   };
 
   const filteredGames = useMemo(() => {
@@ -993,10 +984,9 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       return mConsole && mGenre && mSup;
     });
   }, [completedGames, filterConsole, filterGenre, filterSupport]);
-
+  
   const paginatedGames = filteredGames.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredGames.length / itemsPerPage) || 1;
-
   const uniqueConsoles = [...new Set(completedGames.map(g => g.console))].sort();
   const uniqueGenres = [...new Set(completedGames.map(g => g.genero))].sort();
 
@@ -1004,25 +994,22 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const totalHoras = filteredGames.reduce((acc, g) => acc + g.tempoHoras, 0).toFixed(1);
   const notasValidas = filteredGames.filter(g => g.nota > 0);
   const mediaNota = notasValidas.length > 0 ? (notasValidas.reduce((a, b) => a + b.nota, 0) / notasValidas.length).toFixed(1) : 0;
-  
   const fisicosCount = filteredGames.filter(g => g.suporte === 'Físico').length;
   const fisicoPerc = totalJogos > 0 ? ((fisicosCount / totalJogos) * 100).toFixed(0) : 0;
 
   const byConsole = filteredGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
   const topConsoles = Object.entries(byConsole).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxConsole = topConsoles.length > 0 ? topConsoles[0][1] : 1;
-
   const byGenre = filteredGames.reduce((acc, g) => { acc[g.genero] = (acc[g.genero] || 0) + 1; return acc; }, {});
   const topGenres = Object.entries(byGenre).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxGenre = topGenres.length > 0 ? topGenres[0][1] : 1;
-
   const byYear = filteredGames.reduce((acc, g) => {
     if (g.anoFim) { acc[g.anoFim] = (acc[g.anoFim] || 0) + 1; }
     return acc;
   }, {});
   const yearsKeys = Object.keys(byYear).sort();
   const maxYear = yearsKeys.length > 0 ? Math.max(...Object.values(byYear)) : 1;
-
+  
   if (completedGames.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
@@ -1039,8 +1026,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
   // --- MODO DETALHE ---
   if (selectedGame) {
-    const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link); 
-    
+    const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link);
     return (
       <div className="flex flex-col h-full pb-20 relative">
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
@@ -1078,7 +1064,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
           {(selectedGame.precoPago || selectedGame.precoSemDesc) && (
             <MContainer darkMode={darkMode} className="p-3 grid grid-cols-2 gap-2" colorClass={darkMode ? 'bg-rose-900/40 text-white' : 'bg-rose-100 text-black'}>
-               <MReadOnlyBox label="Preço Pago" value={selectedGame.precoPago ? `R$ ${selectedGame.precoPago}` : '--'} darkMode={darkMode} />
+                <MReadOnlyBox label="Preço Pago" value={selectedGame.precoPago ? `R$ ${selectedGame.precoPago}` : '--'} darkMode={darkMode} />
                <MReadOnlyBox label="Preço Sem Desconto" value={selectedGame.precoSemDesc ? `R$ ${selectedGame.precoSemDesc}` : '--'} darkMode={darkMode} />
             </MContainer>
           )}
@@ -1159,12 +1145,13 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-500' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
           <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
             {yearsKeys.map((yearStr, idx) => {
-              const count = byYear[yearStr]; const heightPerc = (count / maxYear) * 100;
+              const count = byYear[yearStr];
+              const heightPerc = (count / maxYear) * 100;
               return (
                 <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
                   <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
                   <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-500' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
-                </div>
+                 </div>
               );
             })}
           </div>
@@ -1209,7 +1196,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const [importData, setImportData] = useState(null);
   const [openSection, setOpenSection] = useState(null);
   const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
-
+  
   const handleExportCSV = () => {
     if (items.length === 0) return;
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
@@ -1231,12 +1218,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
       const headers = validRows[0].map(h => h.trim());
       const newItems = [];
-
       for (let i = 1; i < validRows.length; i++) {
         const currentRow = validRows[i];
         if (currentRow.length === 1 && !currentRow[0].trim()) continue;
         const item = {};
-
         headers.forEach((h, idx) => {
           let key = h;
           if (h === 'ID') key = 'id';
@@ -1258,13 +1243,11 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
           item[key] = currentRow[idx] ? currentRow[idx].trim() : '';
         });
-
-        // CORREÇÃO: Usando randomUUID na importação
         if (item.id) { item.rating = parseInt(item.rating) || 0; newItems.push(item); } 
         else if (item.title) { item.id = crypto.randomUUID(); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
       }
       if (newItems.length > 0) setImportData(newItems);
-    }; 
+      }; 
     reader.readAsText(file); 
     e.target.value = null;
   };
@@ -1281,11 +1264,12 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         playChipBeep('error'); onShowToast('error');
       }
     };
-    reader.readAsText(file); e.target.value = null;
+    reader.readAsText(file);
+    e.target.value = null;
   };
 
   const handleSaveSettings = () => { playChipBeep('save'); onShowToast('success'); };
-
+  
   const handleAddSubclass = () => {
     if (!newSubclass.name || !newSubclass.code) { playChipBeep('error'); onShowToast('error'); return; }
     
@@ -1305,7 +1289,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     setNewSubclass({ parent: 'Livros', name: '', code: '' });
     playChipBeep('save'); onShowToast('success');
   };
-
+  
   const handleUpdateCode = (type, newCode) => {
     setSettings({
       ...settings,
@@ -1416,7 +1400,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
             />
             
             <div className={`p-3 border-[4px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-gray-100'}`}>
-              <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Adicionar Nova Subclasse</h4>
+             <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Adicionar Nova Subclasse</h4>
               <div className="flex flex-col gap-2">
                 <select value={newSubclass.parent} onChange={e => setNewSubclass({...newSubclass, parent: e.target.value})} className={`w-full p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`}>
                   {Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -1448,7 +1432,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                       </div>
                     ))}
                   </div>
-                </div>
+               </div>
               ))}
             </div>
 
@@ -1497,7 +1481,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         {openSection === 'backup' && (
           <div className="p-4 flex gap-2">
             <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white' : 'border-black bg-white text-black'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
-            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode?'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white':'border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white' : 'border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
           </div>
         )}
       </MContainer>
@@ -1534,10 +1518,10 @@ export default function App() {
   const pwa = usePWA(LINK_DO_ICONE_NO_GITHUB);
   const globalFileInputRef = useRef(null);
 
-  const [aiBoxState, setAiBoxState] = useState('idle'); 
+  const [aiBoxState, setAiBoxState] = useState('idle');
   const [aiBoxMessage, setAiBoxMessage] = useState('');
   const [scannedAIData, setScannedAIData] = useState(null);
-
+  
   // Derivação Dinâmica da Arquivologia ULTRA SEGURA
   const activeCategories = (settings?.userCategories && typeof settings.userCategories === 'object' && !Array.isArray(settings.userCategories)) ? settings.userCategories : DEFAULT_CATEGORIES;
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
@@ -1549,16 +1533,19 @@ export default function App() {
   const processGlobalAIFile = async (file) => {
     const apiKey = settings?.geminiApiKey || "";
     if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente. Adicione-a na aba Ajustes.'); return; }
-    setAiBoxState('loading'); setAiBoxMessage('Processando e analisando imagem...');
+    setAiBoxState('loading');
+    setAiBoxMessage('Processando e analisando imagem...');
     try {
       const base64DataUrl = await resizeImageForAPI(file); const base64Data = base64DataUrl.split(',')[1];
       const payload = { contents: [{ parts: [{ text: `Extraia dados desta imagem (capa de CD, vinil, livro ou ficha catalográfica). Retorne EXATAMENTE um objeto JSON válido. Use o seguinte formato exato sem quebras extras ou marcações markdown (exemplo): {"type": "Livro", "title": "O Nome", "author_developer": "Autor", "year": "2000", "publisher": "Editora", "pages_or_time": "300", "description": "Resumo"}. As opções permitidas em "type" são: ${allTypes.join(', ')}. Caso não saiba, use "Livro". Se algo não for encontrado, use "".` }, { inlineData: { mimeType: "image/jpeg", data: base64Data } }] }], generationConfig: { responseMimeType: "application/json" } };
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!response.ok) { const errData = await response.json(); throw new Error(`Erro API: ${errData.error?.message || response.statusText}`); }
       const result = await response.json(); if (result.error) throw new Error(result.error.message);
-      const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!aiText) throw new Error("A IA retornou uma resposta vazia.");
+      const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!aiText) throw new Error("A IA retornou uma resposta vazia.");
       let cleanedText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const start = cleanedText.indexOf('{'); const end = cleanedText.lastIndexOf('}');
+      const start = cleanedText.indexOf('{');
+      const end = cleanedText.lastIndexOf('}');
       if (start !== -1 && end !== -1) cleanedText = cleanedText.substring(start, end + 1);
       const parsedData = JSON.parse(cleanedText);
       setAiBoxState('success'); setAiBoxMessage('Informações extraídas com IA!'); playChipBeep('success'); setScannedAIData(parsedData); showToast('success');
@@ -1573,12 +1560,12 @@ export default function App() {
       script.onload = () => setIsHtml5QrcodeLoaded(true); document.head.appendChild(script);
     }
   }, []);
-
+  
   const showToast = (type = 'success') => {
     setToast({ visible: true, type });
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000);
   };
-
+  
   // Carregamento Inicial
   useEffect(() => {
     const savedTheme = localStorage.getItem('memorabilia_theme'); if (savedTheme === 'dark') setDarkMode(true);
@@ -1587,13 +1574,13 @@ export default function App() {
     const savedCompleted = localStorage.getItem('memorabilia_completed'); if (savedCompleted) setCompletedGames(JSON.parse(savedCompleted));
     setIsLoaded(true);
   }, []);
-
+  
   // Salvamento Automático
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, isLoaded]);
-
+  
   // ==========================================
   // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
   // ==========================================
@@ -1607,7 +1594,7 @@ export default function App() {
       hasSuggested.current = true;
     }
   }, [isLoaded, items, activeCategories]);
-
+  
   // Coleção Stats
   const totalItens = items.length;
   const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
@@ -1627,7 +1614,7 @@ export default function App() {
   // CORREÇÃO: Limpando caracteres para soma
   let totalGasto = 0;
   completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(String(g.precoPago).replace(/\./g, '').replace(',', '.')); if(!isNaN(p)) totalGasto+=p; } });
-
+  
   // Configurações e Animação do Painel LED Infinito
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
@@ -1647,7 +1634,7 @@ export default function App() {
        <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
     </div>
   );
-
+  
   const MarqueeContent = () => (
     <div className="flex items-center py-1" style={textShadowStyle}>
       <span className={`text-sky-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span> <PacmanSeparator />
@@ -1657,7 +1644,7 @@ export default function App() {
       <span className={`text-sky-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span> <PacmanSeparator />
     </div>
   );
-
+  
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
 
@@ -1671,7 +1658,7 @@ export default function App() {
   const handleLibClick = () => { initAudio(); if (!isLibLongPress.current) { setActiveTab('library'); } };
 
   const handleCompClick = () => { initAudio(); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
-
+  
   if (!isLoaded) return null; 
 
   return (
@@ -1697,7 +1684,7 @@ export default function App() {
               )}
             </div>
             
-            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
+            <div className="w-14 h-14 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
               {toast.visible ? (
                 toast.type === 'error' 
                   ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
@@ -1706,13 +1693,12 @@ export default function App() {
                 <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
               )}
             </div>
-
           </div>
 
           {/* ESTATÍSTICAS DIRETAS E MINIMALISTAS */}
           <div className="flex gap-2 h-20">
             {/* Stats: Coleção Física */}
-            <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
+             <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
               <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
                 <span>Coleção Física</span><span>{totalItens} UN</span>
               </div>
@@ -1732,7 +1718,7 @@ export default function App() {
                     <MarqueeContent /> 
                     <MarqueeContent />
                   </div>
-               </div>
+                </div>
             </div>
           </div>
         </header>
