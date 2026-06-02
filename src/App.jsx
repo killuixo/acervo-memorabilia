@@ -1,3 +1,4 @@
+```react
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
@@ -22,7 +23,7 @@ const DEFAULT_CLASS_CODES = {
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
 
 // ==========================================
-// AUDIO ENGINE E UTILITÁRIOS SEGUROS
+// AUDIO ENGINE E ANIMAÇÕES EXTRAS
 // ==========================================
 let audioCtx = null;
 const initAudio = () => {
@@ -52,11 +53,12 @@ const playChipBeep = (type) => {
   } catch (e) {}
 };
 
-// Gerador de ID Humanamente Legível e Ordenável (Formato: AAAAMMDD-HHMMSSMs-##)
-let lastIdTimeBase = "";
-let idSequence = 0;
+// ==========================================
+// GERADOR DE ID - PADRÃO CRONOLÓGICO + AUTO-INCREMENTO GLOBAL
+// ==========================================
+let globalSequenceCache = null;
 
-const generateId = () => {
+const generateId = (itemsArray = []) => {
   const now = new Date();
   const AAAA = now.getFullYear();
   const MM = String(now.getMonth() + 1).padStart(2, '0');
@@ -66,24 +68,33 @@ const generateId = () => {
   const Seg = String(now.getSeconds()).padStart(2, '0');
   const Ms = String(now.getMilliseconds()).padStart(3, '0');
   
-  // Exemplo gerado: 20260602-143005123
   const timeBase = `${AAAA}${MM}${DD}-${HH}${Min}${Seg}${Ms}`;
-  
-  // Prevenção de duplicatas exatas se gerarmos muitos itens no mesmo milissegundo
-  if (timeBase === lastIdTimeBase) {
-    idSequence++;
-  } else {
-    idSequence = 1;
-    lastIdTimeBase = timeBase;
+
+  // Se o cache global não foi inicializado, varre os itens para achar a maior sequência
+  if (globalSequenceCache === null) {
+     let maxSeq = 0;
+     itemsArray.forEach(item => {
+        const idStr = String(item.id || '');
+        // Procura pelo padrão -XXXX no final do ID
+        const match = idStr.match(/-(\d{4})$/);
+        if (match) {
+           const seq = parseInt(match[1], 10);
+           if (seq > maxSeq) maxSeq = seq;
+        }
+     });
+     globalSequenceCache = maxSeq;
   }
+
+  globalSequenceCache++; // Incrementa globalmente
+  const seqStr = String(globalSequenceCache).padStart(4, '0');
   
-  const seqStr = String(idSequence).padStart(2, '0');
   return `${timeBase}-${seqStr}`;
 };
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS GLOBAIS
 // ==========================================
+
 const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -187,7 +198,7 @@ const processCompletedGamesCSV = (csvText) => {
     const cleanMoney = (val) => val ? val.replace(/R\$\s?/gi, '').trim() : '';
 
     parsed.push({
-      id: generateId(),
+      id: generateId([]), // Usa o gerador de ID seguro para os Zerados também
       nome: safeGet(row, iNome) || 'Desconhecido',
       console: safeGet(row, iConsole) || 'Outro',
       genero: safeGet(row, iGenero) || 'Outro',
@@ -369,20 +380,16 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [activeSubtype, setActiveSubtype] = useState('Todos');
-  
-  // Define o padrão para a aba: Ordenar por 'id' (Adição cronológica) e de forma 'desc' (Descendente = Mais novos primeiro)
   const [sortBy, setSortBy] = useState('id');
   const [sortOrder, setSortOrder] = useState('desc');
-  
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 8;
   
   const filteredItems = useMemo(() => {
-    // 1. Mapeamos os itens antes de filtrar para gravar seu índice cronológico original na matriz.
-    // Como a lógica de salvamento e importação empurra itens novos sempre pro final, 
-    // um índice MAIOR significa uma adição mais RECENTE.
-    let result = items.map((item, index) => ({ ...item, _originalIndex: index })).filter(item => {
+    let result = items.map((item, index) => ({ ...item, _originalIndex: index }));
+    
+    result = result.filter(item => {
       const titleSearch = (item.title || '').toLowerCase();
       const authorSearch = (item.author_developer || '').toLowerCase();
       const query = search.toLowerCase();
@@ -397,13 +404,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     });
 
     result.sort((a, b) => {
-      // 2. Aqui garantimos a ordenação correta por Adição baseada na matriz pura.
       if (sortBy === 'id') {
-        return sortOrder === 'asc' 
-          ? a._originalIndex - b._originalIndex  // Crescente: Mais antigos primeiro
-          : b._originalIndex - a._originalIndex; // Decrescente (Padrão): Mais recentes primeiro
+         return sortOrder === 'asc' ? a._originalIndex - b._originalIndex : b._originalIndex - a._originalIndex;
       }
-
+      
       let valA = a[sortBy] || '';
       let valB = b[sortBy] || '';
 
@@ -433,9 +437,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   };
 
   const saveModifications = () => {
-    const itemToSave = { ...editedItem };
-    delete itemToSave._originalIndex; // Limpamos a sujeira temporária
-    setItems(items.map(i => i.id === editedItem.id ? itemToSave : i));
+    setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
     setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success');
   };
 
@@ -749,7 +751,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   };
 
   const [showErrorModal, setShowErrorModal] = useState(false);
-  
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
     
@@ -768,11 +769,11 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     });
     
     const sequence = String(maxSeq + 1).padStart(4, '0');
-    // Utilizamos o generateId à prova de falhas em vez do randomUUID direto
-    const newItem = { ...formData, id: generateId(), archive_code: `${prefix}-${classCode}-${sequence}` };
     
-    // AQUI ESTAVA O BUG FATAL DE POSIÇÃO NA LISTA!
-    // A ordem correta do Spread Syntax deve jogar o item NO FINAL do array (para manter a cronologia das planilhas)
+    // NOVO MODELO DE ID (Timestamp com Auto-Incremento Global baseado na lista atual)
+    const newItem = { ...formData, id: generateId(items), archive_code: `${prefix}-${classCode}-${sequence}` };
+    
+    // Inserindo no final da array para não bagunçar a indexação cronológica original!
     setItems([...items, newItem]); 
     
     if (settings?.googleSheetsUrl) {
@@ -1291,8 +1292,16 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
           item[key] = currentRow[idx] ? currentRow[idx].trim() : '';
         });
-        if (item.id) { item.rating = parseInt(item.rating) || 0; newItems.push(item); } 
-        else if (item.title) { item.id = generateId(); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
+        
+        // Passa o newItems para que o gerador de ID atualize a sequência durante uma importação em massa
+        if (item.id) { 
+            item.rating = parseInt(item.rating) || 0; 
+            newItems.push(item); 
+        } else if (item.title) { 
+            item.id = generateId(newItems); 
+            item.rating = parseInt(item.rating) || 0; 
+            newItems.push(item); 
+        }
       }
       if (newItems.length > 0) setImportData(newItems);
       }; 
@@ -1548,16 +1557,18 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 // ==========================================
 export default function App() {
   const [activeTab, setActiveTab] = useState('library');
-  const [addMode, setAddMode] = useState('manual'); // Iniciando como manual para não puxar a câmera e travar o Preview
+  const [addMode, setAddMode] = useState('manual');
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
   const [isLoaded, setIsLoaded] = useState(false);
   
+  // Feedback Global Dinâmico
   const [toast, setToast] = useState({ visible: false, type: 'success' });
   const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
   
+  // Chaves para forçar reset ao clicar nos botões do menu
   const [libraryResetKey, setLibraryResetKey] = useState(0);
   const [completedResetKey, setCompletedResetKey] = useState(0);
 
@@ -1568,6 +1579,7 @@ export default function App() {
   const [aiBoxMessage, setAiBoxMessage] = useState('');
   const [scannedAIData, setScannedAIData] = useState(null);
   
+  // Derivação Dinâmica da Arquivologia ULTRA SEGURA
   const activeCategories = (settings?.userCategories && typeof settings.userCategories === 'object' && !Array.isArray(settings.userCategories)) ? settings.userCategories : DEFAULT_CATEGORIES;
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
@@ -1611,34 +1623,24 @@ export default function App() {
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000);
   };
   
+  // Carregamento Inicial
   useEffect(() => {
-    const savedTheme = localStorage.getItem('memorabilia_theme'); 
-    if (savedTheme === 'dark') setDarkMode(true);
-    
-    // Tratamento de erro nos storages pra evitar tela branca
-    try {
-      const savedItems = localStorage.getItem('memorabilia_items'); 
-      if (savedItems) setItems(JSON.parse(savedItems)); else setItems([]);
-    } catch(e) { setItems([]); }
-
-    try {
-      const savedSettings = localStorage.getItem('memorabilia_settings'); 
-      if (savedSettings) setSettings(JSON.parse(savedSettings) || {});
-    } catch(e) {}
-
-    try {
-      const savedCompleted = localStorage.getItem('memorabilia_completed'); 
-      if (savedCompleted) setCompletedGames(JSON.parse(savedCompleted));
-    } catch(e) { setCompletedGames([]); }
-
+    const savedTheme = localStorage.getItem('memorabilia_theme'); if (savedTheme === 'dark') setDarkMode(true);
+    const savedItems = localStorage.getItem('memorabilia_items'); if (savedItems) setItems(JSON.parse(savedItems)); else setItems([]);
+    const savedSettings = localStorage.getItem('memorabilia_settings'); if (savedSettings) setSettings(JSON.parse(savedSettings) || {});
+    const savedCompleted = localStorage.getItem('memorabilia_completed'); if (savedCompleted) setCompletedGames(JSON.parse(savedCompleted));
     setIsLoaded(true);
   }, []);
   
+  // Salvamento Automático
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, isLoaded]);
   
+  // ==========================================
+  // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
+  // ==========================================
   const hasSuggested = useRef(false);
   const [suggestion, setSuggestion] = useState(null);
 
@@ -1650,6 +1652,7 @@ export default function App() {
     }
   }, [isLoaded, items, activeCategories]);
   
+  // Coleção Stats
   const totalItens = items.length;
   const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
@@ -1657,6 +1660,7 @@ export default function App() {
   const ratedItems = items.filter(i => i.rating > 0);
   const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + i.rating, 0) / ratedItems.length).toFixed(1) : 0;
 
+  // Jogos Zerados Stats
   const totalJogos = completedGames.length;
   const tempos = completedGames.map(g => g.tempoHoras).filter(t => t > 0);
   const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
@@ -1667,6 +1671,7 @@ export default function App() {
   let totalGasto = 0;
   completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(String(g.precoPago).replace(/\./g, '').replace(',', '.')); if(!isNaN(p)) totalGasto+=p; } });
   
+  // Configurações e Animação do Painel LED Infinito
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
@@ -1791,3 +1796,6 @@ export default function App() {
     </div>
   );
 }
+
+
+```
