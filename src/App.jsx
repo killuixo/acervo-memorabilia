@@ -52,12 +52,16 @@ const playChipBeep = (type) => {
   } catch (e) {}
 };
 
-// Gerador de ID à prova de falhas (Evita crash de crypto.randomUUID em iframes sem permissão)
+// Gerador de ID (Restaurado para o formato original baseado em Timestamp numérico)
+let lastGeneratedId = 0;
 const generateId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    try { return crypto.randomUUID(); } catch(e) {}
+  let id = Date.now();
+  // Garante que não haverá IDs duplicados caso criados no exato mesmo milissegundo (ex: importando CSV)
+  if (id <= lastGeneratedId) {
+    id = lastGeneratedId + 1;
   }
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  lastGeneratedId = id;
+  return id.toString();
 };
 
 // ==========================================
