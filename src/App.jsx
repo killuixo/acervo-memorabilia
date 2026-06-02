@@ -52,16 +52,33 @@ const playChipBeep = (type) => {
   } catch (e) {}
 };
 
-// Gerador de ID (Restaurado para o formato original baseado em Timestamp numérico)
-let lastGeneratedId = 0;
+// Gerador de ID Humanamente Legível e Ordenável (Formato: AAAAMMDD-HHMMSSMs-##)
+let lastIdTimeBase = "";
+let idSequence = 0;
+
 const generateId = () => {
-  let id = Date.now();
-  // Garante que não haverá IDs duplicados caso criados no exato mesmo milissegundo (ex: importando CSV)
-  if (id <= lastGeneratedId) {
-    id = lastGeneratedId + 1;
+  const now = new Date();
+  const AAAA = now.getFullYear();
+  const MM = String(now.getMonth() + 1).padStart(2, '0');
+  const DD = String(now.getDate()).padStart(2, '0');
+  const HH = String(now.getHours()).padStart(2, '0');
+  const Min = String(now.getMinutes()).padStart(2, '0');
+  const Seg = String(now.getSeconds()).padStart(2, '0');
+  const Ms = String(now.getMilliseconds()).padStart(3, '0');
+  
+  // Exemplo gerado: 20260602-143005123
+  const timeBase = `${AAAA}${MM}${DD}-${HH}${Min}${Seg}${Ms}`;
+  
+  // Prevenção de duplicatas exatas se gerarmos muitos itens no mesmo milissegundo
+  if (timeBase === lastIdTimeBase) {
+    idSequence++;
+  } else {
+    idSequence = 1;
+    lastIdTimeBase = timeBase;
   }
-  lastGeneratedId = id;
-  return id.toString();
+  
+  const seqStr = String(idSequence).padStart(2, '0');
+  return `${timeBase}-${seqStr}`;
 };
 
 // ==========================================
