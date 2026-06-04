@@ -1,11 +1,9 @@
-﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
-
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ==========================================
 // CONFIGURAÇÕES DO APLICATIVO E ARQUIVOLOGIA
 // ==========================================
 const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/acervo-memorabilia/main/icon-192.png";
-
 
 const DEFAULT_CATEGORIES = {
   'Livros': ['Livro', 'Quadrinho', 'Revista'],
@@ -14,7 +12,6 @@ const DEFAULT_CATEGORIES = {
   'Games': ['Mega Drive', 'SNES', 'Wii', 'PS1', 'PS2', 'PS4']
 };
 
-
 const DEFAULT_CLASS_CODES = {
   'Livro': '110', 'Quadrinho': '120', 'Revista': '130',
   'CD': '210', 'Vinil': '220', 'Fita Cassete': '230',
@@ -22,9 +19,7 @@ const DEFAULT_CLASS_CODES = {
   'Mega Drive': '410', 'SNES': '420', 'Wii': '430', 'PS1': '440', 'PS2': '450', 'PS4': '460'
 };
 
-
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
-
 
 // ==========================================
 // AUDIO ENGINE E ANIMAÇÕES EXTRAS
@@ -36,7 +31,6 @@ const initAudio = () => {
     if (audioCtx.state === 'suspended') audioCtx.resume();
   } catch (e) { console.warn("Áudio não suportado", e); }
 };
-
 
 const playChipBeep = (type) => {
   try {
@@ -62,12 +56,10 @@ const playChipBeep = (type) => {
   } catch (e) {}
 };
 
-
 // ==========================================
 // GERADOR DE ID
 // ==========================================
 let globalSequenceCache = null;
-
 
 const generateId = (itemsArray = []) => {
   const now = new Date();
@@ -80,7 +72,6 @@ const generateId = (itemsArray = []) => {
   const Ms = String(now.getMilliseconds()).padStart(3, '0');
   
   const timeBase = `${AAAA}${MM}${DD}-${HH}${Min}${Seg}${Ms}`;
-
 
   if (globalSequenceCache === null) {
      let maxSeq = 0;
@@ -95,13 +86,11 @@ const generateId = (itemsArray = []) => {
      globalSequenceCache = maxSeq;
   }
 
-
   globalSequenceCache++;
   const seqStr = String(globalSequenceCache).padStart(4, '0');
   
   return `${timeBase}-${seqStr}`;
 };
-
 
 // ==========================================
 // FUNÇÕES UTILITÁRIAS GLOBAIS
@@ -128,7 +117,6 @@ const resizeImageForAPI = (file, maxWidth = 800) => {
   });
 };
 
-
 const parseCSVText = (rawText) => {
   const text = rawText.replace(/^\uFEFF/, '');
   const rows = []; let row = []; let inQuotes = false; let val = '';
@@ -146,9 +134,7 @@ const parseCSVText = (rawText) => {
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
 };
 
-
 const normalizeStr = s => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
-
 
 const parseTimeStr = (timeStr) => {
   if (!timeStr) return 0;
@@ -160,7 +146,6 @@ const parseTimeStr = (timeStr) => {
   return parseFloat(str.replace(',', '.')) || 0;
 };
 
-
 const getExternalLinkInfo = (type, title, specificLink = '') => {
   if (specificLink && specificLink.trim().startsWith('http')) return { url: specificLink.trim(), isExact: true };
   if (!title) return { url: '#', isExact: false };
@@ -169,7 +154,6 @@ const getExternalLinkInfo = (type, title, specificLink = '') => {
   if (['Livro', 'Quadrinho', 'Revista'].includes(type)) return { url: `https://www.skoob.com.br/livro/lista/busca:${q}`, isExact: false };
   return { url: `https://gamefaqs.gamespot.com/search?game=${q}`, isExact: false };
 };
-
 
 const processCompletedGamesCSV = (csvText) => {
   const rows = parseCSVText(csvText);
@@ -197,9 +181,7 @@ const processCompletedGamesCSV = (csvText) => {
   const iPrecoSemDesc = getIdx(['preço sem desconto', 'preco sem desconto', 'valor original', 'cheio']); 
   const iLink = getIdx(['link', 'url', 'página web']);
 
-
   const safeGet = (row, idx) => idx >= 0 && row[idx] ? row[idx].trim() : '';
-
 
   const parsed = [];
   for(let i=1; i<rows.length; i++) {
@@ -214,7 +196,6 @@ const processCompletedGamesCSV = (csvText) => {
     if (rawFim) { const parts = rawFim.split('/'); if (parts.length === 3) anoFim = parts[2].split(' ')[0]; }
     
     const cleanMoney = (val) => val ? val.replace(/R\$\s?/gi, '').trim() : '';
-
 
     parsed.push({
       id: generateId(parsed), 
@@ -239,14 +220,12 @@ const processCompletedGamesCSV = (csvText) => {
   return parsed;
 };
 
-
 // ==========================================
 // ÍCONES NATIVOS
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
   <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>{path}</svg>
 );
-
 
 const Search = (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
 const Library = (p) => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></>} />;
@@ -281,14 +260,12 @@ const XIcon = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><
 const Zap = (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = (p) => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
 
-
 // ==========================================
 // PWA ENGINE
 // ==========================================
 const usePWA = (iconUrl) => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
-
 
   useEffect(() => {
     const manifest = {
@@ -303,28 +280,27 @@ const usePWA = (iconUrl) => {
     if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
     manifestLink.href = manifestUrl;
 
-
     if ('serviceWorker' in navigator) {
       const swCode = `self.addEventListener('fetch', (e) => {});`;
       const swBlob = new Blob([swCode], { type: 'application/javascript' });
       const swUrl = URL.createObjectURL(swBlob); navigator.serviceWorker.register(swUrl).catch(() => {});
     }
 
-
     const handleBeforeInstallPrompt = (e) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, [iconUrl]);
+  
   const promptInstall = async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
     if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true); }
   };
+  
   return { isInstallable: !!installPrompt, promptInstall, isInstalled };
 };
-
 
 // ==========================================
 // COMPONENTES UI MONDRIAN
@@ -334,9 +310,11 @@ const getMondrianColor = (index, darkMode) => {
   const colorsDark = ['bg-rose-700', 'bg-sky-700', 'bg-yellow-600', 'bg-gray-800'];
   return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
 };
+
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
 );
+
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
   let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
   if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black';
@@ -350,7 +328,6 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   );
 };
 
-
 const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) => (
   <div className="flex flex-col mb-3 w-full overflow-hidden">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
@@ -359,6 +336,7 @@ const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) =>
     </div>
   </div>
 );
+
 const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly=false }) => (
   <div className="flex flex-col mb-3 w-full">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
@@ -369,6 +347,7 @@ const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "
     )}
   </div>
 );
+
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
@@ -385,7 +364,6 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
   );
 };
 
-
 const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v }) => (
   <div className="flex items-center gap-2 w-full mb-2">
     <div className="w-16 text-[9px] font-black uppercase tracking-widest truncate" title={label}>{label}</div>
@@ -396,11 +374,9 @@ const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)
   </div>
 );
 
-
 // ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
-
 
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCategories }) => {
   const [selectedItem, setSelectedItem] = useState(null);
@@ -433,7 +409,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       return matchesSearch && matchesCategory;
     });
 
-
     result.sort((a, b) => {
       if (sortBy === 'id') {
          return sortOrder === 'asc' ? a._originalIndex - b._originalIndex : b._originalIndex - a._originalIndex;
@@ -442,13 +417,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       let valA = a[sortBy] || '';
       let valB = b[sortBy] || '';
 
-
       if (['year', 'rating', 'pages_or_time'].includes(sortBy)) {
         valA = parseFloat(valA) || 0;
         valB = parseFloat(valB) || 0;
         return sortOrder === 'asc' ? valA - valB : valB - valA;
       }
-
 
       valA = String(valA).toLowerCase();
       valB = String(valB).toLowerCase();
@@ -457,14 +430,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       return 0;
     });
 
-
     return result;
   }, [items, search, activeCategory, activeSubtype, sortBy, sortOrder, activeCategories]);
 
-
   const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
-
 
   const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, newRating) => { 
@@ -472,12 +442,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     playChipBeep('save'); onShowToast('success'); 
   };
 
-
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
     setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success');
   };
-
 
   const confirmDelete = () => {
     if (itemToDelete) {
@@ -486,7 +454,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       playChipBeep('success'); onShowToast('success');
     }
   };
-
 
   const fetchWikiInfo = async () => {
     const apiKey = settings?.geminiApiKey || ""; 
@@ -505,11 +472,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); onShowToast('error'); } finally { setLoadingWiki(false); }
   };
 
-
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
     const linkInfo = getExternalLinkInfo(editedItem.type, editedItem.title);
-
 
     return (
       <div className="flex flex-col h-full pb-20 relative">
@@ -536,7 +501,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${darkMode ? 'bg-gray-800 border-gray-500 text-sky-400' : 'bg-sky-100 border-black text-sky-800'}`}>
             <ExternalLink className="w-4 h-4" /> Buscar "{editedItem.title}" na Web
           </a>
-
 
           <div className="grid grid-cols-3 gap-2">
             <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="number" darkMode={darkMode} />
@@ -602,7 +566,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     );
   }
 
-
   return (
     <div className="flex flex-col h-full">
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -626,7 +589,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             </button>
           </div>
         </div>
-
 
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={cat} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeCategory === cat ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
@@ -679,7 +641,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   );
 };
 
-
 const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast, triggerGlobalAI, globalAiState, globalAiMessage, resetGlobalAi, scannedAIData, setScannedAIData, isHtml5QrcodeLoaded, activeCategories, activeClassCodes, allTypes }) => {
   const [scanBox, setScanBox] = useState({ state: 'idle', message: '' });
   const scannerRef = useRef(null);
@@ -730,14 +691,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
   }, [addMode, isHtml5QrcodeLoaded]);
 
-
   const fetchMultiDatabase = async (barcode) => {
     const cleanCode = barcode.replace(/[-\s]/g, "");
     updateStatus('loading', 'Buscando nos bancos de dados...');
     try {
       let foundItem = { barcode: cleanCode, title: '', author_developer: '', publisher: '', year: '', pages_or_time: '', type: 'Livro', cover_url: '', description: '' };
       let found = false;
-
 
       if (!found && cleanCode.length >= 10 && cleanCode.length <= 13) {
         try {
@@ -755,7 +714,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) {}
       }
 
-
       if (!found && (!cleanCode.startsWith("978") && !cleanCode.startsWith("979"))) {
         try {
           const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json`);
@@ -767,7 +725,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           }
         } catch(e) { }
       }
-
 
       if (!found) {
         try {
@@ -782,7 +739,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { }
       }
 
-
       if (!found) {
         try {
           const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
@@ -795,12 +751,10 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { }
       }
 
-
       if (found) { playChipBeep('success'); updateStatus('success', 'Encontrado!'); setFormData(prev => ({ ...prev, ...foundItem })); } 
       else { playChipBeep('error'); updateStatus('error', 'Não encontrado em banco online. Preencha manualmente.'); }
     } catch (e) { playChipBeep('error'); updateStatus('error', 'Não encontrado. Preencha manualmente.'); }
   };
-
 
   const [showErrorModal, setShowErrorModal] = useState(false);
   const handleSave = () => {
@@ -839,7 +793,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
     updateStatus('idle', ''); resetGlobalAi(); setActiveTab('library');
   };
-
 
   const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(formData.type);
   
@@ -915,7 +868,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   );
 };
 
-
 const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterCat, setFilterCat] = useState('Todas');
   const [filterStatus, setFilterStatus] = useState('Todos');
@@ -953,7 +905,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     return { reliquia, epico, vergonha };
   }, [dashItems, totalDash]);
 
-
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide">
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -976,7 +927,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         </div>
       </MContainer>
 
-
       <div className="grid grid-cols-2 gap-3">
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black'}>
           <LibraryBig className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
@@ -990,9 +940,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         </MContainer>
       </div>
 
-
       {totalDash === 0 && <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest opacity-50">Nenhum dado para este filtro.</div>}
-
 
       {totalDash > 0 && (
         <>
@@ -1002,7 +950,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
               {sortedTypes.map(([type, count], index) => <MondrianHBar key={type} label={type} value={count} max={maxType} index={index} darkMode={darkMode} />)}
             </div>
           </MContainer>
-
 
           <div className="grid grid-cols-2 gap-3">
              {stats.reliquia && (
@@ -1022,14 +969,12 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
             )}
           </div>
 
-
           <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Top 5 Autores / Estúdios</div>
             <div className="flex flex-col">
               {sortedAuthors.map(([author, count], index) => <MondrianHBar key={author} label={String(author || 'Desconhecido')} value={count} max={maxAuthor} index={index + 1} darkMode={darkMode} />)}
             </div>
           </MContainer>
-
 
           {decadesKeys.length > 0 && (
             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
@@ -1056,7 +1001,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   );
 };
 
-
 // ==========================================
 // COMPONENTE DASHBOARD DE JOGOS ZERADOS
 // ==========================================
@@ -1067,7 +1011,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const [page, setPage] = useState(0);
   const [selectedGame, setSelectedGame] = useState(null);
   const itemsPerPage = 20;
-
 
   const handleManualImport = (e) => {
     const file = e.target.files[0];
@@ -1085,7 +1028,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     e.target.value = null;
   };
 
-
   const filteredGames = useMemo(() => {
     return completedGames.filter(g => {
       let mConsole = true, mGenre = true, mSup = true;
@@ -1101,14 +1043,12 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const uniqueConsoles = [...new Set(completedGames.map(g => g.console))].sort();
   const uniqueGenres = [...new Set(completedGames.map(g => g.genero))].sort();
 
-
   const totalJogos = filteredGames.length;
   const totalHoras = filteredGames.reduce((acc, g) => acc + (Number(g.tempoHoras)||0), 0).toFixed(1);
   const notasValidas = filteredGames.filter(g => g.nota > 0);
   const mediaNota = notasValidas.length > 0 ? (notasValidas.reduce((a, b) => a + (Number(b.nota)||0), 0) / notasValidas.length).toFixed(1) : 0;
   const fisicosCount = filteredGames.filter(g => g.suporte === 'Físico').length;
   const fisicoPerc = totalJogos > 0 ? ((fisicosCount / totalJogos) * 100).toFixed(0) : 0;
-
 
   const byConsole = filteredGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
   const topConsoles = Object.entries(byConsole).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -1137,7 +1077,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     );
   }
 
-
   // --- MODO DETALHE ---
   if (selectedGame) {
     const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link);
@@ -1163,11 +1102,9 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
             </div>
           </div>
 
-
           <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${darkMode ? 'bg-gray-800 border-gray-500 text-sky-400' : 'bg-sky-100 border-black text-sky-800'}`}>
             <ExternalLink className="w-4 h-4" /> {linkInfo.isExact ? "Acessar Link Salvo na Planilha" : `Buscar "${selectedGame.nome}" na Web`}
           </a>
-
 
           <div className="grid grid-cols-2 gap-2">
             <MReadOnlyBox label="Sua Nota Final" value={`★ ${selectedGame.nota} / 10`} darkMode={darkMode} emphasize={true} />
@@ -1178,7 +1115,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
             <MReadOnlyBox label="Data de Término" value={selectedGame.fim} darkMode={darkMode} />
           </div>
 
-
           {(selectedGame.precoPago || selectedGame.precoSemDesc) && (
             <MContainer darkMode={darkMode} className="p-3 grid grid-cols-2 gap-2" colorClass={darkMode ? 'bg-rose-900/40 text-white' : 'bg-rose-100 text-black'}>
                 <MReadOnlyBox label="Preço Pago" value={selectedGame.precoPago ? `R$ ${selectedGame.precoPago}` : '--'} darkMode={darkMode} />
@@ -1186,14 +1122,12 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
             </MContainer>
           )}
 
-
           <MReadOnlyBox label="Condição de Conclusão (Objetivo)" value={selectedGame.condicao} multiline darkMode={darkMode} />
           <MReadOnlyBox label="Observações Pessoais" value={selectedGame.observacao} multiline darkMode={darkMode} />
         </div>
       </div>
     );
   }
-
 
   // --- MODO DASHBOARD / LISTA ---
   return (
@@ -1219,7 +1153,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         </div>
       </MContainer>
 
-
       {/* BLOCO DE ESTATÍSTICAS */}
       <div className="grid grid-cols-2 gap-3">
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black'}>
@@ -1243,7 +1176,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         </MContainer>
       </div>
 
-
       {/* BLOCO DE GRÁFICOS */}
       <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Consoles Dominantes</div>
@@ -1253,7 +1185,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         </div>
       </MContainer>
 
-
       <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Gêneros Favoritos</div>
         <div className="flex flex-col">
@@ -1261,7 +1192,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           {topGenres.length === 0 && <span className="opacity-50 text-xs">Sem dados.</span>}
         </div>
       </MContainer>
-
 
       {yearsKeys.length > 0 && (
         <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
@@ -1283,7 +1213,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           </div>
         </MContainer>
       )}
-
 
       {/* BLOCO DA LISTA PAGINADA */}
       <div className={`text-[10px] font-black uppercase tracking-widest border-b-[4px] pb-2 mt-4 ${darkMode ? 'border-gray-500' : 'border-black'}`}>
@@ -1315,7 +1244,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   );
 };
 
-
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, completedGames, setCompletedGames, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importData, setImportData] = useState(null);
@@ -1332,7 +1260,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Memorabilia_Export_${new Date().toISOString().split('T')[0]}.csv`; link.click();
   };
 
-
   const handleImportCSV = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1341,7 +1268,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       const text = evt.target.result;
       const validRows = parseCSVText(text);
       if (validRows.length < 2) return;
-
 
       const headers = validRows[0].map(h => h.trim());
       const newItems = [];
@@ -1368,7 +1294,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           if (h === 'Anotações') key = 'notes';
           if (h === 'Wiki') key = 'wiki_info';
 
-
           item[key] = currentRow[idx] ? currentRow[idx].trim() : '';
         });
         
@@ -1387,7 +1312,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     e.target.value = null;
   };
 
-
   const handleImportCompletedCSV = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1403,7 +1327,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     reader.readAsText(file);
     e.target.value = null;
   };
-
 
   const handleSaveSettings = () => { playChipBeep('save'); onShowToast('success'); };
   
@@ -1434,12 +1357,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     });
   };
 
-
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative">
       <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca principal? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('success'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
       <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('success'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir Coleção" />
-
 
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-sky-500 bg-sky-100 dark:bg-sky-900" colorClass="border-sky-500">
@@ -1451,7 +1372,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           </MButton>
         </MContainer>
       )}
-
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'aparencia' ? null : 'aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
@@ -1493,7 +1413,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                    </div>
                </div>
 
-
                <div>
                    <div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Sun className="w-4 h-4"/> Brilho do Letreiro LED</div>
                    <div className="flex flex-col gap-2 w-full mt-2">
@@ -1521,7 +1440,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           </div>
         )}
       </MContainer>
-
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'arquivologia' ? null : 'arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
@@ -1553,7 +1471,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               </div>
             </div>
 
-
             <div className="mt-2">
               <h4 className="text-[10px] font-black uppercase tracking-widest mb-3">Tabela de Códigos (CDD)</h4>
               {Object.entries(activeCategories || {}).map(([cat, subs]) => (
@@ -1577,11 +1494,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               ))}
             </div>
 
-
           </div>
         )}
       </MContainer>
-
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'integracoes' ? null : 'integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
@@ -1596,7 +1511,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           </div>
         )}
       </MContainer>
-
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-sky-900/40 text-white' : 'bg-sky-100 text-black'}>
         <button onClick={() => setOpenSection(openSection === 'sincronizar' ? null : 'sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
@@ -1614,7 +1528,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
         <button onClick={() => setOpenSection(openSection === 'backup' ? null : 'backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local (.CSV Principal)</span>
@@ -1628,7 +1541,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-
       <div className="mt-8 mb-4 text-center">
         <button onClick={() => setShowResetConfirm(true)} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-rose-500 text-rose-500' : 'border-rose-600 text-rose-600'}`}>
            ⚠️ Resetar Coleção Principal
@@ -1637,7 +1549,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     </div>
   );
 };
-
 
 // ==========================================
 // COMPONENTE PRINCIPAL (APP)
@@ -1657,10 +1568,8 @@ export default function App() {
   const [libraryResetKey, setLibraryResetKey] = useState(0);
   const [completedResetKey, setCompletedResetKey] = useState(0);
 
-
   const pwa = usePWA(LINK_DO_ICONE_NO_GITHUB);
   const globalFileInputRef = useRef(null);
-
 
   const [aiBoxState, setAiBoxState] = useState('idle');
   const [aiBoxMessage, setAiBoxMessage] = useState('');
@@ -1670,10 +1579,8 @@ export default function App() {
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
-
   const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
   const handleGlobalFileChange = (e) => { const file = e.target.files[0]; if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); } e.target.value = null; };
-
 
   const processGlobalAIFile = async (file) => {
     const apiKey = settings?.geminiApiKey || "";
@@ -1696,7 +1603,6 @@ export default function App() {
       setAiBoxState('success'); setAiBoxMessage('Informações extraídas com IA!'); playChipBeep('success'); setScannedAIData(parsedData); showToast('success');
     } catch (error) { console.error("Erro IA:", error); setAiBoxState('error'); setAiBoxMessage(`Falha na IA: ${error.message}`); playChipBeep('error'); showToast('error'); }
   };
-
 
   useEffect(() => {
     if (window.Html5Qrcode) { setIsHtml5QrcodeLoaded(true); return; }
@@ -1760,17 +1666,14 @@ export default function App() {
     }
   };
 
-
   useEffect(() => {
     if (isLoaded && items.length > 0 && !suggestion) {
        shuffleSuggestion();
     }
   }, [isLoaded, items, activeCategories]);
 
-
   const suggPressTimer = useRef(null);
   const isSuggLongPress = useRef(false);
-
 
   const handleSuggPressStart = () => {
     isSuggLongPress.current = false;
@@ -1794,13 +1697,11 @@ export default function App() {
     const stats = [];
     const typeCounts = items.reduce((acc, i) => { acc[i.type] = (acc[i.type] || 0) + 1; return acc; }, {});
 
-
     if (typeCounts['Livro']) stats.push(`${typeCounts['Livro']} Livros na Estante`);
     if (typeCounts['CD']) stats.push(`${typeCounts['CD']} CDs Catalogados`);
     if (typeCounts['Vinil']) stats.push(`${typeCounts['Vinil']} Vinis (LPs)`);
     if (typeCounts['Quadrinho']) stats.push(`${typeCounts['Quadrinho']} HQs & Mangás`);
     if (typeCounts['DVD']) stats.push(`${typeCounts['DVD']} Filmes (DVD)`);
-
 
     const validYears = items.filter(i => i.year && !isNaN(parseInt(i.year)));
     if (validYears.length > 0) {
@@ -1810,13 +1711,11 @@ export default function App() {
       stats.push(`Recente: ${newest.year} (${String(newest.title || 'S/ Tít.').substring(0,12)}...)`);
     }
 
-
     const validLengths = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)) && ((activeCategories['Livros']||[]).includes(i.type)));
     if (validLengths.length > 0) {
        const longest = validLengths.reduce((a,b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b);
        stats.push(`Mais Longo: ${longest.pages_or_time} Págs`);
     }
-
 
     const authorCounts = items.reduce((acc, i) => { if(i.author_developer) acc[i.author_developer] = (acc[i.author_developer]||0)+1; return acc; }, {});
     const topAuthor = Object.entries(authorCounts).sort((a,b)=>b[1]-a[1])[0];
@@ -1824,10 +1723,8 @@ export default function App() {
        stats.push(`+ Freq: ${String(topAuthor[0] || '').substring(0, 15)} (${topAuthor[1]}x)`);
     }
 
-
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
   }, [items, activeCategories]);
-
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1836,7 +1733,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [rotatingStats]);
 
-
   const totalItens = items.length;
   const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
@@ -1844,7 +1740,6 @@ export default function App() {
   const readPercentage = totalPagesCount > 0 ? ((readPages / totalPagesCount) * 100).toFixed(1) : 0;
   const ratedItems = items.filter(i => (Number(i.rating) || 0) > 0);
   const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / ratedItems.length).toFixed(1) : 0;
-
 
   // ==========================================
   // ESTATÍSTICAS AVANÇADAS ZERADOS (PAINEL LED)
@@ -1863,22 +1758,18 @@ export default function App() {
     return { ...g, numPago: pPago, numCheio: pCheio, desconto: pCheio - pPago };
   });
 
-
   const gamesBought = gamesWithPrices.filter(g => g.numPago > 0);
   const cheapest = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago < b.numPago ? a : b) : null;
   const mostExp = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago > b.numPago ? a : b) : null;
   const biggestDisc = gamesWithPrices.filter(g => g.desconto > 0).reduce((a, b) => a.desconto > b.desconto ? a : b, null);
 
-
   const byConsole = completedGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
   const consoleStatsStr = Object.entries(byConsole).sort((a,b)=>b[1]-a[1]).map(([c, count]) => `${c}: ${count}`).join(' | ');
-
 
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
-
 
   // INLINE RENDERERS PARA EVITAR COMPONENTIZAÇÃO QUEBRADA NO REACT
   const renderPacmanSeparator = () => (
@@ -1910,22 +1801,18 @@ export default function App() {
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
 
-
   const handleAddPressStart = () => { initAudio(); isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
   const handleAddPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
   const handleAddClick = () => { initAudio(); if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
-
 
   const libPressTimer = useRef(null); const isLibLongPress = useRef(false);
   const handleLibPressStart = () => { initAudio(); isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
   const handleLibClick = () => { initAudio(); if (!isLibLongPress.current) { setActiveTab('library'); } };
 
-
   const handleCompClick = () => { initAudio(); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
   
   if (!isLoaded) return null; 
-
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
@@ -1936,9 +1823,7 @@ export default function App() {
         @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
       `}</style>
 
-
       <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
-
 
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
@@ -1973,7 +1858,6 @@ export default function App() {
             </div>
           </div>
 
-
           <div className="flex gap-2">
              <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
               <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
@@ -1986,7 +1870,6 @@ export default function App() {
               </div>
               <div className="flex justify-between text-sky-600 dark:text-sky-400 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
             </div>
-
 
             <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-white'}`}>
                <div className="p-1.5 border-b-[2px] border-gray-800 pb-0.5 mb-0.5 opacity-80 flex justify-between z-10 bg-black">
@@ -2003,7 +1886,6 @@ export default function App() {
           </div>
         </header>
 
-
         <main className="flex-1 overflow-hidden p-3 relative z-0">
           <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
           
@@ -2014,7 +1896,6 @@ export default function App() {
           {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
         </main>
 
-
         <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
           <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
@@ -2022,7 +1903,6 @@ export default function App() {
           <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
           <button onClick={() => { initAudio(); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
         </nav>
-
 
       </div>
     </div>
