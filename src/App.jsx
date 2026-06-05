@@ -48,12 +48,16 @@ const playChipBeep = (type) => {
       osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
       gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
       osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'shuffle') {
+      osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
     }
   } catch (e) {}
 };
 
 // ==========================================
-// GERADOR DE ID - PADRÃO CRONOLÓGICO + AUTO-INCREMENTO GLOBAL
+// GERADOR DE ID
 // ==========================================
 let globalSequenceCache = null;
 
@@ -69,12 +73,10 @@ const generateId = (itemsArray = []) => {
   
   const timeBase = `${AAAA}${MM}${DD}-${HH}${Min}${Seg}${Ms}`;
 
-  // Se o cache global não foi inicializado, varre os itens para achar a maior sequência
   if (globalSequenceCache === null) {
      let maxSeq = 0;
      itemsArray.forEach(item => {
         const idStr = String(item.id || '');
-        // Procura pelo padrão -XXXX no final do ID
         const match = idStr.match(/-(\d{4})$/);
         if (match) {
            const seq = parseInt(match[1], 10);
@@ -84,7 +86,7 @@ const generateId = (itemsArray = []) => {
      globalSequenceCache = maxSeq;
   }
 
-  globalSequenceCache++; // Incrementa globalmente
+  globalSequenceCache++;
   const seqStr = String(globalSequenceCache).padStart(4, '0');
   
   return `${timeBase}-${seqStr}`;
@@ -93,7 +95,6 @@ const generateId = (itemsArray = []) => {
 // ==========================================
 // FUNÇÕES UTILITÁRIAS GLOBAIS
 // ==========================================
-
 const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -260,7 +261,7 @@ const Zap = (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 2
 const ListIcon = (p) => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
 
 // ==========================================
-// PWA ENGINE (Injeção Dinâmica do App)
+// PWA ENGINE
 // ==========================================
 const usePWA = (iconUrl) => {
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -389,8 +390,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     let result = items.map((item, index) => ({ ...item, _originalIndex: index }));
     
     result = result.filter(item => {
-      const titleSearch = (item.title || '').toLowerCase();
-      const authorSearch = (item.author_developer || '').toLowerCase();
+      const titleSearch = String(item.title || '').toLowerCase();
+      const authorSearch = String(item.author_developer || '').toLowerCase();
       const query = search.toLowerCase();
       const matchesSearch = titleSearch.includes(query) || authorSearch.includes(query);
       
@@ -698,7 +699,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           if (upcData.items && upcData.items.length > 0) {
             const item = upcData.items[0];
             foundItem = { ...foundItem, title: item.title || "", publisher: item.brand || item.publisher || "", cover_url: item.images?.length > 0 ? item.images[0] : "", };
-            const cat = (item.category || "").toLowerCase(); const tit = (item.title || "").toLowerCase();
+            const cat = String(item.category || "").toLowerCase(); const tit = String(item.title || "").toLowerCase();
             if (cat.includes('music') || tit.includes(' cd') || tit.includes('album')) foundItem.type = 'CD';
             else if (cat.includes('video game') || cat.includes('nintendo') || cat.includes('playstation') || cat.includes('xbox')) foundItem.type = 'PS4';
             else if (cat.includes('dvd') || cat.includes('movie') || tit.includes('dvd')) foundItem.type = 'DVD';
@@ -726,7 +727,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           if (gbData.items && gbData.items.length > 0) {
             const info = gbData.items[0].volumeInfo;
             foundItem = { ...foundItem, title: info.title || "", author_developer: info.authors ? info.authors.join(", ") : "", publisher: info.publisher || "", year: info.publishedDate ? info.publishedDate.substring(0, 4) : "", pages_or_time: info.pageCount?.toString() || "", cover_url: info.imageLinks?.thumbnail?.replace("http://", "https://") || "", description: info.description || "", type: 'Livro' };
-            const pub = (info.publisher || "").toLowerCase(); if (pub.includes('jbc') || pub.includes('conrad') || pub.includes('panini')) foundItem.type = 'Quadrinho';
+            const pub = String(info.publisher || "").toLowerCase(); if (pub.includes('jbc') || pub.includes('conrad') || pub.includes('panini')) foundItem.type = 'Quadrinho';
             found = true;
           }
         } catch(e) { }
@@ -759,7 +760,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     let maxSeq = 0;
     items.forEach(item => {
       if(item.archive_code) { 
-        const parts = item.archive_code.split('-'); 
+        const parts = String(item.archive_code).split('-'); 
         if (parts.length >= 3 && parts[1] === classCode) { 
            const seqNum = parseInt(parts[2], 10); 
            if(!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum; 
@@ -948,14 +949,14 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
              {stats.reliquia && (
               <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div>
-                <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.reliquia.title}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year}</div></div>
+                <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year}</div></div>
               </MContainer>
             )}
              {stats.epico && (
               <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
                 <div>
-                   <div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stats.epico.title}</div>
+                   <div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.epico.title || 'Sem Título')}</div>
                    <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {((activeCategories['Livros']||[]).includes(stats.epico.type)) ? 'Págs' : 'Horas'}</div>
                 </div>
               </MContainer>
@@ -965,7 +966,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Top 5 Autores / Estúdios</div>
             <div className="flex flex-col">
-              {sortedAuthors.map(([author, count], index) => <MondrianHBar key={author} label={author} value={count} max={maxAuthor} index={index + 1} darkMode={darkMode} />)}
+              {sortedAuthors.map(([author, count], index) => <MondrianHBar key={author} label={String(author || 'Desconhecido')} value={count} max={maxAuthor} index={index + 1} darkMode={darkMode} />)}
             </div>
           </MContainer>
 
@@ -1037,9 +1038,9 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const uniqueGenres = [...new Set(completedGames.map(g => g.genero))].sort();
 
   const totalJogos = filteredGames.length;
-  const totalHoras = filteredGames.reduce((acc, g) => acc + g.tempoHoras, 0).toFixed(1);
-  const notasValidas = filteredGames.filter(g => g.nota > 0);
-  const mediaNota = notasValidas.length > 0 ? (notasValidas.reduce((a, b) => a + b.nota, 0) / notasValidas.length).toFixed(1) : 0;
+  const totalHoras = filteredGames.reduce((acc, g) => acc + (Number(g.tempoHoras)||0), 0).toFixed(1);
+  const notasValidas = filteredGames.filter(g => (Number(g.nota)||0) > 0);
+  const mediaNota = notasValidas.length > 0 ? (notasValidas.reduce((a, b) => a + (Number(b.nota)||0), 0) / notasValidas.length).toFixed(1) : 0;
   const fisicosCount = filteredGames.filter(g => g.suporte === 'Físico').length;
   const fisicoPerc = totalJogos > 0 ? ((fisicosCount / totalJogos) * 100).toFixed(0) : 0;
 
@@ -1101,7 +1102,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
           <div className="grid grid-cols-2 gap-2">
             <MReadOnlyBox label="Sua Nota Final" value={`★ ${selectedGame.nota} / 10`} darkMode={darkMode} emphasize={true} />
-            <MReadOnlyBox label="Tempo de Jogo" value={`${selectedGame.tempoHoras.toFixed(1)}h`} darkMode={darkMode} emphasize={true} />
+            <MReadOnlyBox label="Tempo de Jogo" value={`${(Number(selectedGame.tempoHoras)||0).toFixed(1)}h`} darkMode={darkMode} emphasize={true} />
             <MReadOnlyBox label="Dificuldade Jogado" value={selectedGame.dificuldade} darkMode={darkMode} />
             <MReadOnlyBox label="Mídia (Suporte)" value={selectedGame.suporteStr || selectedGame.suporte} darkMode={darkMode} />
             <MReadOnlyBox label="Data de Início" value={selectedGame.inicio} darkMode={darkMode} />
@@ -1221,7 +1222,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
              </div>
              <div className="flex flex-col items-end justify-center min-w-[50px] border-l-[3px] border-current pl-2">
                 <div className="text-[12px] font-black leading-none">★ {g.nota}/10</div>
-                <div className="text-[8px] font-bold mt-1 opacity-70">{g.tempoHoras.toFixed(1)}h</div>
+                <div className="text-[8px] font-bold mt-1 opacity-70">{(Number(g.tempoHoras)||0).toFixed(1)}h</div>
              </div>
           </div>
         ))}
@@ -1290,7 +1291,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           item[key] = currentRow[idx] ? currentRow[idx].trim() : '';
         });
         
-        // Passa o newItems para que o gerador de ID atualize a sequência durante uma importação em massa
         if (item.id) { 
             item.rating = parseInt(item.rating) || 0; 
             newItems.push(item); 
@@ -1367,7 +1367,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </MContainer>
       )}
 
-      {/* BLOCO: APARÊNCIA E VELOCIDADE - ACCORDION */}
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'aparencia' ? null : 'aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Sun className="w-4 h-4" /> Aparência & Interface</span>
@@ -1436,7 +1435,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      {/* BLOCO: GESTÃO DE CLASSES ARQUIVOLOGIA - ACCORDION */}
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'arquivologia' ? null : 'arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><ListIcon className="w-4 h-4" /> Gestão de Classes</span>
@@ -1494,7 +1492,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      {/* INTEGRAÇÕES - ACCORDION */}
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'integracoes' ? null : 'integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações (Opcional)</span>
@@ -1509,7 +1506,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      {/* SINCRONIZAR - ACCORDION */}
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-sky-900/40 text-white' : 'bg-sky-100 text-black'}>
         <button onClick={() => setOpenSection(openSection === 'sincronizar' ? null : 'sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Sincronizar Jogos Zerados</span>
@@ -1526,7 +1522,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      {/* BACKUP - ACCORDION */}
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
         <button onClick={() => setOpenSection(openSection === 'backup' ? null : 'backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local (.CSV Principal)</span>
@@ -1620,21 +1615,86 @@ export default function App() {
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000);
   };
   
-  // Carregamento Inicial
+  // BLOCO BLINDADO DE LOCAL STORAGE
   useEffect(() => {
-    const savedTheme = localStorage.getItem('memorabilia_theme'); if (savedTheme === 'dark') setDarkMode(true);
-    const savedItems = localStorage.getItem('memorabilia_items'); if (savedItems) setItems(JSON.parse(savedItems)); else setItems([]);
-    const savedSettings = localStorage.getItem('memorabilia_settings'); if (savedSettings) setSettings(JSON.parse(savedSettings) || {});
-    const savedCompleted = localStorage.getItem('memorabilia_completed'); if (savedCompleted) setCompletedGames(JSON.parse(savedCompleted));
+    try {
+      const savedTheme = localStorage.getItem('memorabilia_theme'); 
+      if (savedTheme === 'dark') setDarkMode(true);
+      
+      const savedItems = localStorage.getItem('memorabilia_items'); 
+      if (savedItems) {
+         const parsed = JSON.parse(savedItems);
+         setItems(Array.isArray(parsed) ? parsed : []);
+      }
+      
+      const savedSettings = localStorage.getItem('memorabilia_settings'); 
+      if (savedSettings) {
+         setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
+      }
+      
+      const savedCompleted = localStorage.getItem('memorabilia_completed'); 
+      if (savedCompleted) {
+         const parsedC = JSON.parse(savedCompleted);
+         setCompletedGames(Array.isArray(parsedC) ? parsedC : []);
+      }
+    } catch (e) {
+      console.error("Erro fatal ao ler localStorage. Iniciando com dados zerados para evitar quebra.", e);
+      setItems([]);
+      setCompletedGames([]);
+    }
     setIsLoaded(true);
   }, []);
   
-  // Salvamento Automático
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, isLoaded]);
   
+  // ==========================================
+  // ESTATÍSTICAS ROTATIVAS (COLEÇÃO FÍSICA)
+  // ==========================================
+  const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
+  const rotatingStats = useMemo(() => {
+    if (items.length === 0) return ["Acervo em Formação"];
+    const stats = [];
+    const typeCounts = items.reduce((acc, i) => { acc[i.type] = (acc[i.type] || 0) + 1; return acc; }, {});
+
+    if (typeCounts['Livro']) stats.push(`${typeCounts['Livro']} Livros na Estante`);
+    if (typeCounts['CD']) stats.push(`${typeCounts['CD']} CDs Catalogados`);
+    if (typeCounts['Vinil']) stats.push(`${typeCounts['Vinil']} Vinis (LPs)`);
+    if (typeCounts['Quadrinho']) stats.push(`${typeCounts['Quadrinho']} HQs & Mangás`);
+    if (typeCounts['DVD']) stats.push(`${typeCounts['DVD']} Filmes (DVD)`);
+
+    const validYears = items.filter(i => i.year && !isNaN(parseInt(i.year)));
+    if (validYears.length > 0) {
+      const oldest = validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b);
+      const newest = validYears.reduce((a, b) => parseInt(a.year) > parseInt(b.year) ? a : b);
+      stats.push(`Relíquia: ${oldest.year} (${String(oldest.title || 'S/ Tít.').substring(0,12)}...)`);
+      stats.push(`Recente: ${newest.year} (${String(newest.title || 'S/ Tít.').substring(0,12)}...)`);
+    }
+
+    const validLengths = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)) && ((activeCategories['Livros']||[]).includes(i.type)));
+    if (validLengths.length > 0) {
+        const longest = validLengths.reduce((a,b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b);
+        stats.push(`Mais Longo: ${longest.pages_or_time} Págs`);
+    }
+
+    const authorCounts = items.reduce((acc, i) => { if(i.author_developer) acc[i.author_developer] = (acc[i.author_developer]||0)+1; return acc; }, {});
+    const topAuthor = Object.entries(authorCounts).sort((a,b)=>b[1]-a[1])[0];
+    if (topAuthor && topAuthor[1] > 1) {
+        stats.push(`+ Freq: ${String(topAuthor[0] || '').substring(0, 15)} (${topAuthor[1]}x)`);
+    }
+
+    return stats.length > 0 ? stats : ["Sua Coleção Física"];
+  }, [items, activeCategories]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [rotatingStats]);
+
   // ==========================================
   // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
   // ==========================================
@@ -1655,19 +1715,33 @@ export default function App() {
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPercentage = totalPagesCount > 0 ? ((readPages / totalPagesCount) * 100).toFixed(1) : 0;
-  const ratedItems = items.filter(i => i.rating > 0);
-  const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + i.rating, 0) / ratedItems.length).toFixed(1) : 0;
+  const ratedItems = items.filter(i => (Number(i.rating) || 0) > 0);
+  const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / ratedItems.length).toFixed(1) : 0;
 
   // Jogos Zerados Stats
   const totalJogos = completedGames.length;
-  const tempos = completedGames.map(g => g.tempoHoras).filter(t => t > 0);
+  const tempos = completedGames.map(g => Number(g.tempoHoras) || 0).filter(t => t > 0);
   const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
   const maxTime = tempos.length > 0 ? Math.max(...tempos).toFixed(1) : 0;
-  const notasJ = completedGames.filter(g => g.nota > 0);
-  const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + b.nota, 0) / notasJ.length).toFixed(1) : 0;
+  const notasJ = completedGames.filter(g => (Number(g.nota) || 0) > 0);
+  const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + (Number(b.nota) || 0), 0) / notasJ.length).toFixed(1) : 0;
   
   let totalGasto = 0;
-  completedGames.forEach(g => { if(g.precoPago) { let p = parseFloat(String(g.precoPago).replace(/\./g, '').replace(',', '.')); if(!isNaN(p)) totalGasto+=p; } });
+  const gamesWithPrices = completedGames.map(g => {
+    const pPago = parseFloat(String(g.precoPago || '0').replace(/\./g, '').replace(',', '.')) || 0;
+    const pCheio = parseFloat(String(g.precoSemDesc || '0').replace(/\./g, '').replace(',', '.')) || 0;
+    totalGasto += pPago;
+    return { ...g, numPago: pPago, numCheio: pCheio, desconto: pCheio - pPago };
+  });
+
+  const gamesBought = gamesWithPrices.filter(g => g.numPago > 0);
+  const cheapest = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago < b.numPago ? a : b) : null;
+  const mostExp = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago > b.numPago ? a : b) : null;
+  const gamesWithDisc = gamesWithPrices.filter(g => g.desconto > 0);
+  const biggestDisc = gamesWithDisc.length > 0 ? gamesWithDisc.reduce((a, b) => a.desconto > b.desconto ? a : b) : null;
+
+  const byConsole = completedGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
+  const consoleStatsStr = Object.entries(byConsole).sort((a,b)=>b[1]-a[1]).map(([c, count]) => `${c}: ${count}`).join(' | ');
   
   // Configurações e Animação do Painel LED Infinito
   const speed = settings?.marqueeSpeed || 35;
@@ -1675,9 +1749,9 @@ export default function App() {
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
-  const PacmanSeparator = () => (
+  const renderPacmanSeparator = () => (
     <div className="flex items-center gap-2 mx-6 opacity-90 pb-0.5">
-       <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
+       <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0 scale-x-[-1]" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
          <path fill="#facc15">
            <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
          </path>
@@ -1688,16 +1762,36 @@ export default function App() {
     </div>
   );
   
-  const MarqueeContent = () => (
+  const renderMarqueeContent = () => (
     <div className="flex items-center py-1" style={textShadowStyle}>
-      <span className={`text-sky-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span> <PacmanSeparator />
-      <span className={`text-rose-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span> <PacmanSeparator />
-      <span className={`text-rose-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span> <PacmanSeparator />
-      <span className={`text-yellow-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span> <PacmanSeparator />
-      <span className={`text-sky-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span> <PacmanSeparator />
+      <span className={`text-sky-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span> {renderPacmanSeparator()}
+      {consoleStatsStr && <><span className={`text-purple-400 ${ledItemStyle}`}>CONSOLES: {consoleStatsStr}</span> {renderPacmanSeparator()}</>}
+      <span className={`text-rose-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span> {renderPacmanSeparator()}
+      {Number(maxTime) > 0 && <><span className={`text-rose-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span> {renderPacmanSeparator()}</>}
+      <span className={`text-yellow-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span> {renderPacmanSeparator()}
+      <span className={`text-green-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span> {renderPacmanSeparator()}
+      {mostExp && <><span className={`text-rose-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span> {renderPacmanSeparator()}</>}
+      {cheapest && <><span className={`text-sky-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span> {renderPacmanSeparator()}</>}
+      {biggestDisc && <><span className={`text-green-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span> {renderPacmanSeparator()}</>}
     </div>
   );
   
+  const suggPressTimer = useRef(null);
+  const isSuggLongPress = useRef(false);
+
+  const handleSuggPressStart = () => {
+    isSuggLongPress.current = false;
+    suggPressTimer.current = setTimeout(() => {
+      isSuggLongPress.current = true;
+      shuffleSuggestion();
+    }, 500);
+  };
+  const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
+  const handleSuggClick = (e) => {
+    if (isSuggLongPress.current) return;
+    if (suggestion) window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank');
+  };
+
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
 
@@ -1727,16 +1821,27 @@ export default function App() {
 
         <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
-            <div className="flex flex-col flex-1 pr-2">
+            <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
               <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
               {suggestion && (
-                <a href={`https://open.spotify.com/search/${encodeURIComponent(suggestion.title + ' ' + (suggestion.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-max shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer ${darkMode ? 'bg-green-900 border-green-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-green-400 border-black text-black'}`}>
-                  <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate max-w-[200px]">Ouvir Hoje: {suggestion.title}</span>
-                </a>
+                <div 
+                  role="button"
+                  tabIndex={0}
+                  title="Segure apertado para sortear outro disco"
+                  onTouchStart={handleSuggPressStart} 
+                  onTouchEnd={handleSuggPressEnd} 
+                  onMouseDown={handleSuggPressStart} 
+                  onMouseUp={handleSuggPressEnd} 
+                  onMouseLeave={handleSuggPressEnd} 
+                  onClick={handleSuggClick} 
+                  style={{ WebkitTouchCallout: 'none' }}
+                  className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-full shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer select-none ${darkMode ? 'bg-green-900 border-green-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-green-400 border-black text-black'}`}>
+                  <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate w-full text-left">Ouvir Hoje: {suggestion.title || 'S/ Título'}</span>
+                </div>
               )}
             </div>
             
-            <div className="w-14 h-14 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative">
+            <div className="w-14 h-14 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2">
               {toast.visible ? (
                 toast.type === 'error' 
                   ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
@@ -1747,14 +1852,17 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex gap-2 h-20">
+          <div className="flex gap-2">
              <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
               <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
                 <span>Coleção Física</span><span>{totalItens} UN</span>
               </div>
               <div className="flex justify-between"><span>Págs Add:</span><span>{totalPagesCount}</span></div>
               <div className="flex justify-between"><span>Págs Lidas:</span><span>{readPages} ({readPercentage}%)</span></div>
-              <div className="flex justify-between text-sky-600 dark:text-sky-400 mt-auto"><span>Média:</span><span>★ {avgRating}</span></div>
+              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 font-bold transition-opacity duration-500">
+                  <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
+              </div>
+              <div className="flex justify-between text-sky-600 dark:text-sky-400 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
             </div>
 
             <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-white'}`}>
@@ -1764,8 +1872,8 @@ export default function App() {
                
                <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
                   <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
-                    <MarqueeContent /> 
-                    <MarqueeContent />
+                    {renderMarqueeContent()} 
+                    {renderMarqueeContent()}
                   </div>
                 </div>
             </div>
