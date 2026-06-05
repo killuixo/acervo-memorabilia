@@ -1688,12 +1688,13 @@ export default function App() {
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
   }, [items, activeCategories]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [rotatingStats]);
+  // Removido o setInterval para rotação automática
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length);
+  //   }, 3500);
+  //   return () => clearInterval(interval);
+  // }, [rotatingStats]);
 
   // ==========================================
   // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
@@ -1709,6 +1710,20 @@ export default function App() {
     }
   }, [isLoaded, items, activeCategories]);
   
+  const shuffleSuggestion = () => {
+    const musicItems = items.filter(i => (activeCategories['Discos'] || []).includes(i.type));
+    if (musicItems.length > 0) {
+      let nextSugg = musicItems[Math.floor(Math.random() * musicItems.length)];
+      if (musicItems.length > 1 && suggestion) {
+        while (nextSugg.id === suggestion?.id) {
+          nextSugg = musicItems[Math.floor(Math.random() * musicItems.length)];
+        }
+      }
+      setSuggestion(nextSugg);
+      playChipBeep('shuffle');
+    }
+  };
+
   // Coleção Stats
   const totalItens = items.length;
   const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
@@ -1751,14 +1766,16 @@ export default function App() {
 
   const renderPacmanSeparator = () => (
     <div className="flex items-center gap-2 mx-6 opacity-90 pb-0.5">
-       <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0 scale-x-[-1]" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
-         <path fill="#facc15">
+       <Ghost className={`w-3.5 h-3.5 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
+       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
+       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
+       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
+       {/* scale-x-[-1] com o Pac-Man apontando pra direita na origem faz ele apontar pra esquerda e comer as bolinhas de ré em direção ao fantasma */}
+       <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
+         <path fill="#facc15" transform="scale(-1, 1) translate(-100, 0)">
            <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
          </path>
        </svg>
-       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
-       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
-       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
     </div>
   );
   
@@ -1784,7 +1801,7 @@ export default function App() {
     suggPressTimer.current = setTimeout(() => {
       isSuggLongPress.current = true;
       shuffleSuggestion();
-    }, 500);
+    }, 500); // Segurou por meio segundo para embaralhar
   };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
   const handleSuggClick = (e) => {
@@ -1828,6 +1845,7 @@ export default function App() {
                   role="button"
                   tabIndex={0}
                   title="Segure apertado para sortear outro disco"
+                  onContextMenu={(e) => e.preventDefault()}
                   onTouchStart={handleSuggPressStart} 
                   onTouchEnd={handleSuggPressEnd} 
                   onMouseDown={handleSuggPressStart} 
@@ -1835,8 +1853,8 @@ export default function App() {
                   onMouseLeave={handleSuggPressEnd} 
                   onClick={handleSuggClick} 
                   style={{ WebkitTouchCallout: 'none' }}
-                  className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-full shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer select-none ${darkMode ? 'bg-green-900 border-green-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-green-400 border-black text-black'}`}>
-                  <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate w-full text-left">Ouvir Hoje: {suggestion.title || 'S/ Título'}</span>
+                  className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-fit max-w-full shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer select-none ${darkMode ? 'bg-green-900 border-green-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-green-400 border-black text-black'}`}>
+                  <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate text-left">Ouvir Hoje: {suggestion.title || 'S/ Título'}</span>
                 </div>
               )}
             </div>
@@ -1859,7 +1877,7 @@ export default function App() {
               </div>
               <div className="flex justify-between"><span>Págs Add:</span><span>{totalPagesCount}</span></div>
               <div className="flex justify-between"><span>Págs Lidas:</span><span>{readPages} ({readPercentage}%)</span></div>
-              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 font-bold transition-opacity duration-500">
+              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 font-bold transition-opacity duration-500 cursor-pointer active:scale-95" onClick={() => { playChipBeep('save'); setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
                   <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
               </div>
               <div className="flex justify-between text-sky-600 dark:text-sky-400 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
