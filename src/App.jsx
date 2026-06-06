@@ -253,10 +253,10 @@ const processCompletedGamesCSV = (csvText) => {
 };
 
 // ==========================================
-// GERADOR HTML ESTÁTICO (BLOGGER/DESKTOP)
+// GERADOR HTML ESTÁTICO & DINÂMICO (BLOGGER/DESKTOP)
 // ==========================================
-const getBloggerHTMLString = (items, completedGames, activeCategories) => {
-  // 1. Limpar dados sensíveis antes de exportar
+const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
+  // Limpeza local inicial para servir de fallback (caso o leitor esteja sem internet ou erro na API)
   const cleanItems = items.map(i => ({
     id: i.id, type: i.type, title: i.title, author_developer: i.author_developer, 
     year: i.year, publisher: i.publisher, status: i.status, rating: i.rating || 0, 
@@ -348,10 +348,11 @@ const getBloggerHTMLString = (items, completedGames, activeCategories) => {
 </div>
 
 <script>
-  // Dados injetados do React
-  const dataAcervo = ${JSON.stringify(cleanItems)};
+  // Dados injetados do React (Fallback e Inicial)
+  let dataAcervo = ${JSON.stringify(cleanItems)};
   const dataZerados = ${JSON.stringify(cleanCompleted)};
   const categoriesMap = ${JSON.stringify(activeCategories)};
+  const sheetsUrl = "${sheetUrl || ''}";
   
   // Cores Mondrian
   const mColors = ['bg-mondrian-1', 'bg-mondrian-2', 'bg-mondrian-3', 'bg-mondrian-4'];
@@ -364,7 +365,7 @@ const getBloggerHTMLString = (items, completedGames, activeCategories) => {
       document.getElementById('btn-acervo').classList.replace('text-black', 'text-white');
       document.getElementById('btn-zerados').classList.replace('bg-[#0ea5e9]', 'bg-white');
       document.getElementById('btn-zerados').classList.replace('text-white', 'text-black');
-      renderAcervo(dataAcervo);
+      filterAcervo();
     } else {
       document.getElementById('tab-acervo').classList.add('hide');
       document.getElementById('tab-zerados').classList.remove('hide');
@@ -372,7 +373,7 @@ const getBloggerHTMLString = (items, completedGames, activeCategories) => {
       document.getElementById('btn-zerados').classList.replace('text-black', 'text-white');
       document.getElementById('btn-acervo').classList.replace('bg-[#0ea5e9]', 'bg-white');
       document.getElementById('btn-acervo').classList.replace('text-white', 'text-black');
-      renderZerados(dataZerados);
+      filterZerados();
     }
   }
 
@@ -489,8 +490,31 @@ const getBloggerHTMLString = (items, completedGames, activeCategories) => {
     document.body.style.overflow = 'auto';
   }
 
-  // Init
-  renderAcervo(dataAcervo);
+  // Lógica de Sincronização Dinâmica
+  function fetchLiveData() {
+    if(!sheetsUrl) {
+      renderAcervo(dataAcervo);
+      return;
+    }
+    
+    document.getElementById('acervo-grid').innerHTML = '<div class="col-span-full p-10 text-center font-black uppercase text-[10px] text-sky-600 animate-pulse tracking-widest">Sincronizando banco de dados...</div>';
+    
+    fetch(sheetsUrl)
+      .then(res => res.json())
+      .then(data => {
+         if(Array.isArray(data) && data.length > 0) {
+            dataAcervo = data;
+         }
+         filterAcervo(); 
+      })
+      .catch(err => {
+         console.error("Falha ao buscar dados ao vivo, usando versão local salva.", err);
+         filterAcervo(); 
+      });
+  }
+
+  // Inicialização
+  fetchLiveData();
 </script>
 </body>
 </html>`;
@@ -1683,7 +1707,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   // Funções de Exportação para o Blogger
   const handleDownloadBlogger = () => {
-    const htmlStr = getBloggerHTMLString(items, completedGames, activeCategories);
+    const htmlStr = getBloggerHTMLString(items, completedGames, activeCategories, settings?.googleSheetsUrl);
     const blob = new Blob([htmlStr], { type: 'text/html;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -1694,7 +1718,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   };
 
   const handleCopyBlogger = () => {
-    const htmlStr = getBloggerHTMLString(items, completedGames, activeCategories);
+    const htmlStr = getBloggerHTMLString(items, completedGames, activeCategories, settings?.googleSheetsUrl);
     const textArea = document.createElement("textarea");
     textArea.value = htmlStr;
     textArea.style.position = "fixed"; // Evita que a página role para baixo
@@ -1892,9 +1916,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         {openSection === 'blogger' && (
           <div className="p-4 flex flex-col gap-3">
             <p className="text-[10px] font-bold leading-relaxed text-justify opacity-80">
-              Gere um arquivo <span className="font-black underline">HTML estático, responsivo e somente leitura</span> do seu catálogo. Perfeito para desktop ou para colar na aba "Visualização em HTML" do Blogger.com. Todos os dados sensíveis (API, valores e anotações pessoais) serão omitidos.
+              Gere um arquivo <span className="font-black underline">HTML estático e responsivo</span> do seu catálogo. Se a sua Webhook do Google Sheets estiver configurada, o blog carregará seus itens mais novos sozinhos toda vez que alguém acessar a página!
             </p>
-            <div className="flex gap-2 flex-col sm:flex-row">
+            <div className="flex gap-2 flex-col sm:flex-row mt-2">
                <MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="black" className="flex-1 py-3 bg-purple-600 border-black dark:bg-purple-700 text-white">
                  <Download className="w-4 h-4" /> Baixar HTML
                </MButton>
