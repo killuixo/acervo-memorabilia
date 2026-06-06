@@ -221,10 +221,46 @@ const processCompletedGamesCSV = (csvText) => {
 };
 
 // ==========================================
-// ÍCONES NATIVOS
+// ÍCONES NATIVOS E ANIMAÇÕES
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
   <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>{path}</svg>
+);
+
+const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
+  <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
+    <g>
+      {/* Rola no sentido anti-horário */}
+      <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
+      {/* Base Sphere - Neon Mustard */}
+      <circle cx="50" cy="50" r="28" fill="none" stroke="#ffcc00" strokeWidth="6" strokeDasharray="5 5" />
+      <circle cx="50" cy="50" r="18" fill="none" stroke="#ffcc00" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/>
+      
+      {/* Outer Spikes - Fluorescent Cyan */}
+      <g stroke="#00ffff" strokeWidth="6" strokeLinecap="round">
+        <line x1="50" y1="4" x2="50" y2="16" />
+        <line x1="50" y1="96" x2="50" y2="84" />
+        <line x1="4" y1="50" x2="16" y2="50" />
+        <line x1="96" y1="50" x2="84" y2="50" />
+        <line x1="17" y1="17" x2="26" y2="26" />
+        <line x1="83" y1="83" x2="74" y2="74" />
+        <line x1="17" y1="83" x2="26" y2="74" />
+        <line x1="83" y1="17" x2="74" y2="26" />
+      </g>
+
+      {/* Inner Spikes/Bumps - Neon Pink */}
+      <g stroke="#ff007f" strokeWidth="7" strokeLinecap="round">
+        <line x1="50" y1="18" x2="50" y2="22" />
+        <line x1="50" y1="82" x2="50" y2="78" />
+        <line x1="18" y1="50" x2="22" y2="50" />
+        <line x1="82" y1="50" x2="78" y2="50" />
+        <line x1="28" y1="28" x2="32" y2="32" />
+        <line x1="72" y1="72" x2="68" y2="68" />
+        <line x1="28" y1="72" x2="32" y2="68" />
+        <line x1="72" y1="28" x2="68" y2="32" />
+      </g>
+    </g>
+  </svg>
 );
 
 const Search = (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
@@ -368,6 +404,17 @@ const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)
   </div>
 );
 
+const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
+  if (googleSheetsUrl) {
+    fetch(googleSheetsUrl, { 
+      method: 'POST', 
+      mode: 'no-cors', 
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+      body: JSON.stringify(itemToSync) 
+    }).catch(err => console.error("Erro ao enviar Google Sheets:", err));
+  }
+};
+
 // ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
@@ -432,23 +479,16 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
   const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, newRating) => { 
-    setItems(items.map(item => item.id === id ? { ...item, rating: newRating } : item));
+    const updatedItem = { ...items.find(i => i.id === id), rating: newRating };
+    setItems(items.map(item => item.id === id ? updatedItem : item));
     playChipBeep('save'); onShowToast('success'); 
+    syncItemToSheets(updatedItem, settings?.googleSheetsUrl);
   };
 
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
     setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success');
-    
-    // Sincroniza também as Edições (Update) com o Google Sheets
-    if (settings?.googleSheetsUrl) {
-      fetch(settings.googleSheetsUrl, { 
-        method: 'POST', 
-        mode: 'no-cors', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
-        body: JSON.stringify(editedItem) 
-      }).catch(err => console.error("Erro ao atualizar Sheets:", err));
-    }
+    syncItemToSheets(editedItem, settings?.googleSheetsUrl);
   };
 
   const confirmDelete = () => {
@@ -472,7 +512,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
       const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (aiText) { setEditedItem({...editedItem, wiki_info: aiText}); playChipBeep('success'); onShowToast('success'); }
+      if (aiText) { 
+          const updatedItem = {...editedItem, wiki_info: aiText};
+          setEditedItem(updatedItem); 
+          playChipBeep('success'); onShowToast('success'); 
+          // O item é sincronizado via saveModifications que o usuário clica após gerar. 
+      }
     } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); onShowToast('error'); } finally { setLoadingWiki(false); }
   };
 
@@ -783,16 +828,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const newItem = { ...formData, id: generateId(items), archive_code: `${prefix}-${classCode}-${sequence}` };
     
     setItems([...items, newItem]); 
-    
-    // Sincroniza Criação (Insert) com o Google Sheets
-    if (settings?.googleSheetsUrl) {
-      fetch(settings.googleSheetsUrl, { 
-        method: 'POST', 
-        mode: 'no-cors', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
-        body: JSON.stringify(newItem) 
-      }).catch(err => console.error("Erro ao enviar Google Sheets:", err));
-    }
+    syncItemToSheets(newItem, settings?.googleSheetsUrl);
     
     playChipBeep('save'); onShowToast('success');
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
@@ -1006,6 +1042,9 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   );
 };
 
+// ==========================================
+// COMPONENTE DASHBOARD DE JOGOS ZERADOS
+// ==========================================
 const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMode, onShowToast }) => {
   const [filterConsole, setFilterConsole] = useState('Todos');
   const [filterGenre, setFilterGenre] = useState('Todos');
@@ -1502,13 +1541,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'integracoes' ? null : 'integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
-          <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações & Sync</span>
+          <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações (Opcional)</span>
           <span className="text-lg font-mono">{openSection === 'integracoes' ? '−' : '+'}</span>
         </button>
         {openSection === 'integracoes' && (
           <div className="p-4 flex flex-col gap-3">
             <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
-            <MInput darkMode={darkMode} label="App Script Web App URL (Google Sheets Sync)" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
+            <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Sincronizar e Salvar)" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
             <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
           </div>
         )}
@@ -1561,10 +1600,11 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
-  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
-  
+  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
+  const [isLocalStorageLoaded, setIsLocalStorageLoaded] = useState(false);
+  const [isFetchingCloud, setIsFetchingCloud] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(true); // Inicialmente true para travar se for baixar
   
   // Feedback Global Dinâmico
   const [toast, setToast] = useState({ visible: false, type: 'success' });
@@ -1625,9 +1665,9 @@ export default function App() {
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000);
   };
   
-  // BLOCO BLINDADO DE LOCAL STORAGE E SYNC DO SHEETS
+  // BLOCO BLINDADO DE LOCAL STORAGE E FETCH DO SHEETS NA INICIALIZAÇÃO
   useEffect(() => {
-    let parsedSettings = {};
+    let savedSettings = null;
     try {
       const savedTheme = localStorage.getItem('memorabilia_theme'); 
       if (savedTheme === 'dark') setDarkMode(true);
@@ -1638,10 +1678,10 @@ export default function App() {
          setItems(Array.isArray(parsed) ? parsed : []);
       }
       
-      const savedSettings = localStorage.getItem('memorabilia_settings'); 
-      if (savedSettings) {
-         parsedSettings = JSON.parse(savedSettings);
-         setSettings(prev => ({ ...prev, ...parsedSettings }));
+      const savedSettingsStr = localStorage.getItem('memorabilia_settings'); 
+      if (savedSettingsStr) {
+         savedSettings = JSON.parse(savedSettingsStr);
+         setSettings(prev => ({ ...prev, ...savedSettings }));
       }
       
       const savedCompleted = localStorage.getItem('memorabilia_completed'); 
@@ -1650,39 +1690,39 @@ export default function App() {
          setCompletedGames(Array.isArray(parsedC) ? parsedC : []);
       }
     } catch (e) {
-      console.error("Erro ao ler localStorage.", e);
+      console.error("Erro fatal ao ler localStorage.", e);
     }
-
-    // Sincronização Automática via Sheets OnLoad
-    if (parsedSettings && parsedSettings.googleSheetsUrl) {
-       setIsSyncing(true);
-       fetch(parsedSettings.googleSheetsUrl)
-         .then(res => res.json())
-         .then(data => {
-            if (Array.isArray(data) && data.length > 0) {
-               setItems(data);
-               localStorage.setItem('memorabilia_items', JSON.stringify(data));
+    
+    // FETCH GOOGLE SHEETS
+    const fetchSheets = async () => {
+      if (savedSettings?.googleSheetsUrl) {
+         setIsFetchingCloud(true);
+         try {
+            const res = await fetch(savedSettings.googleSheetsUrl);
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) setItems(data);
             }
-         })
-         .catch(err => console.warn("Erro ao sincronizar do Google Sheets (Usando dados locais):", err))
-         .finally(() => {
-            setIsSyncing(false);
-            setIsLoaded(true);
-         });
-    } else {
-       setIsSyncing(false);
-       setIsLoaded(true);
-    }
+         } catch (e) {
+            console.warn("Erro ao buscar dados do Google Sheets na inicialização.", e);
+         }
+      }
+      setIsFetchingCloud(false);
+      setInitialLoadDone(true);
+      setIsLoaded(true);
+    };
 
+    fetchSheets();
+    setIsLocalStorageLoaded(true);
   }, []);
   
-  useEffect(() => { if (isLoaded && !isSyncing) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, isLoaded, isSyncing]);
-  useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, isLoaded]);
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, initialLoadDone]);
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, initialLoadDone]);
   
   // ==========================================
-  // ESTATÍSTICAS ROTATIVAS E TELA DE KATAMARI
+  // ESTATÍSTICAS ROTATIVAS (COLEÇÃO FÍSICA)
   // ==========================================
   const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
   const rotatingStats = useMemo(() => {
@@ -1719,6 +1759,9 @@ export default function App() {
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
   }, [items, activeCategories]);
 
+  // ==========================================
+  // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
+  // ==========================================
   const hasSuggested = useRef(false);
   const [suggestion, setSuggestion] = useState(null);
 
@@ -1744,6 +1787,7 @@ export default function App() {
     }
   };
 
+  // Coleção Stats
   const totalItens = items.length;
   const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
@@ -1752,6 +1796,7 @@ export default function App() {
   const ratedItems = items.filter(i => (Number(i.rating) || 0) > 0);
   const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / ratedItems.length).toFixed(1) : 0;
 
+  // Jogos Zerados Stats
   const totalJogos = completedGames.length;
   const tempos = completedGames.map(g => Number(g.tempoHoras) || 0).filter(t => t > 0);
   const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
@@ -1776,38 +1821,56 @@ export default function App() {
   const byConsole = completedGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
   const consoleStatsStr = Object.entries(byConsole).sort((a,b)=>b[1]-a[1]).map(([c, count]) => `${c}: ${count}`).join(' | ');
   
+  // Configurações e Animação do Painel LED Infinito
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
-  const renderPacmanSeparator = () => (
-    <div className="flex items-center gap-2 mx-6 opacity-90 pb-0.5">
-       <Ghost className={`w-3.5 h-3.5 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
-       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
-       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
-       <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
-       <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
+  const renderKatamariSeparator = () => (
+    <div className="flex items-center mx-4 opacity-90 pb-0.5">
+       <KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} />
+    </div>
+  );
+
+  const renderPacmanEnd = () => (
+    <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
+       {/* Pacman facing left, eating dots toward the text */}
+       <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
          <path fill="#facc15" transform="scale(-1, 1) translate(-100, 0)">
            <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
          </path>
        </svg>
+       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
     </div>
   );
   
-  const renderMarqueeContent = () => (
-    <div className="flex items-center py-1" style={textShadowStyle}>
-      <span className={`text-sky-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span> {renderPacmanSeparator()}
-      {consoleStatsStr && <><span className={`text-purple-400 ${ledItemStyle}`}>CONSOLES: {consoleStatsStr}</span> {renderPacmanSeparator()}</>}
-      <span className={`text-rose-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span> {renderPacmanSeparator()}
-      {Number(maxTime) > 0 && <><span className={`text-rose-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span> {renderPacmanSeparator()}</>}
-      <span className={`text-yellow-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span> {renderPacmanSeparator()}
-      <span className={`text-green-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span> {renderPacmanSeparator()}
-      {mostExp && <><span className={`text-rose-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span> {renderPacmanSeparator()}</>}
-      {cheapest && <><span className={`text-sky-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span> {renderPacmanSeparator()}</>}
-      {biggestDisc && <><span className={`text-green-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span> {renderPacmanSeparator()}</>}
-    </div>
-  );
+  const renderMarqueeContent = () => {
+    const statsArr = [];
+    statsArr.push(<span key="1" className={`text-sky-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span>);
+    if (consoleStatsStr) statsArr.push(<span key="2" className={`text-purple-400 ${ledItemStyle}`}>CONSOLES: {consoleStatsStr}</span>);
+    statsArr.push(<span key="3" className={`text-rose-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span>);
+    if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-rose-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
+    statsArr.push(<span key="5" className={`text-yellow-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
+    statsArr.push(<span key="6" className={`text-green-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
+    if (mostExp) statsArr.push(<span key="7" className={`text-rose-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
+    if (cheapest) statsArr.push(<span key="8" className={`text-sky-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
+    if (biggestDisc) statsArr.push(<span key="9" className={`text-green-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
+
+    return (
+      <div className="flex items-center py-1" style={textShadowStyle}>
+        {statsArr.map((stat, index) => (
+          <React.Fragment key={index}>
+            {stat}
+            {index < statsArr.length - 1 ? renderKatamariSeparator() : renderPacmanEnd()}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
   
   const suggPressTimer = useRef(null);
   const isSuggLongPress = useRef(false);
@@ -1817,7 +1880,7 @@ export default function App() {
     suggPressTimer.current = setTimeout(() => {
       isSuggLongPress.current = true;
       shuffleSuggestion();
-    }, 500);
+    }, 500); 
   };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
   const handleSuggClick = (e) => {
@@ -1839,33 +1902,14 @@ export default function App() {
 
   const handleCompClick = () => { initAudio(); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
   
-  // TELA DE CARREGAMENTO COM KATAMARI
-  if (!isLoaded || isSyncing) {
+  if (isFetchingCloud || !isLoaded) {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'} flex flex-col items-center justify-center font-sans select-none overflow-hidden fixed inset-0 z-50`}>
-         <style>{`
-            @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
-            .animate-spin-reverse { animation: spin-reverse 2s linear infinite; }
-         `}</style>
-         <div className="flex flex-col items-center justify-center animate-in zoom-in duration-500 fade-in relative">
-           <svg viewBox="0 0 100 100" className="w-32 h-32 animate-spin-reverse drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
-             <circle cx="50" cy="50" r="30" fill="#06b6d4" /> {/* Ciano */}
-             <circle cx="20" cy="50" r="14" fill="#ec4899" /> {/* Rosa */}
-             <circle cx="80" cy="50" r="14" fill="#eab308" /> {/* Amarelo */}
-             <circle cx="50" cy="20" r="14" fill="#eab308" />
-             <circle cx="50" cy="80" r="14" fill="#ec4899" />
-             <circle cx="28" cy="28" r="12" fill="#ec4899" />
-             <circle cx="72" cy="72" r="12" fill="#eab308" />
-             <circle cx="28" cy="72" r="12" fill="#06b6d4" />
-             <circle cx="72" cy="28" r="12" fill="#06b6d4" />
-             <circle cx="50" cy="50" r="18" fill="#111" />
-             <circle cx="50" cy="50" r="8" fill="#eab308" />
-           </svg>
-           <div className="mt-8 font-black uppercase tracking-widest text-xs animate-pulse opacity-80">
-             Sincronizando Sheets...
-           </div>
-         </div>
-      </div>
+       <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
+          <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+          <KatamariIcon className="w-24 h-24 mb-6 z-10" glow={10} />
+          <p className="text-sky-400 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
+       </div>
     );
   }
 
