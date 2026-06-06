@@ -32,6 +32,38 @@ const initAudio = () => {
   } catch (e) { console.warn("Áudio não suportado", e); }
 };
 
+const playLydianSuccess = () => {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    
+    // Timbre Square clássico de chiptune
+    osc.type = 'square'; 
+    const now = audioCtx.currentTime;
+    
+    // Escala Lídio (Dó, Ré, Mi, Fá#, Sol, Lá) em Oitava Alta (C5 - A5) para soar como um sucesso em 8-bits
+    const notes = [523.25, 587.33, 659.25, 739.99, 783.99, 880.00]; 
+    const dur = 0.06; // Fusas / Arpejo rápido
+    
+    notes.forEach((freq, i) => {
+      osc.frequency.setValueAtTime(freq, now + i * dur);
+    });
+    
+    // Envelope de volume para não dar "click" nas caixas de som
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.01);
+    gain.gain.setValueAtTime(0.05, now + notes.length * dur - 0.02);
+    gain.gain.linearRampToValueAtTime(0, now + notes.length * dur);
+    
+    osc.start(now);
+    osc.stop(now + notes.length * dur);
+  } catch (e) { console.warn("Áudio não suportado", e); }
+};
+
 const playChipBeep = (type) => {
   try {
     if (!audioCtx) return;
@@ -230,13 +262,11 @@ const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
 const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
     <g>
-      {/* Rola no sentido anti-horário */}
       <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
-      {/* Base Sphere - Neon Mustard */}
-      <circle cx="50" cy="50" r="28" fill="none" stroke="#ffcc00" strokeWidth="6" strokeDasharray="5 5" />
-      <circle cx="50" cy="50" r="18" fill="none" stroke="#ffcc00" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/>
-      
-      {/* Outer Spikes - Fluorescent Cyan */}
+      {/* Esfera base preenchida de amarelo */}
+      <circle cx="50" cy="50" r="28" fill="#ffcc00" stroke="#ffcc00" strokeWidth="6" strokeDasharray="5 5" />
+      {/* Círculo interno mais escuro para dar textura dentro do amarelo */}
+      <circle cx="50" cy="50" r="18" fill="none" stroke="#ccaa00" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/>
       <g stroke="#00ffff" strokeWidth="6" strokeLinecap="round">
         <line x1="50" y1="4" x2="50" y2="16" />
         <line x1="50" y1="96" x2="50" y2="84" />
@@ -247,8 +277,6 @@ const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
         <line x1="17" y1="83" x2="26" y2="74" />
         <line x1="83" y1="17" x2="74" y2="26" />
       </g>
-
-      {/* Inner Spikes/Bumps - Neon Pink */}
       <g stroke="#ff007f" strokeWidth="7" strokeLinecap="round">
         <line x1="50" y1="18" x2="50" y2="22" />
         <line x1="50" y1="82" x2="50" y2="78" />
@@ -516,7 +544,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           const updatedItem = {...editedItem, wiki_info: aiText};
           setEditedItem(updatedItem); 
           playChipBeep('success'); onShowToast('success'); 
-          // O item é sincronizado via saveModifications que o usuário clica após gerar. 
       }
     } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); onShowToast('error'); } finally { setLoadingWiki(false); }
   };
@@ -1702,6 +1729,8 @@ export default function App() {
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data) && data.length > 0) setItems(data);
+              // CHIPTUNE DE SUCESSO (ESCALA LÍDIO)
+              playLydianSuccess();
             }
          } catch (e) {
             console.warn("Erro ao buscar dados do Google Sheets na inicialização.", e);
@@ -1835,16 +1864,15 @@ export default function App() {
 
   const renderPacmanEnd = () => (
     <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
-       {/* Pacman facing left, eating dots toward the text */}
+       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
+       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
        <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
          <path fill="#facc15" transform="scale(-1, 1) translate(-100, 0)">
            <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
          </path>
        </svg>
-       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
-       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
-       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
-       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
     </div>
   );
   
