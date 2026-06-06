@@ -41,19 +41,16 @@ const playLydianSuccess = () => {
     const gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
     
-    // Timbre Square clássico de chiptune
     osc.type = 'square'; 
     const now = audioCtx.currentTime;
     
-    // Escala Lídio (Dó, Ré, Mi, Fá#, Sol, Lá) em Oitava Alta (C5 - A5) para soar como um sucesso em 8-bits
     const notes = [523.25, 587.33, 659.25, 739.99, 783.99, 880.00]; 
-    const dur = 0.06; // Fusas / Arpejo rápido
+    const dur = 0.06; 
     
     notes.forEach((freq, i) => {
       osc.frequency.setValueAtTime(freq, now + i * dur);
     });
     
-    // Envelope de volume para não dar "click" nas caixas de som
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(0.05, now + 0.01);
     gain.gain.setValueAtTime(0.05, now + notes.length * dur - 0.02);
@@ -263,9 +260,7 @@ const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
     <g>
       <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
-      {/* Esfera base preenchida de amarelo */}
       <circle cx="50" cy="50" r="28" fill="#ffcc00" stroke="#ffcc00" strokeWidth="6" strokeDasharray="5 5" />
-      {/* Círculo interno mais escuro para dar textura dentro do amarelo */}
       <circle cx="50" cy="50" r="18" fill="none" stroke="#ccaa00" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/>
       <g stroke="#00ffff" strokeWidth="6" strokeLinecap="round">
         <line x1="50" y1="4" x2="50" y2="16" />
@@ -560,7 +555,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-sky-800 border-sky-500 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black'}`}>Salvar</button>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-[#00ffff] border-[#00ffff] text-black shadow-[3px_3px_0px_rgba(0,255,255,0.4)]' : 'bg-[#00ffff] border-black text-black'}`}>Salvar</button>
         </MContainer>
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4">
@@ -636,7 +631,16 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               </div>
             )}
           </MContainer>
-          <MButton darkMode={darkMode} onClick={() => setItemToDelete(editedItem.id)} variant="red" className="w-full mt-4">Remover da Coleção</MButton>
+          
+          <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[4px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-[#00ffff] border-[#00ffff] text-black shadow-[4px_4px_0px_rgba(0,255,255,0.4)]' : 'bg-[#00ffff] border-black text-black'}`}>
+            <Check className="w-5 h-5" /> Salvar Alterações
+          </button>
+          
+          <div className="mt-8 mb-2 text-center">
+            <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all underline underline-offset-4 ${darkMode ? 'text-gray-400 hover:text-rose-400' : 'text-gray-500 hover:text-rose-600'}`}>
+              Apagar este item
+            </button>
+          </div>
         </div>
       </div>
     );
