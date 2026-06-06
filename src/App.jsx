@@ -439,6 +439,16 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
     setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success');
+    
+    // Sincroniza também as Edições (Update) com o Google Sheets
+    if (settings?.googleSheetsUrl) {
+      fetch(settings.googleSheetsUrl, { 
+        method: 'POST', 
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+        body: JSON.stringify(editedItem) 
+      }).catch(err => console.error("Erro ao atualizar Sheets:", err));
+    }
   };
 
   const confirmDelete = () => {
@@ -774,6 +784,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     
     setItems([...items, newItem]); 
     
+    // Sincroniza Criação (Insert) com o Google Sheets
     if (settings?.googleSheetsUrl) {
       fetch(settings.googleSheetsUrl, { 
         method: 'POST', 
@@ -995,9 +1006,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   );
 };
 
-// ==========================================
-// COMPONENTE DASHBOARD DE JOGOS ZERADOS
-// ==========================================
 const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMode, onShowToast }) => {
   const [filterConsole, setFilterConsole] = useState('Todos');
   const [filterGenre, setFilterGenre] = useState('Todos');
@@ -1494,13 +1502,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <button onClick={() => setOpenSection(openSection === 'integracoes' ? null : 'integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
-          <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações (Opcional)</span>
+          <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações & Sync</span>
           <span className="text-lg font-mono">{openSection === 'integracoes' ? '−' : '+'}</span>
         </button>
         {openSection === 'integracoes' && (
           <div className="p-4 flex flex-col gap-3">
             <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
-            <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Salvar Novos)" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
+            <MInput darkMode={darkMode} label="App Script Web App URL (Google Sheets Sync)" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
             <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
           </div>
         )}
@@ -1554,7 +1562,9 @@ export default function App() {
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', webhookUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
+  
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(true); // Inicialmente true para travar se for baixar
   
   // Feedback Global Dinâmico
   const [toast, setToast] = useState({ visible: false, type: 'success' });
@@ -1615,8 +1625,9 @@ export default function App() {
     setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000);
   };
   
-  // BLOCO BLINDADO DE LOCAL STORAGE
+  // BLOCO BLINDADO DE LOCAL STORAGE E SYNC DO SHEETS
   useEffect(() => {
+    let parsedSettings = {};
     try {
       const savedTheme = localStorage.getItem('memorabilia_theme'); 
       if (savedTheme === 'dark') setDarkMode(true);
@@ -1629,7 +1640,8 @@ export default function App() {
       
       const savedSettings = localStorage.getItem('memorabilia_settings'); 
       if (savedSettings) {
-         setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }));
+         parsedSettings = JSON.parse(savedSettings);
+         setSettings(prev => ({ ...prev, ...parsedSettings }));
       }
       
       const savedCompleted = localStorage.getItem('memorabilia_completed'); 
@@ -1638,20 +1650,39 @@ export default function App() {
          setCompletedGames(Array.isArray(parsedC) ? parsedC : []);
       }
     } catch (e) {
-      console.error("Erro fatal ao ler localStorage. Iniciando com dados zerados para evitar quebra.", e);
-      setItems([]);
-      setCompletedGames([]);
+      console.error("Erro ao ler localStorage.", e);
     }
-    setIsLoaded(true);
+
+    // Sincronização Automática via Sheets OnLoad
+    if (parsedSettings && parsedSettings.googleSheetsUrl) {
+       setIsSyncing(true);
+       fetch(parsedSettings.googleSheetsUrl)
+         .then(res => res.json())
+         .then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+               setItems(data);
+               localStorage.setItem('memorabilia_items', JSON.stringify(data));
+            }
+         })
+         .catch(err => console.warn("Erro ao sincronizar do Google Sheets (Usando dados locais):", err))
+         .finally(() => {
+            setIsSyncing(false);
+            setIsLoaded(true);
+         });
+    } else {
+       setIsSyncing(false);
+       setIsLoaded(true);
+    }
+
   }, []);
   
-  useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, isLoaded]);
+  useEffect(() => { if (isLoaded && !isSyncing) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, isLoaded, isSyncing]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, isLoaded]);
   
   // ==========================================
-  // ESTATÍSTICAS ROTATIVAS (COLEÇÃO FÍSICA)
+  // ESTATÍSTICAS ROTATIVAS E TELA DE KATAMARI
   // ==========================================
   const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
   const rotatingStats = useMemo(() => {
@@ -1688,17 +1719,6 @@ export default function App() {
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
   }, [items, activeCategories]);
 
-  // Removido o setInterval para rotação automática
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length);
-  //   }, 3500);
-  //   return () => clearInterval(interval);
-  // }, [rotatingStats]);
-
-  // ==========================================
-  // ESTATÍSTICAS DO CABEÇALHO E SUGESTÃO
-  // ==========================================
   const hasSuggested = useRef(false);
   const [suggestion, setSuggestion] = useState(null);
 
@@ -1724,7 +1744,6 @@ export default function App() {
     }
   };
 
-  // Coleção Stats
   const totalItens = items.length;
   const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
@@ -1733,7 +1752,6 @@ export default function App() {
   const ratedItems = items.filter(i => (Number(i.rating) || 0) > 0);
   const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / ratedItems.length).toFixed(1) : 0;
 
-  // Jogos Zerados Stats
   const totalJogos = completedGames.length;
   const tempos = completedGames.map(g => Number(g.tempoHoras) || 0).filter(t => t > 0);
   const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
@@ -1758,7 +1776,6 @@ export default function App() {
   const byConsole = completedGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {});
   const consoleStatsStr = Object.entries(byConsole).sort((a,b)=>b[1]-a[1]).map(([c, count]) => `${c}: ${count}`).join(' | ');
   
-  // Configurações e Animação do Painel LED Infinito
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
@@ -1770,7 +1787,6 @@ export default function App() {
        <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
        <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
        <div className="w-1 h-1 bg-yellow-200 rounded-full shadow-[0_0_2px_currentColor]" />
-       {/* scale-x-[-1] com o Pac-Man apontando pra direita na origem faz ele apontar pra esquerda e comer as bolinhas de ré em direção ao fantasma */}
        <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
          <path fill="#facc15" transform="scale(-1, 1) translate(-100, 0)">
            <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
@@ -1801,7 +1817,7 @@ export default function App() {
     suggPressTimer.current = setTimeout(() => {
       isSuggLongPress.current = true;
       shuffleSuggestion();
-    }, 500); // Segurou por meio segundo para embaralhar
+    }, 500);
   };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
   const handleSuggClick = (e) => {
@@ -1823,7 +1839,35 @@ export default function App() {
 
   const handleCompClick = () => { initAudio(); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
   
-  if (!isLoaded) return null; 
+  // TELA DE CARREGAMENTO COM KATAMARI
+  if (!isLoaded || isSyncing) {
+    return (
+      <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'} flex flex-col items-center justify-center font-sans select-none overflow-hidden fixed inset-0 z-50`}>
+         <style>{`
+            @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
+            .animate-spin-reverse { animation: spin-reverse 2s linear infinite; }
+         `}</style>
+         <div className="flex flex-col items-center justify-center animate-in zoom-in duration-500 fade-in relative">
+           <svg viewBox="0 0 100 100" className="w-32 h-32 animate-spin-reverse drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+             <circle cx="50" cy="50" r="30" fill="#06b6d4" /> {/* Ciano */}
+             <circle cx="20" cy="50" r="14" fill="#ec4899" /> {/* Rosa */}
+             <circle cx="80" cy="50" r="14" fill="#eab308" /> {/* Amarelo */}
+             <circle cx="50" cy="20" r="14" fill="#eab308" />
+             <circle cx="50" cy="80" r="14" fill="#ec4899" />
+             <circle cx="28" cy="28" r="12" fill="#ec4899" />
+             <circle cx="72" cy="72" r="12" fill="#eab308" />
+             <circle cx="28" cy="72" r="12" fill="#06b6d4" />
+             <circle cx="72" cy="28" r="12" fill="#06b6d4" />
+             <circle cx="50" cy="50" r="18" fill="#111" />
+             <circle cx="50" cy="50" r="8" fill="#eab308" />
+           </svg>
+           <div className="mt-8 font-black uppercase tracking-widest text-xs animate-pulse opacity-80">
+             Sincronizando Sheets...
+           </div>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
