@@ -172,7 +172,7 @@ const parseTimeStr = (timeStr) => {
     const parts = str.split(':');
     return parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60);
   }
-  return parseFloat(str.replace(',', '.')) || 0;
+  return parseFloat(str.replace(/[hH]/g, '').replace(',', '.')) || 0;
 };
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
@@ -222,7 +222,11 @@ const processCompletedGamesCSV = (csvText) => {
     
     let anoFim = '';
     const rawFim = safeGet(row, iFim);
-    if (rawFim) { const parts = rawFim.split('/'); if (parts.length === 3) anoFim = parts[2].split(' ')[0]; }
+    if (rawFim) { 
+       // Regex para extrair um ano de 4 dígitos entre 1900 e 2099 perfeitamente
+       const match = rawFim.match(/\b(19|20)\d{2}\b/); 
+       if (match) anoFim = match[0]; 
+    }
     
     const cleanMoney = (val) => val ? val.replace(/R\$\s?/gi, '').trim() : '';
 
@@ -1129,7 +1133,10 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const topGenres = Object.entries(byGenre).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxGenre = topGenres.length > 0 ? topGenres[0][1] : 1;
   const byYear = filteredGames.reduce((acc, g) => {
-    if (g.anoFim) { acc[g.anoFim] = (acc[g.anoFim] || 0) + 1; }
+    const year = parseInt(g.anoFim);
+    if (!isNaN(year) && year > 1950 && year < 2100) { 
+        acc[year] = (acc[year] || 0) + 1; 
+    }
     return acc;
   }, {});
   const yearsKeys = Object.keys(byYear).sort();
