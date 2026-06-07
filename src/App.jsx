@@ -22,7 +22,7 @@ const DEFAULT_CLASS_CODES = {
 const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'];
 
 // ==========================================
-// AUDIO ENGINE E ANIMAÇÕES EXTRAS
+// AUDIO ENGINE E ANIMAÇÕES EXTRAS (CHIPTUNE 8-BIT)
 // ==========================================
 let audioCtx = null;
 const initAudio = () => {
@@ -41,19 +41,21 @@ const playLydianSuccess = () => {
     const gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
     
-    osc.type = 'square'; 
+    osc.type = 'square'; // Timbre 8-bit
     const now = audioCtx.currentTime;
     
+    // Escala Lídio de Dó (Dó, Ré, Mi, Fá#, Sol, Lá)
     const notes = [523.25, 587.33, 659.25, 739.99, 783.99, 880.00]; 
-    const dur = 0.06; 
+    const dur = 0.04; // Duração de "Fusa" (rápido)
     
     notes.forEach((freq, i) => {
       osc.frequency.setValueAtTime(freq, now + i * dur);
     });
     
+    // Volume discreto
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.05, now + 0.01);
-    gain.gain.setValueAtTime(0.05, now + notes.length * dur - 0.02);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.01);
+    gain.gain.setValueAtTime(0.04, now + notes.length * dur - 0.02);
     gain.gain.linearRampToValueAtTime(0, now + notes.length * dur);
     
     osc.start(now);
@@ -69,18 +71,35 @@ const playChipBeep = (type) => {
     osc.connect(gain); gain.connect(audioCtx.destination);
     const now = audioCtx.currentTime;
     
+    const vol = 0.02; // Volume discreto
+    
     if (type === 'save' || type === 'success') {
-      osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.type = 'square'; 
+      osc.frequency.setValueAtTime(440, now); 
+      osc.frequency.setValueAtTime(554.37, now + 0.05); // C#
+      gain.gain.setValueAtTime(vol, now); 
+      gain.gain.linearRampToValueAtTime(0, now + 0.1);
       osc.start(now); osc.stop(now + 0.1);
     } else if (type === 'error') {
-      osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
-      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.type = 'sawtooth'; 
+      osc.frequency.setValueAtTime(150, now); 
+      osc.frequency.setValueAtTime(100, now + 0.1);
+      gain.gain.setValueAtTime(vol, now); 
+      gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.start(now); osc.stop(now + 0.2);
     } else if (type === 'shuffle') {
-      osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
-      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      osc.start(now); osc.stop(now + 0.15);
+      osc.type = 'square'; 
+      osc.frequency.setValueAtTime(600, now); 
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+      gain.gain.setValueAtTime(vol, now); 
+      gain.gain.linearRampToValueAtTime(0, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'click') {
+      osc.type = 'square'; 
+      osc.frequency.setValueAtTime(800, now); 
+      gain.gain.setValueAtTime(0.01, now); 
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.start(now); osc.stop(now + 0.03);
     }
   } catch (e) {}
 };
@@ -256,7 +275,6 @@ const processCompletedGamesCSV = (csvText) => {
 // GERADOR HTML ESTÁTICO & DINÂMICO (BLOGGER/DESKTOP)
 // ==========================================
 const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
-  // Limpeza local inicial para servir de fallback (caso o leitor esteja sem internet ou erro na API)
   const cleanItems = items.map(i => ({
     id: i.id, type: i.type, title: i.title, author_developer: i.author_developer, 
     year: i.year, publisher: i.publisher, status: i.status, rating: i.rating || 0, 
@@ -284,9 +302,10 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
   .btn-mondrian { transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; }
   .btn-mondrian:active { transform: translate(2px, 2px); box-shadow: none !important; }
   .hide { display: none !important; }
-  .bg-mondrian-1 { background-color: #f43f5e; } /* rose-500 */
-  .bg-mondrian-2 { background-color: #0ea5e9; } /* sky-500 */
-  .bg-mondrian-3 { background-color: #facc15; } /* yellow-400 */
+  /* Cores Restritas: Pink, Ciano e Mostarda */
+  .bg-mondrian-1 { background-color: #ec4899; } /* pink-500 */
+  .bg-mondrian-2 { background-color: #22d3ee; } /* cyan-400 */
+  .bg-mondrian-3 { background-color: #fbbf24; } /* amber-400 */
   .bg-mondrian-4 { background-color: #ffffff; } /* white */
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 </style>
@@ -301,7 +320,7 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
       <p class="text-xs font-black uppercase tracking-widest mt-2 opacity-70">Catálogo de Acervo Digital</p>
     </div>
     <div class="flex gap-2">
-      <button onclick="switchTab('acervo')" id="btn-acervo" class="btn-mondrian mondrian-border-sm bg-[#0ea5e9] text-white px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest">Coleção Física</button>
+      <button onclick="switchTab('acervo')" id="btn-acervo" class="btn-mondrian mondrian-border-sm bg-[#22d3ee] text-black px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest">Coleção Física</button>
       <button onclick="switchTab('zerados')" id="btn-zerados" class="btn-mondrian mondrian-border-sm bg-white text-black px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-widest">Jogos Zerados</button>
     </div>
   </header>
@@ -309,7 +328,7 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
   <!-- ABA ACERVO -->
   <main id="tab-acervo" class="flex flex-col gap-4">
     <div class="mondrian-border bg-white p-3 flex flex-col md:flex-row gap-2 sticky top-2 z-10">
-      <input type="text" id="search-input" onkeyup="filterAcervo()" placeholder="Buscar título ou autor..." class="flex-1 p-2 border-[3px] border-black bg-gray-100 text-sm font-bold outline-none mondrian-border-sm focus:bg-sky-100">
+      <input type="text" id="search-input" onkeyup="filterAcervo()" placeholder="Buscar título ou autor..." class="flex-1 p-2 border-[3px] border-black bg-gray-100 text-sm font-bold outline-none mondrian-border-sm focus:bg-cyan-100">
       <select id="category-select" onchange="filterAcervo()" class="p-2 border-[3px] border-black text-[10px] font-black uppercase tracking-widest outline-none mondrian-border-sm bg-white">
         <option value="Todos">Todas as Categorias</option>
         ${Object.keys(activeCategories).map(cat => `<option value="${cat}">${cat}</option>`).join('')}
@@ -341,37 +360,35 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
   <div class="mondrian-border bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col" onclick="event.stopPropagation()">
     <div class="p-3 border-b-4 border-black flex justify-between items-center bg-gray-100 sticky top-0">
       <span class="text-xs font-black uppercase tracking-widest">Ficha Catalográfica</span>
-      <button onclick="closeModal()" class="btn-mondrian border-[3px] border-black bg-rose-500 text-white w-8 h-8 flex items-center justify-center font-black">X</button>
+      <button onclick="closeModal()" class="btn-mondrian border-[3px] border-black bg-[#ec4899] text-white w-8 h-8 flex items-center justify-center font-black">X</button>
     </div>
     <div id="modal-content" class="p-4 md:p-6 flex flex-col gap-4"></div>
   </div>
 </div>
 
 <script>
-  // Dados injetados do React (Fallback e Inicial)
   let dataAcervo = ${JSON.stringify(cleanItems)};
   const dataZerados = ${JSON.stringify(cleanCompleted)};
   const categoriesMap = ${JSON.stringify(activeCategories)};
   const sheetsUrl = "${sheetUrl || ''}";
   
-  // Cores Mondrian
   const mColors = ['bg-mondrian-1', 'bg-mondrian-2', 'bg-mondrian-3', 'bg-mondrian-4'];
 
   function switchTab(tab) {
     if(tab === 'acervo') {
       document.getElementById('tab-acervo').classList.remove('hide');
       document.getElementById('tab-zerados').classList.add('hide');
-      document.getElementById('btn-acervo').classList.replace('bg-white', 'bg-[#0ea5e9]');
-      document.getElementById('btn-acervo').classList.replace('text-black', 'text-white');
-      document.getElementById('btn-zerados').classList.replace('bg-[#0ea5e9]', 'bg-white');
+      document.getElementById('btn-acervo').classList.replace('bg-white', 'bg-[#22d3ee]');
+      document.getElementById('btn-acervo').classList.replace('text-black', 'text-black');
+      document.getElementById('btn-zerados').classList.replace('bg-[#22d3ee]', 'bg-white');
       document.getElementById('btn-zerados').classList.replace('text-white', 'text-black');
       filterAcervo();
     } else {
       document.getElementById('tab-acervo').classList.add('hide');
       document.getElementById('tab-zerados').classList.remove('hide');
-      document.getElementById('btn-zerados').classList.replace('bg-white', 'bg-[#0ea5e9]');
-      document.getElementById('btn-zerados').classList.replace('text-black', 'text-white');
-      document.getElementById('btn-acervo').classList.replace('bg-[#0ea5e9]', 'bg-white');
+      document.getElementById('btn-zerados').classList.replace('bg-white', 'bg-[#22d3ee]');
+      document.getElementById('btn-zerados').classList.replace('text-black', 'text-black');
+      document.getElementById('btn-acervo').classList.replace('bg-[#22d3ee]', 'bg-white');
       document.getElementById('btn-acervo').classList.replace('text-white', 'text-black');
       filterZerados();
     }
@@ -401,7 +418,7 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
             </div>
             <div class="flex justify-between items-end mt-2">
               <div class="text-[8px] px-1.5 py-0.5 border-2 border-black bg-gray-100 font-black uppercase">\${item.status || '--'}</div>
-              <div class="text-xs text-yellow-500 tracking-widest font-black drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">\${getStars(item.rating)}</div>
+              <div class="text-xs text-[#fbbf24] tracking-widest font-black drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">\${getStars(item.rating)}</div>
             </div>
           </div>
         </div>\`;
@@ -420,10 +437,10 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
            <div class="flex flex-col flex-1 overflow-hidden pr-2">
               <div class="text-sm font-black truncate">\${g.nome}</div>
               <div class="text-[9px] font-bold uppercase opacity-70 truncate">\${g.console} • \${g.genero}</div>
-              <div class="text-[8px] font-black mt-1 uppercase text-sky-600">\${g.suporte} (\${g.suporteStr})</div>
+              <div class="text-[8px] font-black mt-1 uppercase text-[#22d3ee]">\${g.suporte} (\${g.suporteStr})</div>
            </div>
            <div class="flex flex-col items-end justify-center min-w-[50px] border-l-2 border-black pl-2">
-              <div class="text-xs font-black text-yellow-500 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">\${getStars(g.nota)}</div>
+              <div class="text-xs font-black text-[#fbbf24] drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">\${getStars(g.nota)}</div>
               <div class="text-[9px] font-bold mt-1 opacity-70">\${Number(g.tempoHoras).toFixed(1)}h</div>
            </div>
         </div>\`;
@@ -473,12 +490,12 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
             <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-500">Formato</span><span class="font-bold text-sm">\${item.type || '--'}</span></div>
             <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-500">Tamanho</span><span class="font-bold text-sm">\${item.pages_or_time || '--'}</span></div>
             <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-500">Status</span><span class="font-bold text-sm">\${item.status || '--'}</span></div>
-            <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-500">Avaliação</span><span class="font-black text-sm text-yellow-500 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">\${getStars(item.rating)}</span></div>
+            <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-500">Avaliação</span><span class="font-black text-sm text-[#fbbf24] drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">\${getStars(item.rating)}</span></div>
           </div>
         </div>
       </div>
       \${item.description ? \`<div class="mt-2"><span class="text-[10px] font-black uppercase text-gray-500 block mb-1 border-b-2 border-gray-300">Descrição</span><p class="text-sm font-bold whitespace-pre-wrap leading-relaxed text-justify">\${item.description}</p></div>\` : ''}
-      \${item.wiki_info ? \`<div class="mt-2 p-3 border-[3px] border-black bg-purple-100"><span class="text-[10px] font-black uppercase text-purple-800 block mb-1 flex items-center gap-1">✨ Curiosidade</span><p class="text-xs font-bold whitespace-pre-wrap leading-relaxed italic">\${item.wiki_info}</p></div>\` : ''}
+      \${item.wiki_info ? \`<div class="mt-2 p-3 border-[3px] border-black bg-pink-100"><span class="text-[10px] font-black uppercase text-pink-800 block mb-1 flex items-center gap-1">✨ Curiosidade</span><p class="text-xs font-bold whitespace-pre-wrap leading-relaxed italic">\${item.wiki_info}</p></div>\` : ''}
     \`;
     document.getElementById('modal').classList.remove('hide');
     document.body.style.overflow = 'hidden';
@@ -490,30 +507,13 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
     document.body.style.overflow = 'auto';
   }
 
-  // Lógica de Sincronização Dinâmica
+  // Sincronização
   function fetchLiveData() {
-    if(!sheetsUrl) {
-      renderAcervo(dataAcervo);
-      return;
-    }
-    
-    document.getElementById('acervo-grid').innerHTML = '<div class="col-span-full p-10 text-center font-black uppercase text-[10px] text-sky-600 animate-pulse tracking-widest">Sincronizando banco de dados...</div>';
-    
-    fetch(sheetsUrl)
-      .then(res => res.json())
-      .then(data => {
-         if(Array.isArray(data) && data.length > 0) {
-            dataAcervo = data;
-         }
-         filterAcervo(); 
-      })
-      .catch(err => {
-         console.error("Falha ao buscar dados ao vivo, usando versão local salva.", err);
-         filterAcervo(); 
-      });
+    if(!sheetsUrl) { renderAcervo(dataAcervo); return; }
+    document.getElementById('acervo-grid').innerHTML = '<div class="col-span-full p-10 text-center font-black uppercase text-[10px] text-[#22d3ee] animate-pulse tracking-widest">Sincronizando banco de dados...</div>';
+    fetch(sheetsUrl).then(res => res.json()).then(data => { if(Array.isArray(data) && data.length > 0) { dataAcervo = data; } filterAcervo(); }).catch(err => { console.error(err); filterAcervo(); });
   }
 
-  // Inicialização
   fetchLiveData();
 </script>
 </body>
@@ -523,17 +523,17 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
 // ==========================================
 // ÍCONES NATIVOS E ANIMAÇÕES
 // ==========================================
-const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none" }) => (
-  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className}>{path}</svg>
+const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => (
+  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>
 );
 
 const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
     <g>
       <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
-      <circle cx="50" cy="50" r="28" fill="#ffcc00" stroke="#ffcc00" strokeWidth="6" strokeDasharray="5 5" />
-      <circle cx="50" cy="50" r="18" fill="none" stroke="#ccaa00" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/>
-      <g stroke="#00ffff" strokeWidth="6" strokeLinecap="round">
+      <circle cx="50" cy="50" r="28" fill="#fbbf24" stroke="#fbbf24" strokeWidth="6" strokeDasharray="5 5" />
+      <circle cx="50" cy="50" r="18" fill="none" stroke="#d97706" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/>
+      <g stroke="#22d3ee" strokeWidth="6" strokeLinecap="round">
         <line x1="50" y1="4" x2="50" y2="16" />
         <line x1="50" y1="96" x2="50" y2="84" />
         <line x1="4" y1="50" x2="16" y2="50" />
@@ -543,7 +543,7 @@ const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
         <line x1="17" y1="83" x2="26" y2="74" />
         <line x1="83" y1="17" x2="74" y2="26" />
       </g>
-      <g stroke="#ff007f" strokeWidth="7" strokeLinecap="round">
+      <g stroke="#ec4899" strokeWidth="7" strokeLinecap="round">
         <line x1="50" y1="18" x2="50" y2="22" />
         <line x1="50" y1="82" x2="50" y2="78" />
         <line x1="18" y1="50" x2="22" y2="50" />
@@ -636,21 +636,23 @@ const usePWA = (iconUrl) => {
 // COMPONENTES UI MONDRIAN
 // ==========================================
 const getMondrianColor = (index, darkMode) => {
-  const colorsLight = ['bg-rose-500', 'bg-sky-500', 'bg-yellow-400', 'bg-white'];
-  const colorsDark = ['bg-rose-700', 'bg-sky-700', 'bg-yellow-600', 'bg-gray-800'];
+  const colorsLight = ['bg-pink-500', 'bg-cyan-400', 'bg-amber-400', 'bg-white'];
+  const colorsDark = ['bg-pink-800', 'bg-cyan-800', 'bg-amber-700', 'bg-gray-800'];
   return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
 };
+
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
-  <div className={`border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
+  <div className={`border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
 );
+
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
   let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
-  if (variant === 'red') bgClass = darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black';
-  if (variant === 'blue') bgClass = darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black';
-  if (variant === 'yellow') bgClass = darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black';
+  if (variant === 'pink' || variant === 'red') bgClass = darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black';
+  if (variant === 'cyan' || variant === 'blue') bgClass = darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black';
+  if (variant === 'amber' || variant === 'yellow') bgClass = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black';
   if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
   return (
-    <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
+    <button disabled={disabled} onClick={(e) => { playChipBeep('click'); if(onClick) onClick(e); }} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
       {icon && icon} {children}
     </button>
   );
@@ -659,31 +661,33 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
 const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) => (
   <div className="flex flex-col mb-3 w-full overflow-hidden">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
-    <div className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans ${emphasize ? 'text-lg text-rose-500 font-black tracking-widest text-center' : 'text-sm font-bold'} ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : 'truncate'}`}>
+    <div className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans ${emphasize ? 'text-lg text-pink-500 font-black tracking-widest text-center' : 'text-sm font-bold'} ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : 'truncate'}`}>
       {value || '--'}
     </div>
   </div>
 );
+
 const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly=false }) => (
   <div className="flex flex-col mb-3 w-full">
     <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
     {multiline ? (
-      <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-yellow-100 dark:focus:bg-yellow-900'} transition-colors min-h-[80px] resize-none`} />
+      <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-amber-100 dark:focus:bg-amber-900'} transition-colors min-h-[80px] resize-none`} />
     ) : (
-      <input readOnly={readOnly} type={type} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-sky-100 dark:focus:bg-sky-900'} transition-colors`} />
+      <input readOnly={readOnly} type={type} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly ? '' : 'focus:bg-cyan-100 dark:focus:bg-cyan-900'} transition-colors`} />
     )}
   </div>
 );
+
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Sim", cancelText = "Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm z-[200]">
       <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>{title}</h3>
+        <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</h3>
         <p className="text-sm font-bold opacity-90">{message}</p>
         <div className="flex gap-2 mt-4">
           <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
-          <MButton darkMode={darkMode} variant="red" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
+          <MButton darkMode={darkMode} variant="pink" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
         </div>
       </MContainer>
     </div>
@@ -693,7 +697,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v }) => (
   <div className="flex items-center gap-2 w-full mb-2">
     <div className="w-16 text-[9px] font-black uppercase tracking-widest truncate" title={label}>{label}</div>
-    <div className={`flex-1 h-5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-gray-800 border-gray-500 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-gray-200 border-black'} flex relative overflow-hidden`}>
+    <div className={`flex-1 h-5 border-[3px] ${darkMode ? 'bg-gray-800 border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-gray-200 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} flex relative overflow-hidden`}>
       <div className={`h-full transition-all duration-1000 ${getMondrianColor(index, darkMode)}`} style={{ width: `${max > 0 ? (value / max) * 100 : 0}%` }} />
       <span className={`absolute inset-0 flex items-center ml-2 text-[10px] font-black ${darkMode ? 'text-white' : 'text-black'} drop-shadow-md`}>{valueFormatter(value)}</span>
     </div>
@@ -750,16 +754,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       if (sortBy === 'id') {
          return sortOrder === 'asc' ? a._originalIndex - b._originalIndex : b._originalIndex - a._originalIndex;
       }
-      
       let valA = a[sortBy] || '';
       let valB = b[sortBy] || '';
-
       if (['year', 'rating', 'pages_or_time'].includes(sortBy)) {
         valA = parseFloat(valA) || 0;
         valB = parseFloat(valB) || 0;
         return sortOrder === 'asc' ? valA - valB : valB - valA;
       }
-
       valA = String(valA).toLowerCase();
       valB = String(valB).toLowerCase();
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -773,7 +774,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
-  const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
+  const handleSelect = (item) => { playChipBeep('click'); setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, newRating) => { 
     const updatedItem = { ...items.find(i => i.id === id), rating: newRating };
     setItems(items.map(item => item.id === id ? updatedItem : item));
@@ -796,6 +797,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   };
 
   const fetchWikiInfo = async () => {
+    playChipBeep('click');
     const apiKey = settings?.geminiApiKey || ""; 
     if (!apiKey) { setWikiError("Chave de API ausente (Vá em Ajustes)."); playChipBeep('error'); onShowToast('error'); return; }
     setLoadingWiki(true); setWikiError('');
@@ -825,10 +827,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
-            <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => { playChipBeep('click'); setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-[#00ffff] border-[#00ffff] text-black shadow-[3px_3px_0px_rgba(0,255,255,0.4)]' : 'bg-[#00ffff] border-black text-black'}`}>Salvar</button>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>Salvar</button>
         </MContainer>
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4">
@@ -836,13 +838,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
-              {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-500 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
+              {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-300 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
               <MInput label="Título" value={editedItem.title || ''} onChange={e => setEditedItem({...editedItem, title: e.target.value})} darkMode={darkMode} />
               <MInput label="Autor/Artista" value={editedItem.author_developer || ''} onChange={e => setEditedItem({...editedItem, author_developer: e.target.value})} darkMode={darkMode} />
             </div>
           </div>
           
-          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${darkMode ? 'bg-gray-800 border-gray-500 text-sky-400' : 'bg-sky-100 border-black text-sky-800'}`}>
+          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" onClick={()=>playChipBeep('click')} className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
             <ExternalLink className="w-4 h-4" /> Buscar "{editedItem.title}" na Web
           </a>
 
@@ -858,29 +860,29 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           <div className="flex gap-2 flex-col sm:flex-row">
             {isBookOrGame && (
               <MContainer darkMode={darkMode} className="flex-1 p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
-                <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status Atual</label>
+                <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-sky-700 border-sky-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => { playChipBeep('click'); setEditedItem({...editedItem, status: opt}); }} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </MContainer>
             )}
             <MContainer darkMode={darkMode} className="flex-1 p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
-              <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Sua Avaliação</label>
+              <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Sua Avaliação</label>
               <div className="flex gap-1.5 mt-2">
                 {[1, 2, 3, 4, 5].map(star => (
-                  <Star key={star} onClick={() => setEditedItem({...editedItem, rating: star})} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= (editedItem.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
+                  <Star key={star} onClick={() => { playChipBeep('click'); setEditedItem({...editedItem, rating: star}); }} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= (editedItem.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
                  ))}
               </div>
             </MContainer>
           </div>
           <MInput label="Sinopse / Descrição" multiline value={editedItem.description || ''} onChange={e => setEditedItem({...editedItem, description: e.target.value})} darkMode={darkMode} />
-          <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-yellow-900/30 text-white' : 'bg-yellow-100 text-black'}>
+          <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-100 text-black'}>
             <MInput label="Fichamento e Anotações" multiline value={editedItem.notes || ''} onChange={e => setEditedItem({...editedItem, notes: e.target.value})} darkMode={darkMode} />
           </MContainer>
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-purple-900/20 text-white' : 'bg-purple-200 text-black'}>
-            <div className={`flex justify-between items-center mb-3 border-b-[4px] pb-1 ${darkMode ? 'border-purple-800' : 'border-black'}`}>
+          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-100 text-black'}>
+            <div className={`flex justify-between items-center mb-3 border-b-[4px] pb-1 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Sparkles className="w-4 h-4" /> Enciclopédia (Modo IA)</span>
             </div>
             {editedItem.wiki_info ? (
@@ -892,25 +894,25 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
              <div className="text-center py-2">
                 {loadingWiki ? (
                   <div className="flex flex-col items-center">
-                    <Sparkles className="w-6 h-6 animate-pulse mb-2 text-purple-600" />
+                    <Sparkles className="w-6 h-6 animate-pulse mb-2 text-pink-500" />
                     <span className="text-[10px] font-black uppercase tracking-widest animate-pulse opacity-70">Consultando oráculo digital...</span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
-                    {wikiError && <span className="text-[9px] font-bold text-rose-500 block break-words whitespace-pre-wrap">{wikiError}</span>}
-                    <MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-purple-600 border-black dark:bg-purple-700 text-white">✨ Pesquisar sobre a Obra</MButton>
+                    {wikiError && <span className="text-[9px] font-bold text-pink-500 block break-words whitespace-pre-wrap">{wikiError}</span>}
+                    <MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-pink-500 border-black dark:bg-pink-600 text-white">✨ Pesquisar sobre a Obra</MButton>
                   </div>
                 )}
               </div>
             )}
           </MContainer>
           
-          <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[4px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-[#00ffff] border-[#00ffff] text-black shadow-[4px_4px_0px_rgba(0,255,255,0.4)]' : 'bg-[#00ffff] border-black text-black'}`}>
+          <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[4px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-400 border-gray-300 text-black' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 border-black text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
             <Check className="w-5 h-5" /> Salvar Alterações
           </button>
           
           <div className="mt-8 mb-2 text-center">
-            <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all underline underline-offset-4 ${darkMode ? 'text-gray-400 hover:text-rose-400' : 'text-gray-500 hover:text-rose-600'}`}>
+            <button onClick={() => { playChipBeep('click'); setItemToDelete(editedItem.id); }} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all underline underline-offset-4 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>
               Apagar este item
             </button>
           </div>
@@ -925,11 +927,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         <div className="flex gap-2 w-full items-center">
           <div className="relative flex-1">
             <Search className={`absolute left-2.5 top-2.5 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
-            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-8 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-xs font-bold outline-none`} />
+            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-8 border-[4px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-xs font-bold outline-none`} />
           </div>
           
           <div className="flex gap-1 items-center flex-shrink-0">
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={`w-[85px] p-2 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={`w-[85px] p-2 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}>
               <option value="id">Adição</option>
               <option value="title">Título</option>
               <option value="author_developer">Autor</option>
@@ -937,19 +939,19 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <option value="rating">Nota</option>
               <option value="pages_or_time">Tamanho</option>
             </select>
-            <button onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')} className={`w-8 h-[34px] flex items-center justify-center border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+            <button onClick={() => { playChipBeep('click'); setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); }} className={`w-8 h-[34px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>
               {sortOrder === 'asc' ? '↑' : '↓'}
             </button>
           </div>
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={cat} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeCategory === cat ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
+          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={cat} onClick={() => { playChipBeep('click'); setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeCategory === cat ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
         </div>
         {activeCategory !== 'Todos' && activeCategories[activeCategory] && activeCategories[activeCategory].length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <button onClick={() => { setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeSubtype === 'Todos' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
-            {activeCategories[activeCategory].map(type => <button key={type} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black'} ${activeSubtype === type ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
+            <button onClick={() => { playChipBeep('click'); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === 'Todos' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
+            {activeCategories[activeCategory].map(type => <button key={type} onClick={() => { playChipBeep('click'); setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === type ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
           </div>
         )}
       </MContainer>
@@ -970,10 +972,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                     </div>
                     <div className="flex justify-between items-end mt-auto">
                       {[...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(item.type) ? (
-                        <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-500 bg-sky-900 text-sky-300' : 'border-black bg-yellow-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
+                        <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-300 bg-cyan-900 text-cyan-300' : 'border-black bg-amber-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
                       ) : <div></div>}
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
-                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
                     </div>
                  </div>
@@ -1000,7 +1002,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   const isProcessingScan = useRef(false);
   const [formData, setFormData] = useState({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
   const updateStatus = (state, message) => setScanBox({ state, message });
-  const changeMode = (newMode) => { setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); } };
+  const changeMode = (newMode) => { playChipBeep('click'); setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); } };
   
   useEffect(() => {
     if (scannedAIData) {
@@ -1143,14 +1145,14 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   
   return (
     <div className="flex flex-col h-full pb-20">
-      <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar." onConfirm={() => setShowErrorModal(false)} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
+      <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar." onConfirm={() => { playChipBeep('click'); setShowErrorModal(false); }} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
       <div className="flex gap-2 mb-4">
-        <MButton darkMode={darkMode} variant={addMode === 'manual' ? 'blue' : 'white'} onClick={() => changeMode('manual')} className="flex-1 py-2 text-[10px]"><PlusSquare className="w-4 h-4" /> Manual</MButton>
-        <MButton darkMode={darkMode} variant={addMode === 'barcode' ? 'yellow' : 'white'} onClick={() => changeMode('barcode')} className="flex-1 py-2 text-[10px]"><ScanLine className="w-4 h-4" /> Barcode</MButton>
-        <MButton darkMode={darkMode} variant="red" onClick={triggerGlobalAI} className="flex-1 py-2 text-[10px]"><Camera className="w-4 h-4" /> Auto IA</MButton>
+        <MButton darkMode={darkMode} variant={addMode === 'manual' ? 'cyan' : 'white'} onClick={() => changeMode('manual')} className="flex-1 py-2 text-[10px]"><PlusSquare className="w-4 h-4" /> Manual</MButton>
+        <MButton darkMode={darkMode} variant={addMode === 'barcode' ? 'amber' : 'white'} onClick={() => changeMode('barcode')} className="flex-1 py-2 text-[10px]"><ScanLine className="w-4 h-4" /> Barcode</MButton>
+        <MButton darkMode={darkMode} variant="pink" onClick={triggerGlobalAI} className="flex-1 py-2 text-[10px]"><Camera className="w-4 h-4" /> Auto IA</MButton>
       </div>
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-yellow-700 border-yellow-500 text-white' : 'bg-yellow-400 border-black text-black') : displayBoxState === 'success' ? (darkMode ? 'bg-sky-800 border-sky-500 text-white' : 'bg-sky-400 border-black text-black') : (darkMode ? 'bg-rose-800 border-rose-500 text-white' : 'bg-rose-400 border-black text-black')}`}>
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-700 border-gray-300 text-white shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'bg-amber-400 border-black text-black') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-pink-800 border-gray-300 text-white shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'bg-pink-500 border-black text-white')}`}>
           {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-sm animate-spin flex-shrink-0" />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
@@ -1172,7 +1174,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
             <div className="mb-4">
               <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Formato Específico</label>
-              <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className={`w-full p-2 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'} font-sans text-sm outline-none font-black`}>
+              <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm outline-none font-black`}>
                 {Object.entries(activeCategories || {}).map(([cat, subs]) => (<optgroup label={`--- ${cat.toUpperCase()} ---`} key={cat}>{(Array.isArray(subs) ? subs : []).map(sub => <option key={sub} value={sub}>{sub}</option>)}</optgroup>))}
               </select>
             </div>
@@ -1194,15 +1196,15 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-sky-700 border-sky-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-600 text-gray-400 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => { playChipBeep('click'); setFormData({...formData, status: opt}); }} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </div>
             )}
             <div className="mb-4">
               <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Avaliação (Nota)</label>
-              <div className={`flex gap-2 p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] justify-center ${darkMode ? 'border-gray-500 bg-gray-800 shadow-[3px_3px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white'}`}>
-                {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => setFormData({...formData, rating: star})} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= formData.rating ? (darkMode ? 'fill-yellow-500 text-yellow-500' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+              <div className={`flex gap-2 p-3 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white'} justify-center`}>
+                {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => { playChipBeep('click'); setFormData({...formData, rating: star}); }} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= formData.rating ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
               </div>
             </div>
             <MButton darkMode={darkMode} onClick={handleSave} variant="black" className="mt-2 py-4 text-sm"><Check className="w-6 h-6 mr-2" /> Salvar Item</MButton>
@@ -1257,15 +1259,15 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           <FilterIcon className="w-4 h-4" /> Filtros Interativos
         </div>
         <div className="flex gap-2">
-          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+          <select value={filterCat} onChange={e => { playChipBeep('click'); setFilterCat(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Tudo</option>
             {Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+          <select value={filterStatus} onChange={e => { playChipBeep('click'); setFilterStatus(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Status</option>
             {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
-          <select value={filterRating} onChange={e => setFilterRating(e.target.value)} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+          <select value={filterRating} onChange={e => { playChipBeep('click'); setFilterRating(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Notas</option>
             {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Estrelas</option>)}
           </select>
@@ -1273,7 +1275,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       </MContainer>
 
       <div className="grid grid-cols-2 gap-3">
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black'}>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black'}>
           <LibraryBig className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
           <div className="text-5xl font-black z-10">{totalDash}</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div>
@@ -1290,7 +1292,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       {totalDash > 0 && (
         <>
           <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Formatos Populares</div>
+             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Formatos Populares</div>
             <div className="flex flex-col">
               {sortedTypes.map(([type, count], index) => <MondrianHBar key={type} label={type} value={count} max={maxType} index={index} darkMode={darkMode} />)}
             </div>
@@ -1298,13 +1300,13 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
           <div className="grid grid-cols-2 gap-3">
              {stats.reliquia && (
-              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
+              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div>
                 <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year}</div></div>
               </MContainer>
             )}
              {stats.epico && (
-              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
+              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between min-h-[100px]" colorClass={darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black'}>
                 <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
                 <div>
                    <div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.epico.title || 'Sem Título')}</div>
@@ -1315,7 +1317,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           </div>
 
           <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-            <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Top 5 Autores / Estúdios</div>
+            <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Top 5 Autores / Estúdios</div>
             <div className="flex flex-col">
               {sortedAuthors.map(([author, count], index) => <MondrianHBar key={author} label={String(author || 'Desconhecido')} value={count} max={maxAuthor} index={index + 1} darkMode={darkMode} />)}
             </div>
@@ -1323,14 +1325,14 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
           {decadesKeys.length > 0 && (
             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-              <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-500' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
+              <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
               <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
                 {decadesKeys.map((decadeStr, idx) => {
                   const count = byDecade[decadeStr]; const heightPerc = (count / maxDecade) * 100;
                   return (
                     <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
                       <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                      <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-500' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                      <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
                    </div>
                   );
                 })}
@@ -1417,7 +1419,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         <GamepadIcon className="w-16 h-16 mb-4 opacity-20" />
         <h2 className="text-xl font-black uppercase tracking-widest mb-2">Sem Dados</h2>
         <p className="text-[10px] font-bold mb-6 opacity-70">Acesse a aba Ajustes para fazer o upload do .CSV atualizado da sua lista de jogos zerados.</p>
-        <label className={`cursor-pointer w-full py-4 text-center border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] text-[10px] font-black uppercase tracking-widest active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-sky-800 border-gray-500 text-white shadow-[4px_4px_0px_rgba(100,100,100,0.5)]' : 'bg-sky-400 border-black text-black'}`}>
+        <label className={`cursor-pointer w-full py-4 text-center border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-800 text-white' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 text-black'} text-[10px] font-black uppercase tracking-widest active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
           📤 Fazer Upload do CSV
           <input type="file" accept=".csv" className="hidden" onChange={handleManualImport} />
         </label>
@@ -1432,25 +1434,25 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       <div className="flex flex-col h-full pb-20 relative">
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
-            <button onClick={() => setSelectedGame(null)} className={`p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => { playChipBeep('click'); setSelectedGame(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Registro de Conclusão</div>
           </div>
         </MContainer>
         
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4">
-            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex flex-col items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-sky-900' : 'bg-sky-200'}`}>
+            <MContainer darkMode={darkMode} className="w-32 h-44 flex-shrink-0 flex flex-col items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-cyan-900' : 'bg-cyan-200'}`}>
                <GamepadIcon className={`w-12 h-12 mb-2 ${darkMode ? 'text-white opacity-40' : 'text-black opacity-30'}`} />
                <span className="text-[10px] font-black uppercase tracking-widest opacity-60 px-2 text-center">{selectedGame.console}</span>
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
-              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-sky-500 text-sky-300 bg-sky-900' : 'border-black text-black bg-sky-300'}`}>FINALIZADO</div>
+              <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-300 text-cyan-300 bg-cyan-900' : 'border-black text-black bg-cyan-300'}`}>FINALIZADO</div>
               <MReadOnlyBox label="Nome do Jogo" value={selectedGame.nome} darkMode={darkMode} />
               <MReadOnlyBox label="Gênero" value={selectedGame.genero} darkMode={darkMode} />
             </div>
           </div>
 
-          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${darkMode ? 'bg-gray-800 border-gray-500 text-sky-400' : 'bg-sky-100 border-black text-sky-800'}`}>
+          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" onClick={()=>playChipBeep('click')} className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] border-black bg-cyan-100 text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
             <ExternalLink className="w-4 h-4" /> {linkInfo.isExact ? "Acessar Link Salvo na Planilha" : `Buscar "${selectedGame.nome}" na Web`}
           </a>
 
@@ -1464,7 +1466,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           </div>
 
           {(selectedGame.precoPago || selectedGame.precoSemDesc) && (
-            <MContainer darkMode={darkMode} className="p-3 grid grid-cols-2 gap-2" colorClass={darkMode ? 'bg-rose-900/40 text-white' : 'bg-rose-100 text-black'}>
+            <MContainer darkMode={darkMode} className="p-3 grid grid-cols-2 gap-2" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}>
                 <MReadOnlyBox label="Preço Pago" value={selectedGame.precoPago ? `R$ ${selectedGame.precoPago}` : '--'} darkMode={darkMode} />
                <MReadOnlyBox label="Preço Sem Desconto" value={selectedGame.precoSemDesc ? `R$ ${selectedGame.precoSemDesc}` : '--'} darkMode={darkMode} />
             </MContainer>
@@ -1485,15 +1487,15 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           <div className="flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros de Zerados</div>
         </div>
         <div className="flex gap-2">
-          <select value={filterConsole} onChange={e => { setFilterConsole(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+          <select value={filterConsole} onChange={e => { playChipBeep('click'); setFilterConsole(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Consoles</option>
             {uniqueConsoles.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={filterGenre} onChange={e => { setFilterGenre(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+          <select value={filterGenre} onChange={e => { playChipBeep('click'); setFilterGenre(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Gêneros</option>
             {uniqueGenres.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={filterSupport} onChange={e => { setFilterSupport(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-white text-black'}`}>
+          <select value={filterSupport} onChange={e => { playChipBeep('click'); setFilterSupport(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Mídia</option>
             <option value="Físico">Física</option>
             <option value="Digital/Outro">Digital</option>
@@ -1503,17 +1505,17 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
       {/* BLOCO DE ESTATÍSTICAS */}
       <div className="grid grid-cols-2 gap-3">
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400 text-black'}>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black'}>
           <GamepadIcon className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
           <div className="text-5xl font-black z-10">{totalJogos}</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Jogos Finalizados</div>
         </MContainer>
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-rose-800 text-white' : 'bg-rose-500 text-black'}>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black'}>
           <Clock className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
           <div className="text-3xl font-black z-10">{totalHoras}h</div>
           <div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Total de Horas</div>
         </MContainer>
-        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20" colorClass={darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400 text-black'}>
+        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-20" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black'}>
           <div className="text-2xl font-black z-10">★ {mediaNota}</div>
           <div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Média Geral / 10</div>
         </MContainer>
@@ -1526,7 +1528,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
       {/* BLOCO DE GRÁFICOS */}
       <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Consoles Dominantes</div>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Consoles Dominantes</div>
         <div className="flex flex-col">
           {topConsoles.map(([cons, count], index) => <MondrianHBar key={cons} label={cons} value={count} max={maxConsole} index={index} darkMode={darkMode} />)}
           {topConsoles.length === 0 && <span className="opacity-50 text-xs">Sem dados.</span>}
@@ -1534,7 +1536,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       </MContainer>
 
       <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-500' : 'border-black'}`}>Gêneros Favoritos</div>
+        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Gêneros Favoritos</div>
         <div className="flex flex-col">
           {topGenres.map(([gen, count], index) => <MondrianHBar key={gen} label={gen} value={count} max={maxGenre} index={index + 2} darkMode={darkMode} />)}
           {topGenres.length === 0 && <span className="opacity-50 text-xs">Sem dados.</span>}
@@ -1543,7 +1545,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
       {yearsKeys.length > 0 && (
         <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-          <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-500' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
+          <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
           <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
             {yearsKeys.map((yearStr, idx) => {
               const count = byYear[yearStr];
@@ -1551,7 +1553,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
               return (
                 <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
                   <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                  <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-500' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                  <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
                  </div>
               );
             })}
@@ -1563,19 +1565,19 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       )}
 
       {/* BLOCO DA LISTA PAGINADA */}
-      <div className={`text-[10px] font-black uppercase tracking-widest border-b-[4px] pb-2 mt-4 ${darkMode ? 'border-gray-500' : 'border-black'}`}>
+      <div className={`text-[10px] font-black uppercase tracking-widest border-b-[4px] pb-2 mt-4 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
         Lista Completa ({paginatedGames.length} de {filteredGames.length})
       </div>
       <div className="flex flex-col gap-3">
         {paginatedGames.map((g) => (
-          <div key={g.id} onClick={() => setSelectedGame(g)} className={`cursor-pointer p-2 border-[4px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'bg-gray-800 border-gray-600 shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-white border-black'} flex justify-between`}>
+          <div key={g.id} onClick={() => { playChipBeep('click'); setSelectedGame(g); }} className={`cursor-pointer p-2 border-[4px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white border-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all flex justify-between`}>
              <div className="flex flex-col flex-1 overflow-hidden pr-2">
                 <div className="text-sm font-black truncate">{g.nome}</div>
                 <div className="text-[9px] font-bold uppercase opacity-70 truncate">{g.console} • {g.genero}</div>
-                <div className="text-[8px] font-black mt-1 uppercase text-sky-600 dark:text-sky-400">{g.suporte} ({g.suporteStr})</div>
+                <div className="text-[8px] font-black mt-1 uppercase text-cyan-600 dark:text-cyan-400">{g.suporte} ({g.suporteStr})</div>
              </div>
              <div className="flex flex-col items-end justify-center min-w-[50px] border-l-[3px] border-current pl-2">
-                <div className="text-[12px] font-black leading-none">★ {g.nota}/10</div>
+                <div className="text-[12px] font-black leading-none text-amber-500">★ {g.nota}/10</div>
                 <div className="text-[8px] font-bold mt-1 opacity-70">{(Number(g.tempoHoras)||0).toFixed(1)}h</div>
              </div>
           </div>
@@ -1599,6 +1601,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
   
   const handleExportCSV = () => {
+    playChipBeep('click');
     if (items.length === 0) return;
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
@@ -1721,7 +1724,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     const htmlStr = getBloggerHTMLString(items, completedGames, activeCategories, settings?.googleSheetsUrl);
     const textArea = document.createElement("textarea");
     textArea.value = htmlStr;
-    textArea.style.position = "fixed"; // Evita que a página role para baixo
+    textArea.style.position = "fixed"; 
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
@@ -1737,24 +1740,29 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     document.body.removeChild(textArea);
   };
 
+  const toggleSection = (sectionName) => {
+    playChipBeep('click');
+    setOpenSection(openSection === sectionName ? null : sectionName);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative">
-      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca principal? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('success'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
-      <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('success'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir Coleção" />
+      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca principal? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('success'); onShowToast('success'); }} onCancel={() => { playChipBeep('click'); setShowResetConfirm(false); }} darkMode={darkMode} confirmText="Apagar Tudo" />
+      <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('success'); onShowToast('success'); } }} onCancel={() => { playChipBeep('click'); setImportData(null); }} darkMode={darkMode} confirmText="Substituir Coleção" />
 
       {pwa.isInstallable && !pwa.isInstalled && (
-        <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-sky-500 bg-sky-100 dark:bg-sky-900" colorClass="border-sky-500">
-          <Smartphone className="w-8 h-8 mb-2 text-sky-600 dark:text-sky-400" />
-          <h3 className="font-black uppercase tracking-widest text-sky-700 dark:text-sky-300 text-lg mb-1">Instalar App</h3>
-          <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 mb-3 px-2">Adicione o Memorabilia à tela inicial para abri-lo como aplicativo nativo.</p>
-          <MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="blue" className="w-full py-4 text-sm font-black text-black">
+        <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-400 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-400">
+          <Smartphone className="w-8 h-8 mb-2 text-cyan-600 dark:text-cyan-400" />
+          <h3 className="font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-300 text-lg mb-1">Instalar App</h3>
+          <p className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 mb-3 px-2">Adicione o Memorabilia à tela inicial para abri-lo como aplicativo nativo.</p>
+          <MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="cyan" className="w-full py-4 text-sm font-black text-black">
             📲 Instalar Agora
           </MButton>
         </MContainer>
       )}
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <button onClick={() => setOpenSection(openSection === 'aparencia' ? null : 'aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+        <button onClick={() => toggleSection('aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Sun className="w-4 h-4" /> Aparência & Interface</span>
           <span className="text-lg font-mono">{openSection === 'aparencia' ? '−' : '+'}</span>
         </button>
@@ -1762,7 +1770,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           <div className="p-4 flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-black uppercase tracking-widest">Tema Visual</span>
-              <button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-200 text-black'}`}>
+              <button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-gray-200 text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>
                 {darkMode ? 'Modo Claro' : 'Modo Escuro'}
               </button>
             </div>
@@ -1784,7 +1792,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                        onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }}
                        onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }}
                        className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}
-                       style={{ accentColor: '#38bdf8' }}
+                       style={{ accentColor: '#22d3ee' }}
                      />
                      <div className="flex justify-between text-[8px] font-black uppercase opacity-60">
                        <span>Lento</span>
@@ -1808,7 +1816,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                        onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }}
                        onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }}
                        className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}
-                       style={{ accentColor: '#facc15' }}
+                       style={{ accentColor: '#fbbf24' }}
                      />
                      <div className="flex justify-between text-[8px] font-black uppercase opacity-60">
                        <span>Opaco</span>
@@ -1822,7 +1830,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       </MContainer>
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <button onClick={() => setOpenSection(openSection === 'arquivologia' ? null : 'arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+        <button onClick={() => toggleSection('arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><ListIcon className="w-4 h-4" /> Gestão de Classes</span>
           <span className="text-lg font-mono">{openSection === 'arquivologia' ? '−' : '+'}</span>
         </button>
@@ -1837,17 +1845,17 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               placeholder="Ex: MBU" 
             />
             
-            <div className={`p-3 border-[4px] ${darkMode ? 'border-gray-500 bg-gray-800' : 'border-black bg-gray-100'}`}>
+            <div className={`p-3 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
              <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Adicionar Nova Subclasse</h4>
               <div className="flex flex-col gap-2">
-                <select value={newSubclass.parent} onChange={e => setNewSubclass({...newSubclass, parent: e.target.value})} className={`w-full p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`}>
+                <select value={newSubclass.parent} onChange={e => setNewSubclass({...newSubclass, parent: e.target.value})} className={`w-full p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`}>
                   {Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <div className="flex gap-2">
-                  <input type="text" placeholder="Nome (Ex: Master System)" value={newSubclass.name} onChange={e => setNewSubclass({...newSubclass, name: e.target.value})} className={`flex-1 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
-                  <input type="text" placeholder="Código (Ex: 470)" value={newSubclass.code} onChange={e => setNewSubclass({...newSubclass, code: e.target.value})} className={`w-24 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
+                  <input type="text" placeholder="Nome (Ex: Master System)" value={newSubclass.name} onChange={e => setNewSubclass({...newSubclass, name: e.target.value})} className={`flex-1 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
+                  <input type="text" placeholder="Código (Ex: 470)" value={newSubclass.code} onChange={e => setNewSubclass({...newSubclass, code: e.target.value})} className={`w-24 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
                 </div>
-                <MButton darkMode={darkMode} onClick={handleAddSubclass} variant="blue" className="py-2 text-[10px]">Adicionar Subclasse</MButton>
+                <MButton darkMode={darkMode} onClick={handleAddSubclass} variant="cyan" className="py-2 text-[10px]">Adicionar Subclasse</MButton>
               </div>
             </div>
 
@@ -1865,7 +1873,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                           value={activeClassCodes?.[sub] || ''} 
                           onChange={e => handleUpdateCode(sub, e.target.value)} 
                           onBlur={() => { playChipBeep('save'); onShowToast('success'); }}
-                          className={`w-16 p-1 border-[2px] text-center font-mono text-[10px] outline-none ${darkMode ? 'border-gray-500 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} 
+                          className={`w-16 p-1 border-[2px] text-center font-mono text-[10px] outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} 
                         />
                       </div>
                     ))}
@@ -1879,7 +1887,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       </MContainer>
 
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <button onClick={() => setOpenSection(openSection === 'integracoes' ? null : 'integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+        <button onClick={() => toggleSection('integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações (Opcional)</span>
           <span className="text-lg font-mono">{openSection === 'integracoes' ? '−' : '+'}</span>
         </button>
@@ -1892,15 +1900,15 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-sky-900/40 text-white' : 'bg-sky-100 text-black'}>
-        <button onClick={() => setOpenSection(openSection === 'sincronizar' ? null : 'sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/40 text-white' : 'bg-cyan-100 text-black'}>
+        <button onClick={() => toggleSection('sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Sincronizar Jogos Zerados</span>
           <span className="text-lg font-mono">{openSection === 'sincronizar' ? '−' : '+'}</span>
         </button>
         {openSection === 'sincronizar' && (
           <div className="p-4 flex flex-col gap-3">
             <p className="text-[10px] opacity-80 font-bold leading-relaxed text-justify">Faça o upload manual do seu .CSV atualizado de jogos finalizados para alimentar a aba "Zerados".</p>
-            <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-sky-500 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-sky-800 text-white' : 'border-black bg-sky-400 text-black'} `}>
+            <label onClick={()=>playChipBeep('click')} className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-800 text-white' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 text-black'} `}>
               <Upload className="w-4 h-4 flex-shrink-0" /> Importar CSV de Jogos
               <input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} />
             </label>
@@ -1908,8 +1916,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-purple-900/40 text-white' : 'bg-purple-100 text-black'}>
-        <button onClick={() => setOpenSection(openSection === 'blogger' ? null : 'blogger')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'blogger' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}>
+        <button onClick={() => toggleSection('blogger')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'blogger' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Share className="w-4 h-4" /> Exportar Web (Blogger)</span>
           <span className="text-lg font-mono">{openSection === 'blogger' ? '−' : '+'}</span>
         </button>
@@ -1919,10 +1927,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               Gere um arquivo <span className="font-black underline">HTML estático e responsivo</span> do seu catálogo. Se a sua Webhook do Google Sheets estiver configurada, o blog carregará seus itens mais novos sozinhos toda vez que alguém acessar a página!
             </p>
             <div className="flex gap-2 flex-col sm:flex-row mt-2">
-               <MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="black" className="flex-1 py-3 bg-purple-600 border-black dark:bg-purple-700 text-white">
+               <MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="pink" className="flex-1 py-3 text-white">
                  <Download className="w-4 h-4" /> Baixar HTML
                </MButton>
-               <MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 text-purple-800 border-black dark:text-purple-200">
+               <MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 text-pink-600 border-black">
                  <CopyIcon className="w-4 h-4" /> Copiar Código
                </MButton>
             </div>
@@ -1930,21 +1938,21 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-yellow-600 text-white' : 'bg-yellow-400 text-black'}>
-        <button onClick={() => setOpenSection(openSection === 'backup' ? null : 'backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-500' : 'border-b-[4px] border-black') : ''}`}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black'}>
+        <button onClick={() => toggleSection('backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local (.CSV Principal)</span>
           <span className="text-lg font-mono">{openSection === 'backup' ? '−' : '+'}</span>
         </button>
         {openSection === 'backup' && (
           <div className="p-4 flex gap-2">
-            <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white' : 'border-black bg-white text-black'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
-            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-600 shadow-[4px_4px_0px_rgba(100,100,100,0.5)] bg-gray-800 text-white' : 'border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+            <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-white text-black'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
+            <label onClick={()=>playChipBeep('click')} className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
           </div>
         )}
       </MContainer>
 
       <div className="mt-8 mb-4 text-center">
-        <button onClick={() => setShowResetConfirm(true)} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-rose-500 text-rose-500' : 'border-rose-600 text-rose-600'}`}>
+        <button onClick={() => { playChipBeep('click'); setShowResetConfirm(true); }} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-pink-500 text-pink-500' : 'border-pink-600 text-pink-600'}`}>
            ⚠️ Resetar Coleção Principal
         </button>
       </div>
@@ -1963,7 +1971,11 @@ export default function App() {
   const [completedGames, setCompletedGames] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
   const [isLocalStorageLoaded, setIsLocalStorageLoaded] = useState(false);
+  
+  // Controle de Loading e Tela de Sucesso
   const [isFetchingCloud, setIsFetchingCloud] = useState(false);
+  const [showSuccessSplash, setShowSuccessSplash] = useState(false);
+  
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   
@@ -1987,7 +1999,7 @@ export default function App() {
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
-  const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
+  const triggerGlobalAI = () => { playChipBeep('click'); setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
   const handleGlobalFileChange = (e) => { const file = e.target.files[0]; if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); } e.target.value = null; };
 
   const processGlobalAIFile = async (file) => {
@@ -2063,13 +2075,26 @@ export default function App() {
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data) && data.length > 0) setItems(data);
-              // CHIPTUNE DE SUCESSO (ESCALA LÍDIO)
-              playLydianSuccess();
+              
+              // Se puxou com sucesso, ativa a tela da escala Lídio
+              setShowSuccessSplash(true);
+              playLydianSuccess(); // Nota: O navegador pode emudecer no desktop se for o 1º carregamento sem clique prévio
+              
+              // Segura a tela de sucesso por 1.5s antes de entrar no app
+              setTimeout(() => {
+                 setShowSuccessSplash(false);
+                 setIsFetchingCloud(false);
+                 setInitialLoadDone(true);
+                 setIsLoaded(true);
+              }, 1500);
+              return; 
             }
          } catch (e) {
             console.warn("Erro ao buscar dados do Google Sheets na inicialização.", e);
          }
       }
+      
+      // Se não houver link do sheets ou der erro, entra direto no app sem splash de load
       setIsFetchingCloud(false);
       setInitialLoadDone(true);
       setIsLoaded(true);
@@ -2198,12 +2223,12 @@ export default function App() {
 
   const renderPacmanEnd = () => (
     <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
-       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
-       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
-       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
-       <div className="w-1.5 h-1.5 bg-yellow-200 rounded-full shadow-[0_0_3px_currentColor]" />
-       <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #facc15)` : 'none' }}>
-         <path fill="#facc15" transform="scale(-1, 1) translate(-100, 0)">
+       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-500'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
+       <div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" />
+       <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #fbbf24)` : 'none' }}>
+         <path fill="#fbbf24" transform="scale(-1, 1) translate(-100, 0)">
            <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
          </path>
        </svg>
@@ -2212,15 +2237,15 @@ export default function App() {
   
   const renderMarqueeContent = () => {
     const statsArr = [];
-    statsArr.push(<span key="1" className={`text-sky-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span>);
-    if (consoleStatsStr) statsArr.push(<span key="2" className={`text-purple-400 ${ledItemStyle}`}>CONSOLES: {consoleStatsStr}</span>);
-    statsArr.push(<span key="3" className={`text-rose-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span>);
-    if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-rose-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
-    statsArr.push(<span key="5" className={`text-yellow-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
-    statsArr.push(<span key="6" className={`text-green-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
-    if (mostExp) statsArr.push(<span key="7" className={`text-rose-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
-    if (cheapest) statsArr.push(<span key="8" className={`text-sky-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
-    if (biggestDisc) statsArr.push(<span key="9" className={`text-green-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
+    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span>);
+    if (consoleStatsStr) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>CONSOLES: {consoleStatsStr}</span>);
+    statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span>);
+    if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-pink-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
+    statsArr.push(<span key="5" className={`text-amber-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
+    statsArr.push(<span key="6" className={`text-cyan-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
+    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
+    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
+    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2246,6 +2271,7 @@ export default function App() {
   };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
   const handleSuggClick = (e) => {
+    playChipBeep('click');
     if (isSuggLongPress.current) return;
     if (suggestion) window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank');
   };
@@ -2255,26 +2281,42 @@ export default function App() {
 
   const handleAddPressStart = () => { initAudio(); isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
   const handleAddPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
-  const handleAddClick = () => { initAudio(); if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
+  const handleAddClick = () => { initAudio(); playChipBeep('click'); if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
 
   const libPressTimer = useRef(null); const isLibLongPress = useRef(false);
   const handleLibPressStart = () => { initAudio(); isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
-  const handleLibClick = () => { initAudio(); if (!isLibLongPress.current) { setActiveTab('library'); } };
+  const handleLibClick = () => { initAudio(); playChipBeep('click'); if (!isLibLongPress.current) { setActiveTab('library'); } };
 
-  const handleCompClick = () => { initAudio(); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
-  
-  if (isFetchingCloud || !isLoaded) {
+  const handleCompClick = () => { initAudio(); playChipBeep('click'); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
+
+  // TELA 1: CARREGAMENTO (Katamari)
+  if (isFetchingCloud && !showSuccessSplash) {
     return (
        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
-          <KatamariIcon className="w-24 h-24 mb-6 z-10" glow={10} />
-          <p className="text-sky-400 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
+          <KatamariIcon className="w-24 h-24 mb-6 z-10 text-cyan-400" glow={10} />
+          <p className="text-cyan-400 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
        </div>
     );
   }
 
+  // TELA 2: SUCESSO (Logo + Título + Escala Lídio tocando)
+  if (showSuccessSplash) {
+    return (
+      <div className={`min-h-screen flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden bg-black text-white`} style={{ backgroundImage: 'radial-gradient(circle, #222 1.5px, transparent 1.5px)', backgroundSize: '4px 4px' }}>
+         <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+         <div className="z-10 flex flex-col items-center justify-center gap-6 animate-in zoom-in duration-300">
+           <img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(236,72,153,0.8)]" />
+           <h1 className="text-4xl text-pink-500 drop-shadow-[0_0_10px_currentColor] text-center leading-none uppercase tracking-tighter">Memorabilia</h1>
+         </div>
+      </div>
+    );
+  }
+
+  // TELA 3: APP PRINCIPAL
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <style>{`
@@ -2284,9 +2326,9 @@ export default function App() {
         @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
       `}</style>
 
-      <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-600 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
+      <div className={`max-w-md mx-auto h-screen relative flex flex-col shadow-2xl overflow-hidden ${darkMode ? 'border-x-[4px] border-gray-300 bg-gray-900' : 'border-x-[4px] border-black bg-white'}`}>
 
-        <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
+        <header className={`flex-none p-3 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
               <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
@@ -2303,7 +2345,7 @@ export default function App() {
                   onMouseLeave={handleSuggPressEnd} 
                   onClick={handleSuggClick} 
                   style={{ WebkitTouchCallout: 'none' }}
-                  className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[2px] inline-flex items-center gap-1 w-fit max-w-full shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer select-none ${darkMode ? 'bg-green-900 border-green-500 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'bg-green-400 border-black text-black'}`}>
+                  className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[3px] inline-flex items-center gap-1 w-fit max-w-full active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer select-none ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                   <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate text-left">Ouvir Hoje: {suggestion.title || 'S/ Título'}</span>
                 </div>
               )}
@@ -2312,8 +2354,8 @@ export default function App() {
             <div className="w-14 h-14 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2">
               {toast.visible ? (
                 toast.type === 'error' 
-                  ? <XIcon className="text-rose-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
-                  : <Check className="text-sky-500 w-10 h-10 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] animate-in zoom-in duration-200" />
+                  ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
+                  : <Check className="text-cyan-400 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />
               ) : (
                 <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200" />
               )}
@@ -2321,21 +2363,21 @@ export default function App() {
           </div>
 
           <div className="flex gap-2">
-             <div className={`flex-1 flex flex-col p-1.5 border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-500 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-gray-100 text-black'}`}>
+             <div className={`flex-1 flex flex-col p-1.5 border-[3px] text-[8px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
               <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
                 <span>Coleção Física</span><span>{totalItens} UN</span>
               </div>
               <div className="flex justify-between"><span>Págs Add:</span><span>{totalPagesCount}</span></div>
               <div className="flex justify-between"><span>Págs Lidas:</span><span>{readPages} ({readPercentage}%)</span></div>
-              <div className="flex justify-between text-yellow-600 dark:text-yellow-400 font-bold transition-opacity duration-500 cursor-pointer active:scale-95" onClick={() => { playChipBeep('save'); setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
+              <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95" onClick={() => { playChipBeep('click'); setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
                   <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
               </div>
-              <div className="flex justify-between text-sky-600 dark:text-sky-400 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
+              <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
             </div>
 
-            <div className={`flex-1 flex flex-col border-[3px] shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-500 bg-black text-white shadow-[2px_2px_0px_rgba(100,100,100,0.5)]' : 'border-black bg-black text-white'}`}>
+            <div className={`flex-1 flex flex-col border-[3px] text-[8px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                <div className="p-1.5 border-b-[2px] border-gray-800 pb-0.5 mb-0.5 opacity-80 flex justify-between z-10 bg-black">
-                  <span>Jogos Zerados</span><span className="animate-pulse text-rose-500">REC</span>
+                  <span>Jogos Zerados</span><span className="animate-pulse text-pink-500">REC</span>
                </div>
                
                <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
@@ -2358,12 +2400,12 @@ export default function App() {
           {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
         </main>
 
-        <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-black bg-white'}`}>
-          <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
-          <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
-          <button onClick={() => { initAudio(); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-rose-800 text-white' : 'bg-rose-400') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
-          <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-600 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-sky-800 text-white' : 'bg-sky-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
-          <button onClick={() => { initAudio(); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
+        <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+          <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
+          <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
+          <button onClick={() => { initAudio(); playChipBeep('click'); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
+          <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
+          <button onClick={() => { initAudio(); playChipBeep('click'); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
         </nav>
 
       </div>
