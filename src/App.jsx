@@ -34,8 +34,8 @@ const initAudio = () => {
 
 const playLydianSuccess = () => {
   try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!audioCtx) initAudio();
+    if (!audioCtx) return;
     
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -44,9 +44,9 @@ const playLydianSuccess = () => {
     osc.type = 'square'; // Timbre 8-bit
     const now = audioCtx.currentTime;
     
-    // Escala Lídio de Dó (Dó, Ré, Mi, Fá#, Sol, Lá)
+    // Escala Lídio de Dó (Dó, Ré, Mi, Fá#, Sol, Lá) em fusas
     const notes = [523.25, 587.33, 659.25, 739.99, 783.99, 880.00]; 
-    const dur = 0.04; // Duração de "Fusa" (rápido)
+    const dur = 0.04; 
     
     notes.forEach((freq, i) => {
       osc.frequency.setValueAtTime(freq, now + i * dur);
@@ -65,7 +65,9 @@ const playLydianSuccess = () => {
 
 const playChipBeep = (type) => {
   try {
+    if (!audioCtx) initAudio();
     if (!audioCtx) return;
+    
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
@@ -74,6 +76,7 @@ const playChipBeep = (type) => {
     const vol = 0.02; // Volume discreto
     
     if (type === 'save' || type === 'success') {
+      // Confirmação de salvamento/sucesso
       osc.type = 'square'; 
       osc.frequency.setValueAtTime(440, now); 
       osc.frequency.setValueAtTime(554.37, now + 0.05); // C#
@@ -81,25 +84,13 @@ const playChipBeep = (type) => {
       gain.gain.linearRampToValueAtTime(0, now + 0.1);
       osc.start(now); osc.stop(now + 0.1);
     } else if (type === 'error') {
+      // Erro
       osc.type = 'sawtooth'; 
       osc.frequency.setValueAtTime(150, now); 
       osc.frequency.setValueAtTime(100, now + 0.1);
       gain.gain.setValueAtTime(vol, now); 
       gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.start(now); osc.stop(now + 0.2);
-    } else if (type === 'shuffle') {
-      osc.type = 'square'; 
-      osc.frequency.setValueAtTime(600, now); 
-      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
-      gain.gain.setValueAtTime(vol, now); 
-      gain.gain.linearRampToValueAtTime(0, now + 0.1);
-      osc.start(now); osc.stop(now + 0.1);
-    } else if (type === 'click') {
-      osc.type = 'square'; 
-      osc.frequency.setValueAtTime(800, now); 
-      gain.gain.setValueAtTime(0.01, now); 
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-      osc.start(now); osc.stop(now + 0.03);
     }
   } catch (e) {}
 };
@@ -591,6 +582,7 @@ const Zap = (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 2
 const ListIcon = (p) => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
 const Share = (p) => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
 const CopyIcon = (p) => <Icon {...p} path={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />;
+const Headphones = (p) => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
 
 // ==========================================
 // PWA ENGINE
@@ -652,7 +644,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   if (variant === 'amber' || variant === 'yellow') bgClass = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black';
   if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
   return (
-    <button disabled={disabled} onClick={(e) => { playChipBeep('click'); if(onClick) onClick(e); }} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
+    <button disabled={disabled} onClick={(e) => { if(onClick) onClick(e); }} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
       {icon && icon} {children}
     </button>
   );
@@ -774,7 +766,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
-  const handleSelect = (item) => { playChipBeep('click'); setSelectedItem(item); setEditedItem({ ...item }); };
+  const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, newRating) => { 
     const updatedItem = { ...items.find(i => i.id === id), rating: newRating };
     setItems(items.map(item => item.id === id ? updatedItem : item));
@@ -792,12 +784,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     if (itemToDelete) {
       setItems(items.filter(item => item.id !== itemToDelete));
       setItemToDelete(null); setSelectedItem(null); setEditedItem(null);
-      playChipBeep('success'); onShowToast('success');
+      playChipBeep('save'); onShowToast('success');
     }
   };
 
   const fetchWikiInfo = async () => {
-    playChipBeep('click');
     const apiKey = settings?.geminiApiKey || ""; 
     if (!apiKey) { setWikiError("Chave de API ausente (Vá em Ajustes)."); playChipBeep('error'); onShowToast('error'); return; }
     setLoadingWiki(true); setWikiError('');
@@ -813,7 +804,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       if (aiText) { 
           const updatedItem = {...editedItem, wiki_info: aiText};
           setEditedItem(updatedItem); 
-          playChipBeep('success'); onShowToast('success'); 
+          playChipBeep('save'); onShowToast('success'); 
       }
     } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); onShowToast('error'); } finally { setLoadingWiki(false); }
   };
@@ -827,7 +818,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
-            <button onClick={() => { playChipBeep('click'); setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
           <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>Salvar</button>
@@ -844,7 +835,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             </div>
           </div>
           
-          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" onClick={()=>playChipBeep('click')} className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
             <ExternalLink className="w-4 h-4" /> Buscar "{editedItem.title}" na Web
           </a>
 
@@ -863,7 +854,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => { playChipBeep('click'); setEditedItem({...editedItem, status: opt}); }} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => { setEditedItem({...editedItem, status: opt}); }} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </MContainer>
@@ -872,7 +863,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Sua Avaliação</label>
               <div className="flex gap-1.5 mt-2">
                 {[1, 2, 3, 4, 5].map(star => (
-                  <Star key={star} onClick={() => { playChipBeep('click'); setEditedItem({...editedItem, rating: star}); }} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= (editedItem.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
+                  <Star key={star} onClick={() => { setEditedItem({...editedItem, rating: star}); }} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= (editedItem.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />
                  ))}
               </div>
             </MContainer>
@@ -912,7 +903,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </button>
           
           <div className="mt-8 mb-2 text-center">
-            <button onClick={() => { playChipBeep('click'); setItemToDelete(editedItem.id); }} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all underline underline-offset-4 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>
+            <button onClick={() => { setItemToDelete(editedItem.id); }} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all underline underline-offset-4 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>
               Apagar este item
             </button>
           </div>
@@ -939,19 +930,19 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <option value="rating">Nota</option>
               <option value="pages_or_time">Tamanho</option>
             </select>
-            <button onClick={() => { playChipBeep('click'); setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); }} className={`w-8 h-[34px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>
+            <button onClick={() => { setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); }} className={`w-8 h-[34px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>
               {sortOrder === 'asc' ? '↑' : '↓'}
             </button>
           </div>
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={cat} onClick={() => { playChipBeep('click'); setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeCategory === cat ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
+          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={cat} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeCategory === cat ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
         </div>
         {activeCategory !== 'Todos' && activeCategories[activeCategory] && activeCategories[activeCategory].length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <button onClick={() => { playChipBeep('click'); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === 'Todos' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
-            {activeCategories[activeCategory].map(type => <button key={type} onClick={() => { playChipBeep('click'); setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === type ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
+            <button onClick={() => { setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === 'Todos' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
+            {activeCategories[activeCategory].map(type => <button key={type} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === type ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
           </div>
         )}
       </MContainer>
@@ -1002,7 +993,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   const isProcessingScan = useRef(false);
   const [formData, setFormData] = useState({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
   const updateStatus = (state, message) => setScanBox({ state, message });
-  const changeMode = (newMode) => { playChipBeep('click'); setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); } };
+  const changeMode = (newMode) => { setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); } };
   
   useEffect(() => {
     if (scannedAIData) {
@@ -1145,7 +1136,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   
   return (
     <div className="flex flex-col h-full pb-20">
-      <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar." onConfirm={() => { playChipBeep('click'); setShowErrorModal(false); }} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
+      <MModal isOpen={showErrorModal} title="Atenção" message="O Título é obrigatório para salvar." onConfirm={() => { setShowErrorModal(false); }} onCancel={() => setShowErrorModal(false)} darkMode={darkMode} confirmText="OK" cancelText="Fechar" />
       <div className="flex gap-2 mb-4">
         <MButton darkMode={darkMode} variant={addMode === 'manual' ? 'cyan' : 'white'} onClick={() => changeMode('manual')} className="flex-1 py-2 text-[10px]"><PlusSquare className="w-4 h-4" /> Manual</MButton>
         <MButton darkMode={darkMode} variant={addMode === 'barcode' ? 'amber' : 'white'} onClick={() => changeMode('barcode')} className="flex-1 py-2 text-[10px]"><ScanLine className="w-4 h-4" /> Barcode</MButton>
@@ -1196,7 +1187,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => { playChipBeep('click'); setFormData({...formData, status: opt}); }} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => { setFormData({...formData, status: opt}); }} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </div>
@@ -1204,7 +1195,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             <div className="mb-4">
               <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Avaliação (Nota)</label>
               <div className={`flex gap-2 p-3 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white'} justify-center`}>
-                {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => { playChipBeep('click'); setFormData({...formData, rating: star}); }} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= formData.rating ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => { setFormData({...formData, rating: star}); }} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= formData.rating ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
               </div>
             </div>
             <MButton darkMode={darkMode} onClick={handleSave} variant="black" className="mt-2 py-4 text-sm"><Check className="w-6 h-6 mr-2" /> Salvar Item</MButton>
@@ -1259,15 +1250,15 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           <FilterIcon className="w-4 h-4" /> Filtros Interativos
         </div>
         <div className="flex gap-2">
-          <select value={filterCat} onChange={e => { playChipBeep('click'); setFilterCat(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          <select value={filterCat} onChange={e => { setFilterCat(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Tudo</option>
             {Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
-          <select value={filterStatus} onChange={e => { playChipBeep('click'); setFilterStatus(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Status</option>
             {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
-          <select value={filterRating} onChange={e => { playChipBeep('click'); setFilterRating(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          <select value={filterRating} onChange={e => { setFilterRating(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Notas</option>
             {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Estrelas</option>)}
           </select>
@@ -1366,7 +1357,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     reader.onload = (evt) => {
       const parsed = processCompletedGamesCSV(evt.target.result);
       if (parsed.length > 0) {
-        setCompletedGames(parsed); playChipBeep('success'); onShowToast('success');
+        setCompletedGames(parsed); playChipBeep('save'); onShowToast('success');
       } else {
         playChipBeep('error'); onShowToast('error');
       }
@@ -1434,7 +1425,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       <div className="flex flex-col h-full pb-20 relative">
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
-            <button onClick={() => { playChipBeep('click'); setSelectedGame(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => { setSelectedGame(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Registro de Conclusão</div>
           </div>
         </MContainer>
@@ -1452,7 +1443,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
             </div>
           </div>
 
-          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" onClick={()=>playChipBeep('click')} className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] border-black bg-cyan-100 text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] border-black bg-cyan-100 text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
             <ExternalLink className="w-4 h-4" /> {linkInfo.isExact ? "Acessar Link Salvo na Planilha" : `Buscar "${selectedGame.nome}" na Web`}
           </a>
 
@@ -1487,15 +1478,15 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           <div className="flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros de Zerados</div>
         </div>
         <div className="flex gap-2">
-          <select value={filterConsole} onChange={e => { playChipBeep('click'); setFilterConsole(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          <select value={filterConsole} onChange={e => { setFilterConsole(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Consoles</option>
             {uniqueConsoles.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={filterGenre} onChange={e => { playChipBeep('click'); setFilterGenre(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          <select value={filterGenre} onChange={e => { setFilterGenre(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Gêneros</option>
             {uniqueGenres.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={filterSupport} onChange={e => { playChipBeep('click'); setFilterSupport(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          <select value={filterSupport} onChange={e => { setFilterSupport(e.target.value); setPage(0); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Mídia</option>
             <option value="Físico">Física</option>
             <option value="Digital/Outro">Digital</option>
@@ -1570,7 +1561,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       </div>
       <div className="flex flex-col gap-3">
         {paginatedGames.map((g) => (
-          <div key={g.id} onClick={() => { playChipBeep('click'); setSelectedGame(g); }} className={`cursor-pointer p-2 border-[4px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white border-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all flex justify-between`}>
+          <div key={g.id} onClick={() => { setSelectedGame(g); }} className={`cursor-pointer p-2 border-[4px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white border-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all flex justify-between`}>
              <div className="flex flex-col flex-1 overflow-hidden pr-2">
                 <div className="text-sm font-black truncate">{g.nome}</div>
                 <div className="text-[9px] font-bold uppercase opacity-70 truncate">{g.console} • {g.genero}</div>
@@ -1601,7 +1592,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
   
   const handleExportCSV = () => {
-    playChipBeep('click');
     if (items.length === 0) return;
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
@@ -1670,7 +1660,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     reader.onload = (evt) => {
       const parsed = processCompletedGamesCSV(evt.target.result);
       if (parsed.length > 0) {
-        setCompletedGames(parsed); playChipBeep('success'); onShowToast('success');
+        setCompletedGames(parsed); playChipBeep('save'); onShowToast('success');
       } else {
         playChipBeep('error'); onShowToast('error');
       }
@@ -1716,7 +1706,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     link.href = URL.createObjectURL(blob);
     link.download = `Acervo_Web_Memorabilia_${new Date().toISOString().split('T')[0]}.html`;
     link.click();
-    playChipBeep('success');
+    playChipBeep('save');
     onShowToast('success');
   };
 
@@ -1730,7 +1720,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     textArea.select();
     try {
       document.execCommand('copy');
-      playChipBeep('success');
+      playChipBeep('save');
       onShowToast('success');
     } catch (err) {
       console.error('Falha ao copiar', err);
@@ -1741,14 +1731,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   };
 
   const toggleSection = (sectionName) => {
-    playChipBeep('click');
     setOpenSection(openSection === sectionName ? null : sectionName);
   };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative">
-      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca principal? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('success'); onShowToast('success'); }} onCancel={() => { playChipBeep('click'); setShowResetConfirm(false); }} darkMode={darkMode} confirmText="Apagar Tudo" />
-      <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('success'); onShowToast('success'); } }} onCancel={() => { playChipBeep('click'); setImportData(null); }} darkMode={darkMode} confirmText="Substituir Coleção" />
+      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Deseja realmente apagar TODOS os itens da sua biblioteca principal? Esta ação não tem volta." onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => { setShowResetConfirm(false); }} darkMode={darkMode} confirmText="Apagar Tudo" />
+      <MModal isOpen={!!importData} title="Importar CSV Principal" message={`Foram encontrados ${importData ? importData.length : 0} itens. Substituir a coleção atual?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); } }} onCancel={() => { setImportData(null); }} darkMode={darkMode} confirmText="Substituir Coleção" />
 
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-400 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-400">
@@ -1900,6 +1889,20 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}>
+        <button onClick={() => toggleSection('lastfm')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'lastfm' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
+          <span className="flex items-center gap-2"><Headphones className="w-4 h-4" /> Integração Last.FM</span>
+          <span className="text-lg font-mono">{openSection === 'lastfm' ? '−' : '+'}</span>
+        </button>
+        {openSection === 'lastfm' && (
+          <div className="p-4 flex flex-col gap-3">
+            <MInput darkMode={darkMode} label="Username Last.FM" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} placeholder="Seu nome de usuário..." />
+            <MInput darkMode={darkMode} label="API Key Last.FM" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} placeholder="Sua chave da API..." />
+            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
+          </div>
+        )}
+      </MContainer>
+
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/40 text-white' : 'bg-cyan-100 text-black'}>
         <button onClick={() => toggleSection('sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Sincronizar Jogos Zerados</span>
@@ -1908,7 +1911,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         {openSection === 'sincronizar' && (
           <div className="p-4 flex flex-col gap-3">
             <p className="text-[10px] opacity-80 font-bold leading-relaxed text-justify">Faça o upload manual do seu .CSV atualizado de jogos finalizados para alimentar a aba "Zerados".</p>
-            <label onClick={()=>playChipBeep('click')} className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-800 text-white' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 text-black'} `}>
+            <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-800 text-white' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 text-black'} `}>
               <Upload className="w-4 h-4 flex-shrink-0" /> Importar CSV de Jogos
               <input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} />
             </label>
@@ -1946,13 +1949,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         {openSection === 'backup' && (
           <div className="p-4 flex gap-2">
             <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-white text-black'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
-            <label onClick={()=>playChipBeep('click')} className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
           </div>
         )}
       </MContainer>
 
       <div className="mt-8 mb-4 text-center">
-        <button onClick={() => { playChipBeep('click'); setShowResetConfirm(true); }} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-pink-500 text-pink-500' : 'border-pink-600 text-pink-600'}`}>
+        <button onClick={() => { setShowResetConfirm(true); }} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-pink-500 text-pink-500' : 'border-pink-600 text-pink-600'}`}>
            ⚠️ Resetar Coleção Principal
         </button>
       </div>
@@ -1969,7 +1972,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
-  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU' });
+  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '' });
   const [isLocalStorageLoaded, setIsLocalStorageLoaded] = useState(false);
   
   // Controle de Loading e Tela de Sucesso
@@ -1999,12 +2002,12 @@ export default function App() {
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
-  const triggerGlobalAI = () => { playChipBeep('click'); setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
+  const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
   const handleGlobalFileChange = (e) => { const file = e.target.files[0]; if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); } e.target.value = null; };
 
   const processGlobalAIFile = async (file) => {
     const apiKey = settings?.geminiApiKey || "";
-    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente. Adicione-a na aba Ajustes.'); return; }
+    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente. Adicione-a na aba Ajustes.'); playChipBeep('error'); return; }
     setAiBoxState('loading');
     setAiBoxMessage('Processando e analisando imagem...');
     try {
@@ -2020,7 +2023,7 @@ export default function App() {
       const end = cleanedText.lastIndexOf('}');
       if (start !== -1 && end !== -1) cleanedText = cleanedText.substring(start, end + 1);
       const parsedData = JSON.parse(cleanedText);
-      setAiBoxState('success'); setAiBoxMessage('Informações extraídas com IA!'); playChipBeep('success'); setScannedAIData(parsedData); showToast('success');
+      setAiBoxState('success'); setAiBoxMessage('Informações extraídas com IA!'); playChipBeep('save'); setScannedAIData(parsedData); showToast('success');
     } catch (error) { console.error("Erro IA:", error); setAiBoxState('error'); setAiBoxMessage(`Falha na IA: ${error.message}`); playChipBeep('error'); showToast('error'); }
   };
 
@@ -2103,6 +2106,31 @@ export default function App() {
     fetchSheets();
     setIsLocalStorageLoaded(true);
   }, []);
+
+  // LAST.FM FETCH LOGIC
+  const [lastFmTrack, setLastFmTrack] = useState(null);
+  useEffect(() => {
+    if (!settings?.lastfmUser || !settings?.lastfmApiKey || !isLoaded) return;
+    const fetchLastFm = async () => {
+      try {
+        const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&format=json&limit=1`);
+        const data = await res.json();
+        const track = data?.recenttracks?.track?.[0];
+        if (track) {
+          setLastFmTrack({
+            name: track.name,
+            artist: track.artist['#text'],
+            nowPlaying: track['@attr']?.nowplaying === 'true'
+          });
+        }
+      } catch (e) {
+        console.warn("Last.fm error", e);
+      }
+    };
+    fetchLastFm();
+    const interval = setInterval(fetchLastFm, 60000); // Atualiza a cada 60s
+    return () => clearInterval(interval);
+  }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded]);
   
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
@@ -2171,7 +2199,6 @@ export default function App() {
         }
       }
       setSuggestion(nextSugg);
-      playChipBeep('shuffle');
     }
   };
 
@@ -2271,7 +2298,6 @@ export default function App() {
   };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
   const handleSuggClick = (e) => {
-    playChipBeep('click');
     if (isSuggLongPress.current) return;
     if (suggestion) window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank');
   };
@@ -2279,16 +2305,16 @@ export default function App() {
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
 
-  const handleAddPressStart = () => { initAudio(); isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
+  const handleAddPressStart = () => { isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
   const handleAddPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
-  const handleAddClick = () => { initAudio(); playChipBeep('click'); if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
+  const handleAddClick = () => { if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
 
   const libPressTimer = useRef(null); const isLibLongPress = useRef(false);
-  const handleLibPressStart = () => { initAudio(); isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
+  const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
-  const handleLibClick = () => { initAudio(); playChipBeep('click'); if (!isLibLongPress.current) { setActiveTab('library'); } };
+  const handleLibClick = () => { if (!isLibLongPress.current) { setActiveTab('library'); } };
 
-  const handleCompClick = () => { initAudio(); playChipBeep('click'); setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
+  const handleCompClick = () => { setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
 
   // TELA 1: CARREGAMENTO (Katamari)
   if (isFetchingCloud && !showSuccessSplash) {
@@ -2332,6 +2358,14 @@ export default function App() {
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
               <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
+              
+              {lastFmTrack && (
+                <div className={`mt-2 p-1 px-1.5 text-[8px] font-black uppercase tracking-widest border-[3px] inline-flex items-center gap-1 w-fit max-w-full transition-all ${darkMode ? 'bg-pink-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                  <Headphones className={`w-3 h-3 flex-shrink-0 ${lastFmTrack.nowPlaying ? 'animate-pulse' : ''}`} /> 
+                  <span className="truncate text-left">{lastFmTrack.nowPlaying ? 'Ouvindo Agora:' : 'Última:'} {lastFmTrack.artist} - {lastFmTrack.name}</span>
+                </div>
+              )}
+
               {suggestion && (
                 <div 
                   role="button"
@@ -2369,7 +2403,7 @@ export default function App() {
               </div>
               <div className="flex justify-between"><span>Págs Add:</span><span>{totalPagesCount}</span></div>
               <div className="flex justify-between"><span>Págs Lidas:</span><span>{readPages} ({readPercentage}%)</span></div>
-              <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95" onClick={() => { playChipBeep('click'); setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
+              <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
                   <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
               </div>
               <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
@@ -2403,9 +2437,9 @@ export default function App() {
         <nav className={`flex-none flex border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
           <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
           <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
-          <button onClick={() => { initAudio(); playChipBeep('click'); setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
+          <button onClick={() => { setActiveTab('dashboard'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
           <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
-          <button onClick={() => { initAudio(); playChipBeep('click'); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
+          <button onClick={() => { setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
         </nav>
 
       </div>
