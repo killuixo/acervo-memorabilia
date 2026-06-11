@@ -92,7 +92,7 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// GERADOR DE ID
+// GERADOR DE ID E UTILITÁRIOS
 // ==========================================
 let globalSequenceCache = null;
 
@@ -127,9 +127,6 @@ const generateId = (itemsArray = []) => {
   return `${timeBase}-${seqStr}`;
 };
 
-// ==========================================
-// FUNÇÕES UTILITÁRIAS GLOBAIS E EXPORTADOR
-// ==========================================
 const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -271,7 +268,7 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
     nota: g.nota, suporte: g.suporte, suporteStr: g.suporteStr, anoFim: g.anoFim
   }));
 
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Acervo Memorabilia</title><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6"><h1>Memorabilia HTML Export (Código simplificado aqui para brevidade)</h1></body></html>`;
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Acervo Memorabilia</title><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6"><h1>Memorabilia HTML Export</h1></body></html>`;
 };
 
 // ==========================================
@@ -318,7 +315,6 @@ const BarChart2 = (p) => <Icon {...p} path={<><line x1="18" x2="18" y1="20" y2="
 const Settings = (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />;
 const Camera = (p) => <Icon {...p} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
 const Sun = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />;
-const Moon = (p) => <Icon {...p} path={<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>} />;
 const Download = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
 const Upload = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></>} />;
 const ExternalLink = (p) => <Icon {...p} path={<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>} />;
@@ -330,7 +326,6 @@ const ScanLine = (p) => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><
 const Clock = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
 const Flame = (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
 const Ghost = (p) => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
-const Trophy = (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />;
 const LibraryBig = (p) => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = (p) => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
@@ -396,17 +391,19 @@ const getMondrianColor = (index, darkMode) => {
   return darkMode ? colorsDark[index % colorsDark.length] : colorsLight[index % colorsLight.length];
 };
 
+const getMondrianHex = (index, darkMode) => {
+  const hexLight = ['#ec4899', '#22d3ee', '#fbbf24', '#ffffff'];
+  const hexDark = ['#9d174d', '#155e75', '#b45309', '#1f2937'];
+  return darkMode ? hexDark[index % hexDark.length] : hexLight[index % hexLight.length];
+}
+
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
 );
 
 const MImage = ({ src, alt, className, fallbackIcon: FallbackIcon }) => {
   const [error, setError] = useState(false);
-  
-  useEffect(() => {
-    setError(false);
-  }, [src]);
-
+  useEffect(() => { setError(false); }, [src]);
   if (!src || error) return <FallbackIcon />;
   return <img src={src} alt={alt} className={className} onError={() => setError(true)} />;
 };
@@ -469,6 +466,144 @@ const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)
     </div>
   </div>
 );
+
+// ==========================================
+// COMPONENTES DE GRÁFICOS SVG CUSTOMIZADOS
+// ==========================================
+const MondrianPieChart = ({ data, darkMode }) => {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  if(total === 0) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
+  let currentAngle = 0;
+  return (
+    <div className="relative w-full flex items-center justify-center gap-6 py-2">
+      <svg viewBox="0 0 32 32" className="w-28 h-28 transform -rotate-90 drop-shadow-md rounded-full overflow-hidden">
+        {data.map((d, i) => {
+          if (d.value === 0) return null;
+          const angle = (d.value / total) * 360;
+          const dasharray = `${(angle / 360) * 100.53} 100.53`;
+          const dashoffset = -(currentAngle / 360) * 100.53;
+          currentAngle += angle;
+          return <circle key={i} cx="16" cy="16" r="16" fill="none" stroke={d.hexColor} strokeWidth="32" strokeDasharray={dasharray} strokeDashoffset={dashoffset} />
+        })}
+      </svg>
+      <div className="flex flex-col gap-2 justify-center">
+        {data.map((d, i) => d.value > 0 && (
+          <div key={i} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest leading-none">
+             <div className="w-3 h-3 border-[2px] border-black dark:border-gray-300" style={{ backgroundColor: d.hexColor }} />
+             <span>{d.label} ({d.value})</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const MondrianLineAreaChart = ({ data, darkMode, isArea }) => {
+   if(data.length === 0) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
+   const max = Math.max(...data.map(d => d.value), 1);
+   const pts = data.map((d, i) => `${(i / Math.max(1, data.length - 1)) * 100},${100 - (d.value / max * 100)}`).join(' ');
+   const polyPts = `0,100 ${pts} 100,100`;
+   return (
+     <div className="w-full h-32 relative flex flex-col">
+       <svg viewBox="0 -10 100 120" preserveAspectRatio="none" className="w-full flex-1 overflow-visible">
+         {isArea && <polygon points={polyPts} fill="#22d3ee" fillOpacity={darkMode ? "0.6" : "0.3"} />}
+         <polyline points={pts} fill="none" stroke={isArea ? "#ec4899" : "#fbbf24"} strokeWidth="2.5" strokeLinejoin="round" />
+         {data.map((d, i) => {
+           const cx = (i / Math.max(1, data.length - 1)) * 100;
+           const cy = 100 - (d.value / max * 100);
+           return (
+             <g key={i} className="group cursor-pointer">
+               <circle cx={cx} cy={cy} r="3" fill="#ec4899" stroke={darkMode ? "#374151" : "#fff"} strokeWidth="1" />
+               <text x={cx} y={cy - 5} fontSize="6" fill={darkMode ? "#fff" : "#000"} textAnchor="middle" className="font-black opacity-0 group-hover:opacity-100 transition-opacity">{d.value}</text>
+             </g>
+           )
+         })}
+       </svg>
+       <div className="flex justify-between mt-2 px-1">
+         <span className="text-[8px] font-black">{data[0].label}</span>
+         {data.length > 2 && <span className="text-[8px] font-black opacity-50">{data[Math.floor(data.length/2)].label}</span>}
+         <span className="text-[8px] font-black">{data[data.length-1].label}</span>
+       </div>
+     </div>
+   )
+};
+
+const MondrianScatterChart = ({ data, darkMode }) => {
+   if(data.length === 0) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados válidos</div>;
+   const maxY = Math.max(...data.map(d => d.y), 100);
+   return (
+     <div className="relative w-full h-32">
+       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+         {[25,50,75].map(l => <line key={l} x1="0" x2="100" y1={l} y2={l} stroke={darkMode ? "#374151" : "#e5e7eb"} strokeWidth="1"/>)}
+         <line x1="0" x2="0" y1="0" y2="100" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
+         <line x1="0" x2="100" y1="100" y2="100" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
+         {data.map((d, i) => {
+           const cx = ((d.x - 1) / 4) * 90 + 5; 
+           const cy = 100 - ((d.y / maxY) * 90 + 5);
+           return <circle key={i} cx={cx} cy={cy} r="4" fill="#22d3ee" stroke={darkMode ? "#1f2937" : "#000"} strokeWidth="1.5"><title>{d.label} (Nota: {d.x}, Tam: {d.y})</title></circle>
+         })}
+       </svg>
+       <div className="absolute -bottom-4 left-0 right-0 flex justify-between text-[7px] font-black opacity-60"><span>Nota 1</span><span>Nota 5</span></div>
+       <div className="absolute top-0 -left-6 bottom-0 flex flex-col justify-between text-[7px] font-black opacity-60 items-end py-1"><span>{maxY}</span><span>0</span></div>
+     </div>
+   )
+};
+
+const MondrianTreemap = ({ data, darkMode }) => {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  if(total === 0) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
+  return (
+    <div className="w-full h-32 flex flex-wrap content-start border-[3px] border-black dark:border-gray-300">
+       {data.map((d, i) => {
+         const perc = (d.value / total) * 100;
+         if(perc === 0) return null;
+         return (
+           <div key={i} className={`flex items-center justify-center p-1 border-[1px] ${darkMode ? 'border-gray-300' : 'border-black'} ${getMondrianColor(i+1, darkMode)} overflow-hidden`} style={{ width: `${Math.max(18, perc)}%`, flexGrow: perc }}>
+             <div className="flex flex-col items-center">
+                <span className={`text-[8px] font-black uppercase truncate drop-shadow-md ${darkMode ? 'text-white' : 'text-black'}`}>{d.label}</span>
+                <span className={`text-[10px] font-black drop-shadow-md ${darkMode ? 'text-white' : 'text-black'}`}>{d.value}</span>
+             </div>
+           </div>
+         )
+       })}
+    </div>
+  )
+};
+
+const MondrianGauge = ({ value, max, label, darkMode }) => {
+  const perc = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
+  const r = 40;
+  const c = Math.PI * r; 
+  const dash = `${(perc / 100) * c} ${c}`;
+  return (
+     <div className="relative w-full flex flex-col items-center justify-center pt-2 pb-2 h-full">
+        <svg viewBox="0 0 100 55" className="w-full max-w-[140px] drop-shadow-md overflow-visible">
+           <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke={darkMode ? "#374151" : "#e5e7eb"} strokeWidth="14" strokeLinecap="square"/>
+           <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#fbbf24" strokeWidth="14" strokeDasharray={dash} strokeLinecap="square"/>
+        </svg>
+        <div className="absolute bottom-4 flex flex-col items-center">
+          <div className={`text-2xl font-black ${darkMode ? 'text-amber-400' : 'text-amber-500'} drop-shadow-sm`}>{perc.toFixed(0)}%</div>
+          <div className="text-[8px] font-black uppercase tracking-widest opacity-70 mt-1">{label}</div>
+        </div>
+     </div>
+  )
+};
+
+const MondrianTimelineChart = ({ data, darkMode }) => {
+  if(data.length === 0) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem marcos históricos</div>;
+  return (
+    <div className="w-full flex items-center justify-between overflow-x-auto scrollbar-hide py-8 px-4 relative">
+      <div className={`absolute top-1/2 left-4 right-4 h-2 -translate-y-1/2 ${darkMode ? 'bg-gray-300' : 'bg-black'} z-0`} />
+      {data.map((d, i) => (
+         <div key={i} className="relative z-10 flex flex-col items-center min-w-[70px] group flex-1">
+            <div className="absolute bottom-full mb-3 text-[8px] font-black uppercase tracking-widest bg-pink-500 text-white px-2 py-1 truncate max-w-[120px] border-[3px] border-black shadow-[3px_3px_0px_#000] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{d.label}</div>
+            <div className={`w-5 h-5 rounded-full border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${getMondrianColor(i, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'} hover:scale-125 transition-transform`} />
+            <div className={`absolute top-full mt-3 text-[9px] font-black border-[3px] px-1.5 py-0.5 shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-white border-black text-black'}`}>{d.year}</div>
+         </div>
+      ))}
+    </div>
+  )
+};
 
 const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
   if (googleSheetsUrl) {
@@ -563,7 +698,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       playChipBeep('save'); onShowToast('success');
       
       if (deletedItem && settings?.googleSheetsUrl) {
-        // Envia a instrução para o Google Sheets excluir (em minúsculo, exatamente como o script do Google espera)
         syncItemToSheets({ ...deletedItem, _action: 'delete', status: 'DELETADO' }, settings?.googleSheetsUrl);
       }
     }
@@ -1020,6 +1154,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterCat, setFilterCat] = useState('Todas');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterRating, setFilterRating] = useState('Todas');
+  
   const dashItems = useMemo(() => {
     return items.filter(item => {
       let mCat = true, mStatus = true, mRating = true;
@@ -1029,13 +1164,16 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       return mCat && mStatus && mRating;
     });
   }, [items, filterCat, filterStatus, filterRating, activeCategories]);
+  
   const totalDash = dashItems.length;
+  
   const byType = dashItems.reduce((acc, i) => { acc[i.type || 'Outro'] = (acc[i.type || 'Outro'] || 0) + 1; return acc; }, {});
   const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
+  
   const byAuthor = dashItems.reduce((acc, i) => { if (i.author_developer) { acc[i.author_developer] = (acc[i.author_developer] || 0) + 1; } return acc; }, {});
   const sortedAuthors = Object.entries(byAuthor).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
+  
   const byDecade = dashItems.reduce((acc, i) => {
     const year = parseInt(i.year);
     if (!isNaN(year) && year > 1800) { const decade = Math.floor(year / 10) * 10; acc[decade] = (acc[decade] || 0) + 1; }
@@ -1043,6 +1181,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   }, {});
   const decadesKeys = Object.keys(byDecade).sort();
   const maxDecade = decadesKeys.length > 0 ? Math.max(...Object.values(byDecade)) : 1;
+  
   const stats = useMemo(() => {
     if (totalDash === 0) return {};
     const validYears = dashItems.filter(i => i.year && !isNaN(parseInt(i.year)));
@@ -1052,6 +1191,45 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     const vergonha = dashItems.filter(i => i.status === 'Não Iniciado').length;
     return { reliquia, epico, vergonha };
   }, [dashItems, totalDash]);
+
+  // Preparações para os novos gráficos interativos
+  const statusCounts = STATUS_OPTIONS.map((status, i) => ({
+    label: status,
+    value: dashItems.filter(item => item.status === status).length,
+    hexColor: getMondrianHex(i, darkMode)
+  }));
+
+  const yearCounts = {};
+  dashItems.forEach(i => {
+     const y = parseInt(i.year);
+     if(!isNaN(y) && y > 1900 && y <= new Date().getFullYear() + 5) {
+       yearCounts[y] = (yearCounts[y] || 0) + 1;
+     }
+  });
+  const lineData = Object.keys(yearCounts).sort().map(y => ({ label: y, value: yearCounts[y] }));
+
+  const scatterData = dashItems.filter(i => (Number(i.rating) > 0) && (Number(i.pages_or_time) > 0)).map(i => ({
+     x: Number(i.rating),
+     y: Number(i.pages_or_time),
+     label: i.title
+  }));
+
+  const treemapData = Object.entries(byType).map(([type, count]) => ({
+     label: type,
+     value: count
+  }));
+
+  const timelineItems = dashItems.filter(i => i.year && !isNaN(parseInt(i.year))).sort((a,b) => parseInt(a.year) - parseInt(b.year));
+  const tlNodes = [];
+  if(timelineItems.length > 0) {
+    tlNodes.push(timelineItems[0]);
+    if(timelineItems.length > 4) tlNodes.push(timelineItems[Math.floor(timelineItems.length/4)]);
+    if(timelineItems.length > 2) tlNodes.push(timelineItems[Math.floor(timelineItems.length/2)]);
+    if(timelineItems.length > 3) tlNodes.push(timelineItems[Math.floor((timelineItems.length/4)*3)]);
+    if(timelineItems.length > 1) tlNodes.push(timelineItems[timelineItems.length-1]);
+  }
+
+  const completedCount = dashItems.filter(i => i.status === 'Concluído').length;
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
@@ -1106,29 +1284,15 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       {totalDash === 0 && <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest opacity-50">Nenhum dado para este filtro.</div>}
 
       {totalDash > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Formatos Populares</div>
-            <div className="flex flex-col">
-              {sortedTypes.map(([type, count], index) => <MondrianHBar key={type} label={type} value={count} max={maxType} index={index} darkMode={darkMode} />)}
-            </div>
-          </MContainer>
-
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-            <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Top 5 Autores / Estúdios</div>
-            <div className="flex flex-col">
-              {sortedAuthors.map(([author, count], index) => <MondrianHBar key={author} label={String(author || 'Desconhecido')} value={count} max={maxAuthor} index={index + 1} darkMode={darkMode} />)}
-            </div>
-          </MContainer>
-
+        <>
           {decadesKeys.length > 0 && (
-            <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-              <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+              <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Histograma (Por Década)</span><BarChart2 className="w-4 h-4" /></div>
               <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
                 {decadesKeys.map((decadeStr, idx) => {
                   const count = byDecade[decadeStr]; const heightPerc = (count / maxDecade) * 100;
                   return (
-                    <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                    <div key={decadeStr} className="flex flex-col items-center justify-end flex-1 min-w-[30px] h-full group">
                       <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
                       <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
                    </div>
@@ -1140,7 +1304,54 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
               </div>
             </MContainer>
           )}
-        </div>
+
+          {/* NOVA GRADE DE GRÁFICOS INJETADOS AQUI */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-2 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Visão Geral (Pizza)</div>
+                <MondrianPieChart data={statusCounts} darkMode={darkMode} />
+             </MContainer>
+
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-2 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Série Temporal (Área)</div>
+                <div className="flex-1 flex items-end"><MondrianLineAreaChart data={lineData} darkMode={darkMode} isArea /></div>
+             </MContainer>
+
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-2 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Crescimento (Linhas)</div>
+                <div className="flex-1 flex items-end"><MondrianLineAreaChart data={lineData} darkMode={darkMode} /></div>
+             </MContainer>
+
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-2 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Avaliação x Tamanho (Dispersão)</div>
+                <MondrianScatterChart data={scatterData} darkMode={darkMode} />
+             </MContainer>
+
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-2 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Distribuição (Mapa de Árvore)</div>
+                <MondrianTreemap data={treemapData} darkMode={darkMode} />
+             </MContainer>
+
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-2 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Progresso (Medidor)</div>
+                <div className="flex-1"><MondrianGauge value={completedCount} max={totalDash} label="Concluídos vs Total" darkMode={darkMode} /></div>
+             </MContainer>
+
+             <MContainer darkMode={darkMode} className="p-4 md:col-span-2 lg:col-span-3" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Top Autores / Estúdios (Barras)</div>
+                <div className="flex flex-col">
+                  {sortedAuthors.map(([author, count], index) => <MondrianHBar key={author} label={String(author || 'Desconhecido')} value={count} max={maxAuthor} index={index + 1} darkMode={darkMode} />)}
+                </div>
+             </MContainer>
+          </div>
+
+          {timelineItems.length > 0 && (
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col mt-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+               <div className={`text-[10px] font-black uppercase tracking-widest mb-2 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Marcos Históricos (Cronograma)</span><Calendar className="w-4 h-4" /></div>
+               <MondrianTimelineChart data={tlNodes} darkMode={darkMode} />
+            </MContainer>
+          )}
+        </>
       )}
     </div>
   );
@@ -1349,7 +1560,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
                 const count = byYear[yearStr];
                 const heightPerc = (count / maxYear) * 100;
                 return (
-                  <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                  <div key={yearStr} className="flex flex-col items-center justify-end flex-1 min-w-[30px] h-full group">
                     <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
                     <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
                    </div>
@@ -1880,17 +2091,13 @@ export default function App() {
       if (savedSettings?.googleSheetsUrl) {
          setIsFetchingCloud(true);
          try {
-            // FIX ANTICACHE: Força o navegador a buscar a planilha mais recente e ignora cópias salvas no cache
             let fetchUrl = savedSettings.googleSheetsUrl;
             fetchUrl += fetchUrl.includes('?') ? `&nocache=${new Date().getTime()}` : `?nocache=${new Date().getTime()}`;
 
-            // Requisição limpa sem { cache: 'no-store' } para evitar bloqueio de CORS (Preflight) do Google Apps Script
-            // Apenas o parâmetro de tempo na URL já garante que a planilha atualizada será baixada
             const res = await fetch(fetchUrl);
 
             if (res.ok) {
               const data = await res.json();
-              // Aceita array vazio também, caso você delete tudo da planilha, o app vai apagar tudo também
               if (Array.isArray(data)) {
                  setItems(data);
               }
@@ -2145,7 +2352,7 @@ export default function App() {
     );
   }
 
-  // TELA 3: APP PRINCIPAL (Agora Flexível/Responsivo)
+  // TELA 3: APP PRINCIPAL (Responsivo)
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <style>{`
@@ -2155,10 +2362,6 @@ export default function App() {
         @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
       `}</style>
 
-      {/* A mudança principal está aqui:
-        - Mobile: flex-col (fica igual antes, navbar embaixo)
-        - Desktop (md:): flex-row (navbar vira sidebar à esquerda)
-      */}
       <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
 
         {/* SIDEBAR PARA DESKTOP (Escondida no Mobile) */}
@@ -2218,7 +2421,6 @@ export default function App() {
               </div>
               
               <div className="w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2 md:hidden">
-                {/* No desktop a logo já está na sidebar, mostramos apenas os Toasts de sucesso aqui */}
                 {toast.visible ? (
                   toast.type === 'error' 
                     ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
@@ -2227,7 +2429,6 @@ export default function App() {
                   <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200 md:hidden" />
                 )}
               </div>
-              {/* Espaço para o Toast no Desktop (fica no lugar da logo) */}
               <div className="hidden md:flex w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 items-center justify-center transition-all duration-300 relative ml-2">
                  {toast.visible && (
                    toast.type === 'error' 
@@ -2237,25 +2438,26 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex gap-2 flex-col sm:flex-row mt-2">
-               <div className={`flex-1 flex flex-col md:flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+            {/* ESTATÍSTICAS SIDE-BY-SIDE FIX (Ajustado com flex-row) */}
+            <div className="flex flex-row gap-2 mt-2 w-full">
+               <div className={`flex-1 flex flex-col md:flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight w-1/2 ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                 <div className="flex-1">
                   <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
-                    <span>Coleção Física</span><span>{totalItens} UN</span>
+                    <span>Física</span><span>{totalItens}</span>
                   </div>
-                  <div className="flex justify-between"><span>Páginas:</span><span>Lidas: {readPages} ({readPercentage}%)</span></div>
+                  <div className="flex justify-between"><span>Lidas:</span><span>{readPercentage}%</span></div>
                 </div>
                 <div className="flex-1 flex flex-col justify-between">
                   <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
                       <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
                   </div>
-                  <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
+                  <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Med:</span><span>★ {avgRating}</span></div>
                 </div>
               </div>
 
-              <div className={`flex-1 flex flex-col border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+              <div className={`flex-1 flex flex-col border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative w-1/2 ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                  <div className="p-1.5 border-b-[2px] border-gray-800 pb-0.5 mb-0.5 opacity-80 flex justify-between z-10 bg-black">
-                    <span>Jogos Zerados</span><span className="animate-pulse text-pink-500">REC</span>
+                    <span>Zerados</span><span className="animate-pulse text-pink-500">REC</span>
                  </div>
                  
                  <div className="flex-1 flex items-center overflow-hidden w-full relative led-board min-h-[24px]">
