@@ -487,8 +487,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   
-  // Responsive Items per page depending on screen width might be complex without a resize listener,
-  // We'll use a fixed larger number so grids on desktop look full.
   const itemsPerPage = 12; 
   
   const filteredItems = useMemo(() => {
@@ -1082,19 +1080,23 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           {decadesKeys.length > 0 && (
             <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
-              <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
-                {decadesKeys.map((decadeStr, idx) => {
-                  const count = byDecade[decadeStr]; const heightPerc = (count / maxDecade) * 100;
-                  return (
-                    <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
-                      <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                      <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
-                   </div>
-                  );
-                })}
-              </div>
-              <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
-                {decadesKeys.map(decadeStr => <div key={`label-${decadeStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>)}
+              
+              <div className="flex w-full overflow-x-auto scrollbar-hide pt-2 pb-1">
+                <div className="flex gap-2 min-w-max">
+                  {decadesKeys.map((decadeStr, idx) => {
+                    const count = byDecade[decadeStr];
+                    const heightPerc = maxDecade > 0 ? (count / maxDecade) * 100 : 0;
+                    return (
+                      <div key={decadeStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
+                        <div className="h-32 w-full flex flex-col justify-end items-center border-b-[3px] border-current">
+                            <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                            <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(heightPerc, 4)}%` }}></div>
+                        </div>
+                        <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </MContainer>
           )}
@@ -1302,20 +1304,23 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         {yearsKeys.length > 0 && (
           <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
-            <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
-              {yearsKeys.map((yearStr, idx) => {
-                const count = byYear[yearStr];
-                const heightPerc = (count / maxYear) * 100;
-                return (
-                  <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
-                    <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                    <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
-                   </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
-              {yearsKeys.map(yearStr => <div key={`label-${yearStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>)}
+            
+            <div className="flex w-full overflow-x-auto scrollbar-hide pt-2 pb-1">
+              <div className="flex gap-2 min-w-max">
+                {yearsKeys.map((yearStr, idx) => {
+                  const count = byYear[yearStr];
+                  const heightPerc = maxYear > 0 ? (count / maxYear) * 100 : 0;
+                  return (
+                    <div key={yearStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
+                      <div className="h-32 w-full flex flex-col justify-end items-center border-b-[3px] border-current">
+                          <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                          <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(heightPerc, 4)}%` }}></div>
+                      </div>
+                      <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </MContainer>
         )}
@@ -2021,9 +2026,9 @@ export default function App() {
     if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-pink-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
     statsArr.push(<span key="5" className={`text-amber-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
     statsArr.push(<span key="6" className={`text-cyan-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
-    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
-    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
-    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
+    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')}</span>);
+    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')}</span>);
+    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2186,15 +2191,16 @@ export default function App() {
             </div>
 
             <div className="flex gap-2 flex-col sm:flex-row mt-2">
-               <div className={`flex-1 flex flex-col md:flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="flex-1">
-                  <div className="border-b-[2px] border-current pb-0.5 mb-1 opacity-70 flex justify-between">
+               {/* MODIFICAÇÃO DA BARRA SUPERIOR: Ao invés de flex-col que as forçava a empilhar, agora usamos flex-row para mantê-las lado a lado uniformemente */}
+               <div className={`flex-1 flex flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                <div className="flex-1 flex flex-col justify-between border-r-[2px] border-current pr-2 opacity-90">
+                  <div className="border-b-[2px] border-current pb-0.5 mb-1 flex justify-between">
                     <span>Coleção Física</span><span>{totalItens} UN</span>
                   </div>
                   <div className="flex justify-between"><span>Páginas:</span><span>Lidas: {readPages} ({readPercentage}%)</span></div>
                 </div>
-                <div className="flex-1 flex flex-col justify-between">
-                  <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
+                <div className="flex-1 flex flex-col justify-between pl-1">
+                  <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 border-b-[2px] border-transparent pb-0.5 mb-1" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
                       <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
                   </div>
                   <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
