@@ -487,8 +487,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   
-  // Responsive Items per page depending on screen width might be complex without a resize listener,
-  // We'll use a fixed larger number so grids on desktop look full.
   const itemsPerPage = 12; 
   
   const filteredItems = useMemo(() => {
@@ -1838,10 +1836,24 @@ export default function App() {
       if (savedSettings?.googleSheetsUrl) {
          setIsFetchingCloud(true);
          try {
-            const res = await fetch(savedSettings.googleSheetsUrl);
+            // FIX ANTICACHE: Força o navegador a buscar a planilha mais recente e ignora cópias salvas no cache
+            let fetchUrl = savedSettings.googleSheetsUrl;
+            fetchUrl += fetchUrl.includes('?') ? `&nocache=${new Date().getTime()}` : `?nocache=${new Date().getTime()}`;
+
+            const res = await fetch(fetchUrl, {
+                cache: 'no-store', // Impede ativamente que o cache seja lido
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+
             if (res.ok) {
               const data = await res.json();
-              if (Array.isArray(data) && data.length > 0) setItems(data);
+              // Aceita array vazio também, caso você delete tudo da planilha, o app vai apagar tudo também
+              if (Array.isArray(data)) {
+                 setItems(data);
+              }
               
               setShowSuccessSplash(true);
               playLydianSuccess(); 
