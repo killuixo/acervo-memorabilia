@@ -1107,24 +1107,19 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           {decadesKeys.length > 0 && (
             <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
-              
-              <div className="flex w-full overflow-x-auto scrollbar-hide pt-4 pb-1">
-                <div className="flex gap-2 min-w-max px-1">
-                  {decadesKeys.map((decadeStr, idx) => {
-                    const count = byDecade[decadeStr];
-                    const heightPerc = maxDecade > 0 ? (count / maxDecade) * 100 : 0;
-                    const pixelHeight = Math.max((heightPerc / 100) * 100, 4); // Altura precisa em Pixels
-                    return (
-                      <div key={decadeStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
-                        <div className="h-[110px] w-full flex flex-col justify-end items-center border-b-[3px] border-current relative">
-                            <div className="absolute -top-5 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                            <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${pixelHeight}px` }}></div>
-                        </div>
-                        <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+                {decadesKeys.map((decadeStr, idx) => {
+                  const count = byDecade[decadeStr]; const heightPerc = (count / maxDecade) * 100;
+                  return (
+                    <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                      <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                      <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                   </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
+                {decadesKeys.map(decadeStr => <div key={`label-${decadeStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>)}
               </div>
             </MContainer>
           )}
@@ -1332,24 +1327,20 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         {yearsKeys.length > 0 && (
           <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
-            
-            <div className="flex w-full overflow-x-auto scrollbar-hide pt-4 pb-1">
-              <div className="flex gap-2 min-w-max px-1">
-                {yearsKeys.map((yearStr, idx) => {
-                  const count = byYear[yearStr];
-                  const heightPerc = maxYear > 0 ? (count / maxYear) * 100 : 0;
-                  const pixelHeight = Math.max((heightPerc / 100) * 100, 4); // Altura precisa em Pixels
-                  return (
-                    <div key={yearStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
-                      <div className="h-[110px] w-full flex flex-col justify-end items-center border-b-[3px] border-current relative">
-                          <div className="absolute -top-5 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                          <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${pixelHeight}px` }}></div>
-                      </div>
-                      <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+              {yearsKeys.map((yearStr, idx) => {
+                const count = byYear[yearStr];
+                const heightPerc = (count / maxYear) * 100;
+                return (
+                  <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                    <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                    <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                   </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
+              {yearsKeys.map(yearStr => <div key={`label-${yearStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>)}
             </div>
           </MContainer>
         )}
@@ -1919,29 +1910,117 @@ export default function App() {
     setIsLocalStorageLoaded(true);
   }, []);
 
-  const [lastFmTrack, setLastFmTrack] = useState(null);
+  // Last.FM Lógicas unificadas (Interativo)
+  const [lfmPeriodIdx, setLfmPeriodIdx] = useState(0); 
+  const [lfmStatIdx, setLfmStatIdx] = useState(0);
+  const [lfmData, setLfmData] = useState({ recent: null, cache: {} });
+  const [isLfmLoading, setIsLfmLoading] = useState(false);
+
+  const LFM_PERIODS = ['7day', '1month', '12month', 'overall'];
+  const LFM_PERIOD_LABELS = ['7D', '1M', '1A', 'Geral'];
+
   useEffect(() => {
     if (!settings?.lastfmUser || !settings?.lastfmApiKey || !isLoaded) return;
-    const fetchLastFm = async () => {
+
+    const fetchLFM = async () => {
       try {
-        const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&format=json&limit=1`);
-        const data = await res.json();
-        const track = data?.recenttracks?.track?.[0];
+        const resRecent = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&format=json&limit=1`);
+        const dataRec = await resRecent.json();
+        const track = dataRec?.recenttracks?.track?.[0];
+        let recentObj = null;
         if (track) {
-          setLastFmTrack({
+          recentObj = {
             name: track.name,
             artist: track.artist['#text'],
             nowPlaying: track['@attr']?.nowplaying === 'true'
-          });
+          };
         }
+
+        const period = LFM_PERIODS[lfmPeriodIdx];
+        const cacheKey = `${lfmStatIdx}-${period}`;
+        let newCache = {};
+
+        if (lfmStatIdx > 0 && !lfmData.cache[cacheKey]) {
+          setIsLfmLoading(true);
+          if (lfmStatIdx === 1 || lfmStatIdx === 4) {
+            const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettopartists&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${period}&format=json&limit=1`);
+            const data = await res.json();
+            newCache[`1-${period}`] = data?.topartists?.artist?.[0]?.name || 'N/A';
+            newCache[`4-${period}`] = data?.topartists?.['@attr']?.total || '0';
+          } else if (lfmStatIdx === 2) {
+            const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettopalbums&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${period}&format=json&limit=1`);
+            const data = await res.json();
+            const album = data?.topalbums?.album?.[0];
+            newCache[`2-${period}`] = album ? `${album.name} (${album.artist.name})` : 'N/A';
+          } else if (lfmStatIdx === 3) {
+            const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${period}&format=json&limit=1`);
+            const data = await res.json();
+            const trackTop = data?.toptracks?.track?.[0];
+            newCache[`3-${period}`] = trackTop ? `${trackTop.name} (${trackTop.artist.name})` : 'N/A';
+          }
+          setIsLfmLoading(false);
+        }
+
+        setLfmData(prev => ({ recent: recentObj, cache: { ...prev.cache, ...newCache } }));
       } catch (e) {
-        console.warn("Last.fm error", e);
+        setIsLfmLoading(false);
       }
     };
-    fetchLastFm();
-    const interval = setInterval(fetchLastFm, 60000);
-    return () => clearInterval(interval);
-  }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded]);
+
+    fetchLFM();
+
+    let interval;
+    if (lfmStatIdx === 0) {
+      interval = setInterval(fetchLFM, 60000);
+    }
+    return () => { if(interval) clearInterval(interval); };
+  }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded, lfmStatIdx, lfmPeriodIdx]);
+
+  let lfmDisplay = "";
+  let lfmLabel = "";
+  let isPulsingLfm = false;
+
+  if (lfmStatIdx === 0) {
+    const track = lfmData.recent;
+    if (track) {
+      lfmLabel = track.nowPlaying ? 'Ouvindo:' : 'Última:';
+      lfmDisplay = `${track.artist} - ${track.name}`;
+      isPulsingLfm = track.nowPlaying;
+    } else {
+      lfmLabel = 'Last.FM:';
+      lfmDisplay = 'Sem dados';
+    }
+  } else {
+    const periodLabel = LFM_PERIOD_LABELS[lfmPeriodIdx];
+    const cacheKey = `${lfmStatIdx}-${LFM_PERIODS[lfmPeriodIdx]}`;
+    const val = lfmData.cache[cacheKey] || (isLfmLoading ? '...' : 'N/A');
+
+    if (lfmStatIdx === 1) { lfmLabel = `(${periodLabel}) Top Artista:`; lfmDisplay = val; }
+    if (lfmStatIdx === 2) { lfmLabel = `(${periodLabel}) Top Álbum:`; lfmDisplay = val; }
+    if (lfmStatIdx === 3) { lfmLabel = `(${periodLabel}) Top Faixa:`; lfmDisplay = val; }
+    if (lfmStatIdx === 4) { lfmLabel = `(${periodLabel}) Art. Únicos:`; lfmDisplay = val; }
+  }
+
+  const lfmPressTimer = useRef(null);
+  const isLfmLongPress = useRef(false);
+
+  const handleLfmPressStart = () => {
+    isLfmLongPress.current = false;
+    lfmPressTimer.current = setTimeout(() => {
+      isLfmLongPress.current = true;
+      setLfmPeriodIdx(prev => (prev + 1) % 4);
+      if (lfmStatIdx === 0) setLfmStatIdx(1); 
+      playChipBeep('save');
+    }, 500);
+  };
+  const handleLfmPressEnd = () => {
+    if (lfmPressTimer.current) clearTimeout(lfmPressTimer.current);
+  };
+  const handleLfmClick = () => {
+    if (isLfmLongPress.current) return;
+    setLfmStatIdx(prev => (prev + 1) % 5);
+    playChipBeep('success');
+  };
   
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
@@ -2079,9 +2158,9 @@ export default function App() {
     if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-pink-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
     statsArr.push(<span key="5" className={`text-amber-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
     statsArr.push(<span key="6" className={`text-cyan-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
-    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')}</span>);
-    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')}</span>);
-    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF</span>);
+    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
+    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
+    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2204,11 +2283,17 @@ export default function App() {
               <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
                 <h1 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
                 
-                <div className="flex flex-col md:flex-row gap-2 mt-2">
-                  {lastFmTrack && (
-                    <div className={`p-1 px-1.5 text-[8px] lg:text-[9px] font-black uppercase tracking-widest border-[3px] inline-flex items-center gap-1 w-fit max-w-full transition-all ${darkMode ? 'bg-pink-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                      <Headphones className={`w-3 h-3 flex-shrink-0 ${lastFmTrack.nowPlaying ? 'animate-pulse' : ''}`} /> 
-                      <span className="truncate text-left">{lastFmTrack.nowPlaying ? 'Ouvindo:' : 'Última:'} {lastFmTrack.artist} - {lastFmTrack.name}</span>
+                <div className="flex flex-row gap-2 mt-2 w-full">
+                  {settings?.lastfmUser && (
+                    <div 
+                      onMouseDown={handleLfmPressStart} onMouseUp={handleLfmPressEnd} onMouseLeave={handleLfmPressEnd}
+                      onTouchStart={handleLfmPressStart} onTouchEnd={handleLfmPressEnd} onClick={handleLfmClick}
+                      className={`flex-1 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-pink-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                      <Headphones className={`w-3.5 h-3.5 flex-shrink-0 ${isPulsingLfm ? 'animate-pulse' : ''}`} /> 
+                      <div className="flex flex-col truncate leading-none justify-center">
+                        <span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">{lfmLabel}</span>
+                        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate">{lfmDisplay}</span>
+                      </div>
                     </div>
                   )}
 
@@ -2216,8 +2301,12 @@ export default function App() {
                     <div 
                       role="button" tabIndex={0} title="Segure apertado para sortear outro disco" onContextMenu={(e) => e.preventDefault()}
                       onTouchStart={handleSuggPressStart} onTouchEnd={handleSuggPressEnd} onMouseDown={handleSuggPressStart} onMouseUp={handleSuggPressEnd} onMouseLeave={handleSuggPressEnd} onClick={handleSuggClick} style={{ WebkitTouchCallout: 'none' }}
-                      className={`p-1 px-1.5 text-[8px] lg:text-[9px] font-black uppercase tracking-widest border-[3px] inline-flex items-center gap-1 w-fit max-w-full active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer select-none ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                      <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate text-left">Ouvir Hoje: {suggestion.title || 'S/ Título'}</span>
+                      className={`flex-1 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                      <Sparkles className="w-3.5 h-3.5 flex-shrink-0" /> 
+                      <div className="flex flex-col truncate leading-none justify-center w-full">
+                        <span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">Ouvir Hoje:</span>
+                        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate w-full">{suggestion.title || 'S/ Título'}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2281,7 +2370,7 @@ export default function App() {
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             
             {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
-            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
+            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={globalAiState} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
             {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
             {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
             {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
