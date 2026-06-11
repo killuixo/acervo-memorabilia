@@ -171,13 +171,6 @@ const parseCSVText = (rawText) => {
 
 const normalizeStr = s => s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
 
-const normalizeWorkTitle = (title) => {
-  if (!title) return '';
-  return title.toLowerCase()
-       .replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '')
-       .trim();
-};
-
 const parseTimeStr = (timeStr) => {
   if (!timeStr) return 0;
   const str = String(timeStr).trim();
@@ -987,11 +980,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     return items.filter(item => {
       let mCat = true, mStatus = true, mRating = true;
       if (filterCat !== 'Todas') { const catTypes = activeCategories[filterCat] || []; mCat = catTypes.includes(item.type); }
-      if (filterStatus !== 'Todos') {
-         const isDisc = (activeCategories['Discos'] || []).includes(item.type);
-         if (isDisc) mStatus = false;
-         else mStatus = item.status === filterStatus;
-      }
+      if (filterStatus !== 'Todos') mStatus = item.status === filterStatus;
       if (filterRating !== 'Todas') mRating = item.rating === parseInt(filterRating);
       return mCat && mStatus && mRating;
     });
@@ -1000,16 +989,8 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const byType = dashItems.reduce((acc, i) => { acc[i.type || 'Outro'] = (acc[i.type || 'Outro'] || 0) + 1; return acc; }, {});
   const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
-  const byAuthor = dashItems.reduce((acc, i) => { 
-    if (i.author_developer) { 
-      const author = i.author_developer;
-      const normTitle = normalizeWorkTitle(i.title);
-      if (!acc[author]) acc[author] = new Set();
-      acc[author].add(normTitle);
-    } 
-    return acc; 
-  }, {});
-  const sortedAuthors = Object.entries(byAuthor).map(([author, titlesSet]) => [author, titlesSet.size]).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const byAuthor = dashItems.reduce((acc, i) => { if (i.author_developer) { acc[i.author_developer] = (acc[i.author_developer] || 0) + 1; } return acc; }, {});
+  const sortedAuthors = Object.entries(byAuthor).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
   const byDecade = dashItems.reduce((acc, i) => {
     const year = parseInt(i.year);
@@ -1024,12 +1005,9 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
     const validLengths = dashItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
     const epico = validLengths.length > 0 ? validLengths.reduce((a, b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b) : null;
-    const vergonha = dashItems.filter(i => {
-       const isDisc = (activeCategories['Discos'] || []).includes(i.type);
-       return i.status === 'Não Iniciado' && !isDisc;
-    }).length;
+    const vergonha = dashItems.filter(i => i.status === 'Não Iniciado').length;
     return { reliquia, epico, vergonha };
-  }, [dashItems, totalDash, activeCategories]);
+  }, [dashItems, totalDash]);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
@@ -1797,21 +1775,6 @@ export default function App() {
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
-  const [ratingCatIdx, setRatingCatIdx] = useState(0);
-  const ratingCategories = useMemo(() => ['Todas', ...Object.keys(activeCategories)], [activeCategories]);
-  const currentRatingCat = ratingCategories[ratingCatIdx] || 'Todas';
-  
-  const dynamicAvgRating = useMemo(() => {
-    const ratedItemsFiltered = items.filter(i => {
-       if ((Number(i.rating) || 0) === 0) return false;
-       if (currentRatingCat === 'Todas') return true;
-       return (activeCategories[currentRatingCat] || []).includes(i.type);
-    });
-    return ratedItemsFiltered.length > 0 
-       ? (ratedItemsFiltered.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / ratedItemsFiltered.length).toFixed(1) 
-       : 0;
-  }, [items, currentRatingCat, activeCategories]);
-
   const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
   const handleGlobalFileChange = (e) => { const file = e.target.files[0]; if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); } e.target.value = null; };
 
@@ -1967,19 +1930,10 @@ export default function App() {
         stats.push(`Mais Longo: ${longest.pages_or_time} Págs`);
     }
 
-    const authorCounts = items.reduce((acc, i) => { 
-       if(i.author_developer) {
-          const author = i.author_developer;
-          const normTitle = normalizeWorkTitle(i.title);
-          if (!acc[author]) acc[author] = new Set();
-          acc[author].add(normTitle);
-       }
-       return acc; 
-    }, {});
-    
-    const topAuthorEntry = Object.entries(authorCounts).map(([a, s]) => [a, s.size]).sort((a,b)=>b[1]-a[1])[0];
-    if (topAuthorEntry && topAuthorEntry[1] > 1) {
-        stats.push(`+ Freq: ${String(topAuthorEntry[0] || '').substring(0, 15)} (${topAuthorEntry[1]} Obras)`);
+    const authorCounts = items.reduce((acc, i) => { if(i.author_developer) acc[i.author_developer] = (acc[i.author_developer]||0)+1; return acc; }, {});
+    const topAuthor = Object.entries(authorCounts).sort((a,b)=>b[1]-a[1])[0];
+    if (topAuthor && topAuthor[1] > 1) {
+        stats.push(`+ Freq: ${String(topAuthor[0] || '').substring(0, 15)} (${topAuthor[1]}x)`);
     }
 
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
@@ -2014,7 +1968,9 @@ export default function App() {
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPercentage = totalPagesCount > 0 ? ((readPages / totalPagesCount) * 100).toFixed(1) : 0;
-  
+  const ratedItems = items.filter(i => (Number(i.rating) || 0) > 0);
+  const avgRating = ratedItems.length > 0 ? (ratedItems.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / ratedItems.length).toFixed(1) : 0;
+
   const totalJogos = completedGames.length;
   const tempos = completedGames.map(g => Number(g.tempoHoras) || 0).filter(t => t > 0);
   const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
@@ -2236,25 +2192,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
-              <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80">
-                  <span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span>
-                </div>
-                <div className="flex justify-between truncate mb-0.5">
-                  <span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span>
-                </div>
-                <div className="flex justify-between truncate mb-0.5">
-                  <span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span>
-                </div>
-                <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
-                    <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
-                </div>
-                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}>
-                  <span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span>
-                </div>
-              </div>
-
+            <div className="flex gap-2 flex-row mt-2 items-stretch h-[76px]">
               <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                  <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black">
                     <span className="truncate">Jogos Zerados</span><span className="animate-pulse text-pink-500 ml-1">REC</span>
@@ -2266,6 +2204,17 @@ export default function App() {
                       {renderMarqueeContent()}
                     </div>
                   </div>
+              </div>
+              
+              <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80">
+                  <span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span>
+                </div>
+                <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
+                    <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
+                </div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Páginas Lidas:</span><span className="ml-1 truncate">{readPercentage}%</span></div>
+                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span className="truncate">Média:</span><span className="ml-1">★ {avgRating}</span></div>
               </div>
             </div>
           </header>
