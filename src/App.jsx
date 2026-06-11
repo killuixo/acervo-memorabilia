@@ -400,6 +400,17 @@ const MContainer = ({ children, className = '', colorClass = '', darkMode }) => 
   <div className={`border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${colorClass} ${className} transition-colors duration-300`}>{children}</div>
 );
 
+const MImage = ({ src, alt, className, fallbackIcon: FallbackIcon }) => {
+  const [error, setError] = useState(false);
+  
+  useEffect(() => {
+    setError(false);
+  }, [src]);
+
+  if (!src || error) return <FallbackIcon />;
+  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />;
+};
+
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
   let bgClass = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
   if (variant === 'pink' || variant === 'red') bgClass = darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black';
@@ -590,7 +601,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4 flex-col md:flex-row md:items-start">
             <MContainer darkMode={darkMode} className="w-32 h-44 md:w-48 md:h-64 flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0" colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
-              {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
+              <MImage 
+                src={editedItem.cover_url} 
+                alt="Capa" 
+                className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" 
+                fallbackIcon={() => <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />} 
+              />
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
               {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-300 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
@@ -830,13 +846,35 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           const mbData = await mbRes.json();
           if (mbData.releases && mbData.releases.length > 0) {
             const release = mbData.releases[0];
-            foundItem = { ...foundItem, title: release.title || "", author_developer: release["artist-credit"] ? release["artist-credit"].map(a => a.name).join(", ") : "", publisher: release.label ? release.label : (release["label-info"]?.length > 0 && release["label-info"][0].label ? release["label-info"][0].label.name : ""), year: release.date ? release.date.substring(0, 4) : "", type: 'CD', cover_url: `https://coverartarchive.org/release/${release.id}/front` };
+            const hasCover = release["cover-art-archive"] && release["cover-art-archive"].front;
+            foundItem = { ...foundItem, title: release.title || "", author_developer: release["artist-credit"] ? release["artist-credit"].map(a => a.name).join(", ") : "", publisher: release.label ? release.label : (release["label-info"]?.length > 0 && release["label-info"][0].label ? release["label-info"][0].label.name : ""), year: release.date ? release.date.substring(0, 4) : "", type: 'CD', cover_url: hasCover ? `https://coverartarchive.org/release/${release.id}/front` : "" };
             found = true;
           }
         } catch(e) { }
       }
 
-      if (!found) {
+      if (!found && cleanCode.length === 13 && (cleanCode.startsWith("978") || cleanCode.startsWith("979"))) {
+        try {
+          const brRes = await fetch(`https://brasilapi.com.br/api/isbn/v1/${cleanCode}`);
+          if (brRes.ok) {
+            const brData = await brRes.json();
+            foundItem = {
+              ...foundItem,
+              title: brData.title || "",
+              author_developer: brData.authors ? brData.authors.join(", ") : "",
+              publisher: brData.publisher || "",
+              year: brData.year ? brData.year.toString() : "",
+              pages_or_time: brData.page_count ? brData.page_count.toString() : "",
+              description: brData.synopsis || "",
+              cover_url: brData.cover_url || "",
+              type: 'Livro'
+            };
+            found = true;
+          }
+        } catch(e) {}
+      }
+
+      if (!found && (cleanCode.startsWith("978") || cleanCode.startsWith("979"))) {
         try {
           const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
           const gbData = await gbRes.json();
@@ -855,7 +893,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           const olData = await olRes.json();
           if (olData[`ISBN:${cleanCode}`]) {
             const info = olData[`ISBN:${cleanCode}`];
-            foundItem = { ...foundItem, title: info.title || '', author_developer: info.authors?.map(a => a.name).join(', ') || '', year: info.publish_date ? info.publish_date.substring(0, 4) : '', publisher: info.publishers?.map(p => p.name).join(', ') || '', pages_or_time: info.number_of_pages?.toString() || '', description: info.subtitle || '', cover_url: `https://covers.openlibrary.org/b/isbn/${cleanCode}-L.jpg`, type: 'Livro' };
+            foundItem = { ...foundItem, title: info.title || '', author_developer: info.authors?.map(a => a.name).join(', ') || '', year: info.publish_date ? info.publish_date.substring(0, 4) : '', publisher: info.publishers?.map(p => p.name).join(', ') || '', pages_or_time: info.number_of_pages?.toString() || '', description: info.subtitle || '', cover_url: info.cover ? info.cover.large : '', type: 'Livro' };
             found = true;
           }
         } catch(e) { }
