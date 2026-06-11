@@ -2192,34 +2192,29 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex gap-2 flex-col sm:flex-row mt-2">
-               {/* MODIFICAÇÃO DA BARRA SUPERIOR: Ao invés de flex-col que as forçava a empilhar, agora usamos flex-row para mantê-las lado a lado uniformemente */}
-               <div className={`flex-1 flex flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="flex-1 flex flex-col justify-between border-r-[2px] border-current pr-2 opacity-90">
-                  <div className="border-b-[2px] border-current pb-0.5 mb-1 flex justify-between">
-                    <span>Coleção Física</span><span>{totalItens} UN</span>
-                  </div>
-                  <div className="flex justify-between"><span>Páginas:</span><span>Lidas: {readPages} ({readPercentage}%)</span></div>
-                </div>
-                <div className="flex-1 flex flex-col justify-between pl-1">
-                  <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 border-b-[2px] border-transparent pb-0.5 mb-1" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
-                      <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
-                  </div>
-                  <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Média:</span><span>★ {avgRating}</span></div>
-                </div>
-              </div>
-
-              <div className={`flex-1 flex flex-col border-[3px] text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                 <div className="p-1.5 border-b-[2px] border-gray-800 pb-0.5 mb-0.5 opacity-80 flex justify-between z-10 bg-black">
-                    <span>Jogos Zerados</span><span className="animate-pulse text-pink-500">REC</span>
+            <div className="flex gap-2 flex-row mt-2 items-stretch h-[76px]">
+              <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                 <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black">
+                    <span className="truncate">Jogos Zerados</span><span className="animate-pulse text-pink-500 ml-1">REC</span>
                  </div>
                  
-                 <div className="flex-1 flex items-center overflow-hidden w-full relative led-board min-h-[24px]">
+                 <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
                     <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
                       {renderMarqueeContent()} 
                       {renderMarqueeContent()}
                     </div>
                   </div>
+              </div>
+              
+              <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80">
+                  <span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span>
+                </div>
+                <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => { setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length); }}>
+                    <span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span>
+                </div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Páginas Lidas:</span><span className="ml-1 truncate">{readPercentage}%</span></div>
+                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span className="truncate">Média:</span><span className="ml-1">★ {avgRating}</span></div>
               </div>
             </div>
           </header>
