@@ -322,7 +322,7 @@ const Search = (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path 
 const Library = (p) => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></>} />;
 const PlusSquare = (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
 const BarChart2 = (p) => <Icon {...p} path={<><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></>} />;
-const Settings = (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />;
+const Settings = (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0-2.73-.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />;
 const Camera = (p) => <Icon {...p} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
 const Sun = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />;
 const Moon = (p) => <Icon {...p} path={<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>} />;
@@ -1107,24 +1107,19 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           {decadesKeys.length > 0 && (
             <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
-              
-              <div className="flex w-full overflow-x-auto scrollbar-hide pt-4 pb-1">
-                <div className="flex gap-2 min-w-max px-1">
-                  {decadesKeys.map((decadeStr, idx) => {
-                    const count = byDecade[decadeStr];
-                    const heightPerc = maxDecade > 0 ? (count / maxDecade) * 100 : 0;
-                    const pixelHeight = Math.max((heightPerc / 100) * 100, 4); // Altura precisa em Pixels
-                    return (
-                      <div key={decadeStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
-                        <div className="h-[110px] w-full flex flex-col justify-end items-center border-b-[3px] border-current relative">
-                            <div className="absolute -top-5 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                            <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${pixelHeight}px` }}></div>
-                        </div>
-                        <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+                {decadesKeys.map((decadeStr, idx) => {
+                  const count = byDecade[decadeStr]; const heightPerc = (count / maxDecade) * 100;
+                  return (
+                    <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                      <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                      <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                   </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
+                {decadesKeys.map(decadeStr => <div key={`label-${decadeStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>)}
               </div>
             </MContainer>
           )}
@@ -1332,24 +1327,20 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         {yearsKeys.length > 0 && (
           <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
-            
-            <div className="flex w-full overflow-x-auto scrollbar-hide pt-4 pb-1">
-              <div className="flex gap-2 min-w-max px-1">
-                {yearsKeys.map((yearStr, idx) => {
-                  const count = byYear[yearStr];
-                  const heightPerc = maxYear > 0 ? (count / maxYear) * 100 : 0;
-                  const pixelHeight = Math.max((heightPerc / 100) * 100, 4); // Altura precisa em Pixels
-                  return (
-                    <div key={yearStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
-                      <div className="h-[110px] w-full flex flex-col justify-end items-center border-b-[3px] border-current relative">
-                          <div className="absolute -top-5 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                          <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${pixelHeight}px` }}></div>
-                      </div>
-                      <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+              {yearsKeys.map((yearStr, idx) => {
+                const count = byYear[yearStr];
+                const heightPerc = (count / maxYear) * 100;
+                return (
+                  <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
+                    <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                    <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                   </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
+              {yearsKeys.map(yearStr => <div key={`label-${yearStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>)}
             </div>
           </MContainer>
         )}
@@ -1919,10 +1910,20 @@ export default function App() {
     setIsLocalStorageLoaded(true);
   }, []);
 
+  // Last.FM Lógicas unificadas (Interativo)
+  const [lfmPeriodIdx, setLfmPeriodIdx] = useState(0); 
+  const [lfmStatIdx, setLfmStatIdx] = useState(0);
+  const [lfmCache, setLfmCache] = useState({});
+  const [isLfmLoading, setIsLfmLoading] = useState(false);
   const [lastFmTrack, setLastFmTrack] = useState(null);
+
+  const LFM_PERIODS = ['7day', '1month', '12month', 'overall'];
+  const LFM_PERIOD_LABELS = ['7D', '1M', '1A', 'Geral'];
+  const LFM_STATS = ['Última', 'Top Artista', 'Top Álbum', 'Top Faixa', 'Artistas Únicos', 'Faixas Escutadas'];
+
   useEffect(() => {
     if (!settings?.lastfmUser || !settings?.lastfmApiKey || !isLoaded) return;
-    const fetchLastFm = async () => {
+    const fetchRecent = async () => {
       try {
         const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&format=json&limit=1`);
         const data = await res.json();
@@ -1930,18 +1931,118 @@ export default function App() {
         if (track) {
           setLastFmTrack({
             name: track.name,
-            artist: track.artist['#text'],
+            artist: track.artist['#text'] || track.artist?.name || 'Desconhecido',
             nowPlaying: track['@attr']?.nowplaying === 'true'
           });
         }
-      } catch (e) {
-        console.warn("Last.fm error", e);
-      }
+      } catch (e) {}
     };
-    fetchLastFm();
-    const interval = setInterval(fetchLastFm, 60000);
+    fetchRecent();
+    const interval = setInterval(fetchRecent, 60000);
     return () => clearInterval(interval);
   }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded]);
+
+  useEffect(() => {
+    if (!settings?.lastfmUser || !settings?.lastfmApiKey || !isLoaded) return;
+    
+    // O índice 0 é sempre a música recente, não precisa de cache de período
+    if (lfmStatIdx === 0) return;
+
+    const period = LFM_PERIODS[lfmPeriodIdx];
+    const cacheKey = `${lfmStatIdx}-${period}`;
+
+    if (!lfmCache[cacheKey]) {
+      const fetchStat = async () => {
+        setIsLfmLoading(true);
+        try {
+          let val = 'N/A';
+          if (lfmStatIdx === 1 || lfmStatIdx === 4) {
+            const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettopartists&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${period}&format=json&limit=1`);
+            const data = await res.json();
+            if (lfmStatIdx === 1) val = data?.topartists?.artist?.[0]?.name || 'N/A';
+            if (lfmStatIdx === 4) val = data?.topartists?.['@attr']?.total || '0';
+          } else if (lfmStatIdx === 2) {
+            const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettopalbums&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${period}&format=json&limit=1`);
+            const data = await res.json();
+            const album = data?.topalbums?.album?.[0];
+            val = album ? `${album.name} (${album.artist?.name})` : 'N/A';
+          } else if (lfmStatIdx === 3 || lfmStatIdx === 5) {
+            const res = await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${period}&format=json&limit=1`);
+            const data = await res.json();
+            if (lfmStatIdx === 3) {
+              const track = data?.toptracks?.track?.[0];
+              val = track ? `${track.name} (${track.artist?.name})` : 'N/A';
+            }
+            if (lfmStatIdx === 5) {
+              val = data?.toptracks?.['@attr']?.total || '0';
+            }
+          }
+          setLfmCache(prev => ({ ...prev, [cacheKey]: String(val) }));
+        } catch (e) {
+          setLfmCache(prev => ({ ...prev, [cacheKey]: 'Erro' }));
+        } finally {
+          setIsLfmLoading(false);
+        }
+      };
+      fetchStat();
+    }
+  }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded, lfmStatIdx, lfmPeriodIdx, lfmCache]);
+
+  const lfmPressTimer = useRef(null);
+  const isLfmLongPress = useRef(false);
+
+  const handleLfmPressStart = () => {
+    isLfmLongPress.current = false;
+    lfmPressTimer.current = setTimeout(() => {
+      isLfmLongPress.current = true;
+      setLfmPeriodIdx(prev => (prev + 1) % LFM_PERIODS.length);
+      // Se estava na estatística 0 (recente), pula para a 1 para o usuário ver a mudança de período
+      if (lfmStatIdx === 0) setLfmStatIdx(1); 
+      playChipBeep('save');
+    }, 500);
+  };
+  
+  const handleLfmPressEnd = () => {
+    if (lfmPressTimer.current) clearTimeout(lfmPressTimer.current);
+  };
+  
+  const handleLfmClick = () => {
+    if (isLfmLongPress.current) return;
+    setLfmStatIdx(prev => (prev + 1) % LFM_STATS.length);
+    playChipBeep('success');
+  };
+
+  // Montando o Display final do Last.FM para renderizar (apenas strings)
+  let lfmLabelStr = 'Last.FM:';
+  let lfmDisplayStr = 'Sem dados';
+  let isPulsingLfm = false;
+
+  if (!settings?.lastfmUser) {
+    lfmDisplayStr = 'Configure em Ajustes';
+  } else if (lfmStatIdx === 0) {
+    if (lastFmTrack) {
+      lfmLabelStr = lastFmTrack.nowPlaying ? 'Ouvindo:' : 'Última:';
+      lfmDisplayStr = `${lastFmTrack.artist} - ${lastFmTrack.name}`;
+      isPulsingLfm = lastFmTrack.nowPlaying;
+    } else {
+      lfmDisplayStr = 'Carregando...';
+    }
+  } else {
+    const periodLabel = LFM_PERIOD_LABELS[lfmPeriodIdx];
+    const cacheKey = `${lfmStatIdx}-${LFM_PERIODS[lfmPeriodIdx]}`;
+    
+    if (lfmStatIdx === 1) lfmLabelStr = `(${periodLabel}) Top Artista:`;
+    else if (lfmStatIdx === 2) lfmLabelStr = `(${periodLabel}) Top Álbum:`;
+    else if (lfmStatIdx === 3) lfmLabelStr = `(${periodLabel}) Top Faixa:`;
+    else if (lfmStatIdx === 4) lfmLabelStr = `(${periodLabel}) Artistas Únicos:`;
+    else if (lfmStatIdx === 5) lfmLabelStr = `(${periodLabel}) Total Faixas:`;
+
+    if (isLfmLoading && !lfmCache[cacheKey]) {
+      lfmDisplayStr = 'Carregando...';
+    } else {
+      lfmDisplayStr = lfmCache[cacheKey] || 'N/A';
+    }
+  }
   
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
@@ -2079,9 +2180,9 @@ export default function App() {
     if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-pink-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
     statsArr.push(<span key="5" className={`text-amber-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
     statsArr.push(<span key="6" className={`text-cyan-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
-    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')}</span>);
-    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')}</span>);
-    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF</span>);
+    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
+    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
+    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2204,20 +2305,41 @@ export default function App() {
               <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
                 <h1 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
                 
-                <div className="flex flex-col md:flex-row gap-2 mt-2">
-                  {lastFmTrack && (
-                    <div className={`p-1 px-1.5 text-[8px] lg:text-[9px] font-black uppercase tracking-widest border-[3px] inline-flex items-center gap-1 w-fit max-w-full transition-all ${darkMode ? 'bg-pink-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                      <Headphones className={`w-3 h-3 flex-shrink-0 ${lastFmTrack.nowPlaying ? 'animate-pulse' : ''}`} /> 
-                      <span className="truncate text-left">{lastFmTrack.nowPlaying ? 'Ouvindo:' : 'Última:'} {lastFmTrack.artist} - {lastFmTrack.name}</span>
+                {/* Last.FM & Sugestões: Colocados permanentemente lado a lado com flex-row w-full */}
+                <div className="flex flex-row gap-2 mt-2 w-full h-[38px] md:h-[42px]">
+                  {settings?.lastfmUser ? (
+                    <div 
+                      onMouseDown={handleLfmPressStart} onMouseUp={handleLfmPressEnd} onMouseLeave={handleLfmPressEnd}
+                      onTouchStart={handleLfmPressStart} onTouchEnd={handleLfmPressEnd} onClick={handleLfmClick}
+                      className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-pink-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                      <Headphones className={`w-3.5 h-3.5 flex-shrink-0 ${isPulsingLfm ? 'animate-pulse' : ''}`} /> 
+                      <div className="flex flex-col truncate leading-none justify-center w-full">
+                        <span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">{lfmLabelStr}</span>
+                        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate w-full">{lfmDisplayStr}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 transition-all overflow-hidden opacity-50 ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-200 border-black text-black'}`}>
+                      <Headphones className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="text-[7px] font-black uppercase tracking-widest truncate">Last.FM Off</span>
                     </div>
                   )}
 
-                  {suggestion && (
+                  {suggestion ? (
                     <div 
                       role="button" tabIndex={0} title="Segure apertado para sortear outro disco" onContextMenu={(e) => e.preventDefault()}
                       onTouchStart={handleSuggPressStart} onTouchEnd={handleSuggPressEnd} onMouseDown={handleSuggPressStart} onMouseUp={handleSuggPressEnd} onMouseLeave={handleSuggPressEnd} onClick={handleSuggClick} style={{ WebkitTouchCallout: 'none' }}
-                      className={`p-1 px-1.5 text-[8px] lg:text-[9px] font-black uppercase tracking-widest border-[3px] inline-flex items-center gap-1 w-fit max-w-full active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer select-none ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                      <Sparkles className="w-3 h-3 flex-shrink-0" /> <span className="truncate text-left">Ouvir Hoje: {suggestion.title || 'S/ Título'}</span>
+                      className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                      <Sparkles className="w-3.5 h-3.5 flex-shrink-0" /> 
+                      <div className="flex flex-col truncate leading-none justify-center w-full">
+                        <span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">Ouvir Hoje:</span>
+                        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate w-full">{String(suggestion.title || 'S/ Título')}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 transition-all overflow-hidden opacity-50 ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-200 border-black text-black'}`}>
+                      <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="text-[7px] font-black uppercase tracking-widest truncate">Sem Discos</span>
                     </div>
                   )}
                 </div>
