@@ -557,9 +557,15 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
   const confirmDelete = () => {
     if (itemToDelete) {
+      const deletedItem = items.find(i => i.id === itemToDelete);
       setItems(items.filter(item => item.id !== itemToDelete));
       setItemToDelete(null); setSelectedItem(null); setEditedItem(null);
       playChipBeep('save'); onShowToast('success');
+      
+      if (deletedItem && settings?.googleSheetsUrl) {
+        // Envia a instrução para o Google Sheets excluir (em minúsculo, exatamente como o script do Google espera)
+        syncItemToSheets({ ...deletedItem, _action: 'delete', status: 'DELETADO' }, settings?.googleSheetsUrl);
+      }
     }
   };
 
@@ -1878,13 +1884,9 @@ export default function App() {
             let fetchUrl = savedSettings.googleSheetsUrl;
             fetchUrl += fetchUrl.includes('?') ? `&nocache=${new Date().getTime()}` : `?nocache=${new Date().getTime()}`;
 
-            const res = await fetch(fetchUrl, {
-                cache: 'no-store', // Impede ativamente que o cache seja lido
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                }
-            });
+            // Requisição limpa sem { cache: 'no-store' } para evitar bloqueio de CORS (Preflight) do Google Apps Script
+            // Apenas o parâmetro de tempo na URL já garante que a planilha atualizada será baixada
+            const res = await fetch(fetchUrl);
 
             if (res.ok) {
               const data = await res.json();
