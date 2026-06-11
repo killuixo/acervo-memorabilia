@@ -1081,16 +1081,17 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
             <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
               
-              <div className="flex w-full overflow-x-auto scrollbar-hide pt-2 pb-1">
-                <div className="flex gap-2 min-w-max">
+              <div className="flex w-full overflow-x-auto scrollbar-hide pt-4 pb-1">
+                <div className="flex gap-2 min-w-max px-1">
                   {decadesKeys.map((decadeStr, idx) => {
                     const count = byDecade[decadeStr];
                     const heightPerc = maxDecade > 0 ? (count / maxDecade) * 100 : 0;
+                    const pixelHeight = Math.max((heightPerc / 100) * 100, 4); // Altura precisa em Pixels
                     return (
                       <div key={decadeStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
-                        <div className="h-32 w-full flex flex-col justify-end items-center border-b-[3px] border-current">
-                            <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                            <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(heightPerc, 4)}%` }}></div>
+                        <div className="h-[110px] w-full flex flex-col justify-end items-center border-b-[3px] border-current relative">
+                            <div className="absolute -top-5 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                            <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${pixelHeight}px` }}></div>
                         </div>
                         <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>
                       </div>
@@ -1305,16 +1306,17 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
           <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
             
-            <div className="flex w-full overflow-x-auto scrollbar-hide pt-2 pb-1">
-              <div className="flex gap-2 min-w-max">
+            <div className="flex w-full overflow-x-auto scrollbar-hide pt-4 pb-1">
+              <div className="flex gap-2 min-w-max px-1">
                 {yearsKeys.map((yearStr, idx) => {
                   const count = byYear[yearStr];
                   const heightPerc = maxYear > 0 ? (count / maxYear) * 100 : 0;
+                  const pixelHeight = Math.max((heightPerc / 100) * 100, 4); // Altura precisa em Pixels
                   return (
                     <div key={yearStr} className="flex flex-col items-center w-10 sm:w-12 flex-shrink-0 group">
-                      <div className="h-32 w-full flex flex-col justify-end items-center border-b-[3px] border-current">
-                          <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                          <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(heightPerc, 4)}%` }}></div>
+                      <div className="h-[110px] w-full flex flex-col justify-end items-center border-b-[3px] border-current relative">
+                          <div className="absolute -top-5 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
+                          <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${pixelHeight}px` }}></div>
                       </div>
                       <div className="mt-2 text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>
                     </div>
