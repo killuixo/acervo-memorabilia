@@ -191,8 +191,6 @@ const processCompletedGamesCSV = (csvText) => {
   return parsed;
 };
 
-const getBloggerHTMLString = () => `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Acervo Memorabilia</title></head><body><h1>Export HTML</h1></body></html>`;
-
 // ==========================================
 // ÍCONES NATIVOS
 // ==========================================
@@ -210,7 +208,6 @@ const Settings = p => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v
 const Camera = p => <Icon {...p} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
 const Sun = p => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />;
 const Download = p => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
-const Upload = p => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></>} />;
 const ExternalLink = p => <Icon {...p} path={<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>} />;
 const Star = ({ className='', onClick }) => <Icon onClick={onClick} className={className} fill={className.includes('fill')?'currentColor':'none'} path={<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>} />;
 const ChevronLeft = p => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
@@ -223,17 +220,12 @@ const Ghost = p => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01
 const LibraryBig = p => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = p => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = p => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
-const FilterIcon = p => <Icon {...p} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
 const Calendar = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />;
-const Smartphone = p => <Icon {...p} path={<><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></>} />;
 const GamepadIcon = p => <Icon {...p} path={<><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></>} />;
-const DiscIcon = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></>} />;
 const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>} />;
 const XIcon = p => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
 const Zap = p => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = p => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
-const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
-const CopyIcon = p => <Icon {...p} path={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />;
 const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
 
 // ==========================================
@@ -346,21 +338,21 @@ const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter=(v)=>
 // COMPONENTES DE GRÁFICOS SVG CUSTOMIZADOS
 // ==========================================
 const MondrianPieChart = ({ data, darkMode }) => {
-  const total = data.reduce((s, d) => s + d.value, 0);
+  const total = (data || []).reduce((s, d) => s + (d?.value || 0), 0);
   if(!total) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
   let cur = 0;
   return (
     <div className="relative w-full flex items-center justify-center gap-6 py-2">
       <svg viewBox="0 0 32 32" className="w-28 h-28 transform -rotate-90 drop-shadow-md rounded-full overflow-hidden">
-        {data.map((d, i) => {
-          if(!d.value) return null;
+        {(data || []).map((d, i) => {
+          if(!d || !d.value) return null;
           const a = (d.value / total) * 360;
           const res = <circle key={i} cx="16" cy="16" r="16" fill="none" stroke={d.hexColor} strokeWidth="32" strokeDasharray={`${(a/360)*100.53} 100.53`} strokeDashoffset={-(cur/360)*100.53} />;
           cur += a; return res;
         })}
       </svg>
       <div className="flex flex-col gap-2 justify-center">
-        {data.map((d, i) => d.value > 0 && (
+        {(data || []).map((d, i) => (d && d.value > 0) && (
           <div key={i} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest leading-none">
              <div className="w-3 h-3 border-[2px] border-black dark:border-gray-300" style={{ backgroundColor: d.hexColor }} />
              <span>{d.label} ({d.value})</span>
@@ -372,9 +364,9 @@ const MondrianPieChart = ({ data, darkMode }) => {
 };
 
 const MondrianLineAreaChart = ({ data, darkMode, isArea }) => {
-   if(!data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
-   const max = data.reduce((m, d) => Math.max(m, d.value), 1);
-   const pts = data.map((d, i) => `${(i / Math.max(1, data.length - 1)) * 100},${100 - (d.value / max * 100)}`).join(' ');
+   if(!data || !data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
+   const max = data.reduce((m, d) => Math.max(m, d?.value || 0), 1);
+   const pts = data.map((d, i) => `${(i / Math.max(1, data.length - 1)) * 100},${100 - ((d?.value || 0) / max * 100)}`).join(' ');
    return (
      <div className="w-full h-32 relative flex flex-col">
        <svg viewBox="0 -10 100 120" preserveAspectRatio="none" className="w-full flex-1 overflow-visible">
@@ -382,27 +374,27 @@ const MondrianLineAreaChart = ({ data, darkMode, isArea }) => {
          <polyline points={pts} fill="none" stroke={isArea ? "#ec4899" : "#fbbf24"} strokeWidth="2.5" strokeLinejoin="round" />
          {data.map((d, i) => {
            const cx = (i / Math.max(1, data.length - 1)) * 100;
-           const cy = 100 - (d.value / max * 100);
+           const cy = 100 - ((d?.value || 0) / max * 100);
            return (
              <g key={i} className="group cursor-pointer">
                <circle cx={cx} cy={cy} r="3" fill="#ec4899" stroke={darkMode ? "#374151" : "#fff"} strokeWidth="1" />
-               <text x={cx} y={cy - 5} fontSize="6" fill={darkMode ? "#fff" : "#000"} textAnchor="middle" className="font-black opacity-0 group-hover:opacity-100 transition-opacity">{d.value}</text>
+               <text x={cx} y={cy - 5} fontSize="6" fill={darkMode ? "#fff" : "#000"} textAnchor="middle" className="font-black opacity-0 group-hover:opacity-100 transition-opacity">{d?.value || 0}</text>
              </g>
            )
          })}
        </svg>
        <div className="flex justify-between mt-2 px-1">
-         <span className="text-[8px] font-black">{data[0]?.label}</span>
-         {data.length > 2 && <span className="text-[8px] font-black opacity-50">{data[Math.floor(data.length/2)]?.label}</span>}
-         <span className="text-[8px] font-black">{data[data.length-1]?.label}</span>
+         <span className="text-[8px] font-black">{data[0]?.label || ''}</span>
+         {data.length > 2 && <span className="text-[8px] font-black opacity-50">{data[Math.floor(data.length/2)]?.label || ''}</span>}
+         <span className="text-[8px] font-black">{data[data.length-1]?.label || ''}</span>
        </div>
      </div>
    )
 };
 
 const MondrianScatterChart = ({ data, darkMode }) => {
-   if(!data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
-   const maxY = data.reduce((m, d) => Math.max(m, d.y), 100);
+   if(!data || !data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
+   const maxY = data.reduce((m, d) => Math.max(m, d?.y || 0), 100);
    return (
      <div className="relative w-full h-32">
        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
@@ -410,9 +402,10 @@ const MondrianScatterChart = ({ data, darkMode }) => {
          <line x1="0" x2="0" y1="0" y2="100" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
          <line x1="0" x2="100" y1="100" y2="100" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
          {data.map((d, i) => {
-           const cx = ((d.x - 1) / 4) * 90 + 5; 
-           const cy = 100 - ((d.y / maxY) * 90 + 5);
-           return <circle key={i} cx={cx} cy={cy} r="4" fill="#22d3ee" stroke={darkMode?"#1f2937":"#000"} strokeWidth="1.5"><title>{d.label}</title></circle>
+           if (!d) return null;
+           const cx = (((d.x||1) - 1) / 4) * 90 + 5; 
+           const cy = 100 - (((d.y||0) / maxY) * 90 + 5);
+           return <circle key={i} cx={cx} cy={cy} r="4" fill="#22d3ee" stroke={darkMode?"#1f2937":"#000"} strokeWidth="1.5"><title>{d.label || 'Item'}</title></circle>
          })}
        </svg>
        <div className="absolute -bottom-4 left-0 right-0 flex justify-between text-[7px] font-black opacity-60"><span>Nota 1</span><span>Nota 5</span></div>
@@ -421,17 +414,18 @@ const MondrianScatterChart = ({ data, darkMode }) => {
 };
 
 const MondrianTreemap = ({ data, darkMode }) => {
-  const total = data.reduce((s, d) => s + d.value, 0);
+  const total = (data || []).reduce((s, d) => s + (d?.value || 0), 0);
   if(!total) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
   return (
     <div className="w-full h-32 flex flex-wrap content-start border-[3px] border-black dark:border-gray-300">
-       {data.map((d, i) => {
+       {(data || []).map((d, i) => {
+         if (!d || !d.value) return null;
          const perc = (d.value / total) * 100;
          if(!perc) return null;
          return (
            <div key={i} className={`flex items-center justify-center p-1 border-[1px] ${darkMode?'border-gray-300':'border-black'} ${getMondrianColor(i+1, darkMode)} overflow-hidden`} style={{ width: `${Math.max(18, perc)}%`, flexGrow: perc }}>
              <div className="flex flex-col items-center">
-                <span className={`text-[8px] font-black uppercase truncate drop-shadow-md ${darkMode?'text-white':'text-black'}`}>{d.label}</span>
+                <span className={`text-[8px] font-black uppercase truncate drop-shadow-md ${darkMode?'text-white':'text-black'}`}>{d.label || '--'}</span>
                 <span className={`text-[10px] font-black drop-shadow-md ${darkMode?'text-white':'text-black'}`}>{d.value}</span>
              </div>
            </div>
@@ -442,7 +436,8 @@ const MondrianTreemap = ({ data, darkMode }) => {
 };
 
 const MondrianGauge = ({ value, max, label, darkMode }) => {
-  const perc = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
+  const v = Number(value) || 0; const m = Number(max) || 0;
+  const perc = m > 0 ? Math.min(100, Math.max(0, (v / m) * 100)) : 0;
   const c = Math.PI * 40; 
   return (
      <div className="relative w-full flex flex-col items-center justify-center pt-2 pb-2 h-full">
@@ -459,15 +454,15 @@ const MondrianGauge = ({ value, max, label, darkMode }) => {
 };
 
 const MondrianTimelineChart = ({ data, darkMode }) => {
-  if(!data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem marcos</div>;
+  if(!data || !data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem marcos</div>;
   return (
     <div className="w-full flex items-center justify-between overflow-x-auto scrollbar-hide py-8 px-4 relative">
       <div className={`absolute top-1/2 left-4 right-4 h-2 -translate-y-1/2 ${darkMode ? 'bg-gray-300' : 'bg-black'} z-0`} />
-      {data.map((d, i) => d && (
+      {(data || []).map((d, i) => d && (
          <div key={i} className="relative z-10 flex flex-col items-center min-w-[70px] group flex-1">
-            <div className="absolute bottom-full mb-3 text-[8px] font-black uppercase tracking-widest bg-pink-500 text-white px-2 py-1 truncate max-w-[120px] border-[3px] border-black opacity-0 group-hover:opacity-100 transition-opacity">{d.title || 'Sem Título'}</div>
+            <div className="absolute bottom-full mb-3 text-[8px] font-black uppercase tracking-widest bg-pink-500 text-white px-2 py-1 truncate max-w-[120px] border-[3px] border-black opacity-0 group-hover:opacity-100 transition-opacity">{d?.title || 'Sem Título'}</div>
             <div className={`w-5 h-5 rounded-full border-[4px] shadow-[3px_3px_0px_rgba(0,0,0,1)] ${getMondrianColor(i, darkMode)} ${darkMode?'border-gray-300':'border-black'} hover:scale-125 transition-transform`} />
-            <div className={`absolute top-full mt-3 text-[9px] font-black border-[3px] px-1.5 py-0.5 shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode?'bg-gray-800 border-gray-300 text-white':'bg-white border-black text-black'}`}>{d.year || ''}</div>
+            <div className={`absolute top-full mt-3 text-[9px] font-black border-[3px] px-1.5 py-0.5 shadow-[2px_2px_0px_rgba(0,0,0,1)] ${darkMode?'bg-gray-800 border-gray-300 text-white':'bg-white border-black text-black'}`}>{d?.year || ''}</div>
          </div>
       ))}
     </div>
@@ -497,8 +492,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const itemsPerPage = 12; 
   
   const filteredItems = useMemo(() => {
-    let result = items.map((item, index) => ({ ...item, _originalIndex: index }));
+    let result = (items || []).map((item, index) => ({ ...item, _originalIndex: index }));
     result = result.filter(item => {
+      if(!item) return false;
       const q = search.toLowerCase();
       const mSearch = String(item.title||'').toLowerCase().includes(q) || String(item.author_developer||'').toLowerCase().includes(q);
       let mCat = true;
@@ -859,39 +855,79 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterRating, setFilterRating] = useState('Todas');
   
-  const dashItems = useMemo(() => items.filter(item => {
+  // Reforço extremo: garantir que items é um array, garantir que cada item não é null
+  const dashItems = useMemo(() => (items || []).filter(item => {
+    if (!item) return false;
     let mC = true, mS = true, mR = true;
-    if (filterCat !== 'Todas') mC = (activeCategories[filterCat] || []).includes(item.type);
-    if (filterStatus !== 'Todos') mS = item.status === filterStatus;
-    if (filterRating !== 'Todas') mR = item.rating === parseInt(filterRating);
+    if (filterCat !== 'Todas') mC = (activeCategories[filterCat] || []).includes(item?.type || '');
+    if (filterStatus !== 'Todos') mS = (item?.status || '') === filterStatus;
+    if (filterRating !== 'Todas') mR = Number(item?.rating || 0) === parseInt(filterRating);
     return mC && mS && mR;
   }), [items, filterCat, filterStatus, filterRating, activeCategories]);
   
   const tD = dashItems.length;
-  const byType = dashItems.reduce((a, i) => { a[i.type||'Outro']=(a[i.type||'Outro']||0)+1; return a; }, {});
-  const sAuthors = Object.entries(dashItems.reduce((a, i) => { if(i.author_developer) a[i.author_developer]=(a[i.author_developer]||0)+1; return a; }, {})).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  
+  // Fallbacks reforçados para todos os reduce
+  const byType = dashItems.reduce((a, i) => { 
+    if(!i) return a;
+    const type = i.type || 'Outro';
+    a[type] = (a[type]||0) + 1; 
+    return a; 
+  }, {});
+  
+  const sAuthors = Object.entries(dashItems.reduce((a, i) => { 
+    if (i && i.author_developer) {
+      const auth = String(i.author_developer).trim();
+      if(auth) a[auth] = (a[auth]||0) + 1;
+    }
+    return a; 
+  }, {})).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  
   const mAuthor = sAuthors.length > 0 ? sAuthors[0][1] : 1;
-  const byDecade = dashItems.reduce((a, i) => { const y = parseInt(i.year); if(!isNaN(y) && y>1800) { const d = Math.floor(y/10)*10; a[d] = (a[d]||0)+1; } return a; }, {});
+  
+  const byDecade = dashItems.reduce((a, i) => { 
+    const y = parseInt(i?.year); 
+    if(!isNaN(y) && y>1800) { 
+      const d = Math.floor(y/10)*10; 
+      a[d] = (a[d]||0)+1; 
+    } 
+    return a; 
+  }, {});
+  
   const decKeys = Object.keys(byDecade).sort();
   const maxDecade = decKeys.length > 0 ? Object.values(byDecade).reduce((m,v)=>Math.max(m,v),1) : 1;
   
   const stats = useMemo(() => {
     if(!tD) return {};
-    const vY = dashItems.filter(i => i.year && !isNaN(parseInt(i.year)));
-    const reliquia = vY.length ? vY.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
-    const vL = dashItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
-    const epico = vL.length ? vL.reduce((a, b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b) : null;
-    const vergonha = dashItems.filter(i => i.status === 'Não Iniciado').length;
+    const vY = dashItems.filter(i => i && i.year && !isNaN(parseInt(i.year)));
+    const reliquia = vY.length ? vY.reduce((a, b) => parseInt(a?.year||0) < parseInt(b?.year||0) ? a : b) : null;
+    const vL = dashItems.filter(i => i && i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
+    const epico = vL.length ? vL.reduce((a, b) => parseInt(a?.pages_or_time||0) > parseInt(b?.pages_or_time||0) ? a : b) : null;
+    const vergonha = dashItems.filter(i => i && i.status === 'Não Iniciado').length;
     return { reliquia, epico, vergonha };
   }, [dashItems, tD]);
 
-  const sCounts = STATUS_OPTIONS.map((s, i) => ({ label: s, value: dashItems.filter(it => it.status === s).length, hexColor: getMondrianHex(i, darkMode) }));
+  const sCounts = STATUS_OPTIONS.map((s, i) => ({ 
+    label: s, 
+    value: dashItems.filter(it => it && it.status === s).length, 
+    hexColor: getMondrianHex(i, darkMode) 
+  }));
+  
   const yCounts = {};
-  dashItems.forEach(i => { const y = parseInt(i.year); if(!isNaN(y) && y>1900 && y<=new Date().getFullYear()+5) yCounts[y] = (yCounts[y]||0)+1; });
+  dashItems.forEach(i => { 
+    const y = parseInt(i?.year); 
+    if(!isNaN(y) && y>1900 && y<=new Date().getFullYear()+5) {
+      yCounts[y] = (yCounts[y]||0)+1; 
+    }
+  });
   const lData = Object.keys(yCounts).sort().map(y => ({ label: y, value: yCounts[y] }));
-  const scData = dashItems.filter(i=>(Number(i.rating)>0)&&(Number(i.pages_or_time)>0)).map(i=>({x:Number(i.rating),y:Number(i.pages_or_time),label:i.title}));
+  
+  const scData = dashItems.filter(i => i && (Number(i.rating)>0) && (Number(i.pages_or_time)>0))
+    .map(i => ({x: Number(i.rating), y: Number(i.pages_or_time), label: i.title || 'Item'}));
+    
   const tmData = Object.entries(byType).map(([t, c]) => ({ label: t, value: c }));
-  const tlItems = dashItems.filter(i=>i.year&&!isNaN(parseInt(i.year))).sort((a,b)=>parseInt(a.year)-parseInt(b.year));
+  
+  const tlItems = dashItems.filter(i => i && i.year && !isNaN(parseInt(i.year))).sort((a,b)=>parseInt(a.year)-parseInt(b.year));
   const tlNodes = [];
   if(tlItems.length > 0) {
     tlNodes.push(tlItems[0]);
@@ -914,8 +950,8 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode?'bg-cyan-800 text-white':'bg-cyan-400 text-black'}><LibraryBig className="absolute -right-4 -bottom-4 w-20 h-20 opacity-20" /><div className="text-5xl font-black z-10">{tD}</div><div className="text-[9px] font-black uppercase mt-1 z-10">Itens no Filtro</div></MContainer>
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode?'bg-gray-800 text-white':'bg-gray-200 text-black'}><Ghost className="absolute -right-4 -bottom-4 w-20 h-20 opacity-20" /><div className="text-5xl font-black z-10">{stats.vergonha||0}</div><div className="text-[9px] font-black uppercase mt-1 z-10">Backlog</div></MContainer>
-        {stats.reliquia && <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28" colorClass={darkMode?'bg-amber-700 text-white':'bg-amber-400 text-black'}><div className="flex justify-between mb-2"><div className="text-[9px] font-black uppercase">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black line-clamp-2">{stats.reliquia.title}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year}</div></div></MContainer>}
-        {stats.epico && <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28" colorClass={darkMode?'bg-pink-800 text-white':'bg-pink-500 text-black'}><div className="flex justify-between mb-2"><div className="text-[9px] font-black uppercase">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black line-clamp-2">{stats.epico.title}</div><div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} Tam</div></div></MContainer>}
+        {stats.reliquia && <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28" colorClass={darkMode?'bg-amber-700 text-white':'bg-amber-400 text-black'}><div className="flex justify-between mb-2"><div className="text-[9px] font-black uppercase">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black line-clamp-2">{stats.reliquia.title || 'S/ Título'}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year || '--'}</div></div></MContainer>}
+        {stats.epico && <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28" colorClass={darkMode?'bg-pink-800 text-white':'bg-pink-500 text-black'}><div className="flex justify-between mb-2"><div className="text-[9px] font-black uppercase">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black line-clamp-2">{stats.epico.title || 'S/ Título'}</div><div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time || 0} Tam</div></div></MContainer>}
       </div>
 
       {tD > 0 && (
@@ -941,7 +977,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
              <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode?'bg-gray-900 text-white':'bg-white text-black'}><div className="text-[10px] font-black uppercase border-b-[4px] pb-2 mb-2">Linhas</div><MondrianLineAreaChart data={lData} darkMode={darkMode} /></MContainer>
              <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode?'bg-gray-900 text-white':'bg-white text-black'}><div className="text-[10px] font-black uppercase border-b-[4px] pb-2 mb-2">Dispersão</div><MondrianScatterChart data={scData} darkMode={darkMode} /></MContainer>
              <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode?'bg-gray-900 text-white':'bg-white text-black'}><div className="text-[10px] font-black uppercase border-b-[4px] pb-2 mb-2">Treemap</div><MondrianTreemap data={tmData} darkMode={darkMode} /></MContainer>
-             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode?'bg-gray-900 text-white':'bg-white text-black'}><div className="text-[10px] font-black uppercase border-b-[4px] pb-2 mb-2">Gauge</div><MondrianGauge value={dashItems.filter(i=>i.status==='Concluído').length} max={tD} label="Concluídos" darkMode={darkMode} /></MContainer>
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode?'bg-gray-900 text-white':'bg-white text-black'}><div className="text-[10px] font-black uppercase border-b-[4px] pb-2 mb-2">Gauge</div><MondrianGauge value={dashItems.filter(i=>i && i.status==='Concluído').length} max={tD} label="Concluídos" darkMode={darkMode} /></MContainer>
              <MContainer darkMode={darkMode} className="p-4 md:col-span-2 lg:col-span-3" colorClass={darkMode?'bg-gray-900 text-white':'bg-white text-black'}><div className="text-[10px] font-black uppercase border-b-[4px] pb-2 mb-4">Autores / Barras</div><div className="flex flex-col">{sAuthors.map(([a, c], i) => <MondrianHBar key={a} label={a||'--'} value={c} max={mAuthor} index={i+1} darkMode={darkMode} />)}</div></MContainer>
           </div>
 
@@ -1246,24 +1282,27 @@ export default function App() {
   
   const [rotIdx, setRotIdx] = useState(0);
   const rotStats = useMemo(() => {
-    if(!items.length) return ["Acervo Formando"];
-    const s = []; const c = items.reduce((a,i)=>{a[i.type]=(a[i.type]||0)+1;return a;},{});
+    if(!(items || []).length) return ["Acervo Formando"];
+    const s = []; const c = (items || []).reduce((a,i)=>{
+      if (i) { a[i.type] = (a[i.type]||0)+1; } 
+      return a;
+    },{});
     if(c['Livro']) s.push(`${c['Livro']} Livros`); if(c['CD']) s.push(`${c['CD']} CDs`); if(c['DVD']) s.push(`${c['DVD']} DVDs`);
     return s.length ? s : ["Sua Coleção"];
   }, [items]);
 
   const [suggestion, setSuggestion] = useState(null);
   useEffect(() => {
-    if(isLoaded && items.length > 0 && !suggestion) {
-      const m = items.filter(i => (activeCategories['Discos']||[]).includes(i.type));
+    if(isLoaded && items && items.length > 0 && !suggestion) {
+      const m = items.filter(i => i && (activeCategories['Discos']||[]).includes(i.type));
       if(m.length) setSuggestion(m[Math.floor(Math.random()*m.length)]);
     }
   }, [isLoaded, items, activeCategories, suggestion]);
 
-  const readP = items.filter(i=>(activeCategories['Livros']||[]).includes(i.type) && i.status==='Concluído').reduce((a,i)=>a+(parseInt(i.pages_or_time)||0),0);
-  const totP = items.filter(i=>(activeCategories['Livros']||[]).includes(i.type)).reduce((a,i)=>a+(parseInt(i.pages_or_time)||0),0);
+  const readP = (items || []).filter(i=> i && (activeCategories['Livros']||[]).includes(i.type) && i.status==='Concluído').reduce((a,i)=>a+(parseInt(i.pages_or_time)||0),0);
+  const totP = (items || []).filter(i=> i && (activeCategories['Livros']||[]).includes(i.type)).reduce((a,i)=>a+(parseInt(i.pages_or_time)||0),0);
   const rPerc = totP > 0 ? ((readP/totP)*100).toFixed(1) : 0;
-  const rtItems = items.filter(i=>(Number(i.rating)||0)>0);
+  const rtItems = (items || []).filter(i=> i && (Number(i.rating)||0)>0);
   const aRt = rtItems.length ? (rtItems.reduce((a,i)=>a+(Number(i.rating)||0),0)/rtItems.length).toFixed(1) : 0;
 
   const tJ = completedGames.length;
@@ -1305,7 +1344,7 @@ export default function App() {
 
             <div className="flex flex-row gap-2 mt-2 w-full">
                <div className={`flex-1 flex flex-col md:flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase w-1/2 ${darkMode?'border-gray-300 bg-gray-800 text-white':'border-black bg-gray-100 text-black'}`}>
-                <div className="flex-1"><div className="border-b-[2px] border-current pb-0.5 mb-1 flex justify-between"><span>Física</span><span>{items.length}</span></div><div className="flex justify-between"><span>Lidas:</span><span>{rPerc}%</span></div></div>
+                <div className="flex-1"><div className="border-b-[2px] border-current pb-0.5 mb-1 flex justify-between"><span>Física</span><span>{(items||[]).length}</span></div><div className="flex justify-between"><span>Lidas:</span><span>{rPerc}%</span></div></div>
                 <div className="flex-1 flex flex-col justify-between"><div className="flex justify-between text-amber-500 cursor-pointer" onClick={()=>setRotIdx((rotIdx+1)%rotStats.length)}><span className="truncate">{rotStats[rotIdx]}</span></div><div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Med:</span><span>★ {aRt}</span></div></div>
               </div>
 
