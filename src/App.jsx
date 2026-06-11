@@ -192,14 +192,22 @@ const processCompletedGamesCSV = (csvText) => {
 };
 
 // ==========================================
-// ÍCONES NATIVOS
+// ÍCONES NATIVOS E SVG
 // ==========================================
 const Icon = ({ path, className="w-6 h-6", onClick, fill="none", style }) => (
   <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>
 );
-const KatamariIcon = ({ className="w-6 h-6", glow=0 }) => (
-  <svg viewBox="0 0 100 100" className={className} style={{ filter: glow>0?`drop-shadow(0 0 ${glow}px currentColor)`:'none' }}><g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" /><circle cx="50" cy="50" r="28" fill="#fbbf24" stroke="#fbbf24" strokeWidth="6" strokeDasharray="5 5" /><circle cx="50" cy="50" r="18" fill="none" stroke="#d97706" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/><g stroke="#22d3ee" strokeWidth="6" strokeLinecap="round"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g><g stroke="#ec4899" strokeWidth="7" strokeLinecap="round"><line x1="50" y1="18" x2="50" y2="22" /><line x1="50" y1="82" x2="50" y2="78" /><line x1="18" y1="50" x2="22" y2="50" /><line x1="82" y1="50" x2="78" y2="50" /><line x1="28" y1="28" x2="32" y2="32" /><line x1="72" y1="72" x2="68" y2="68" /><line x1="28" y1="72" x2="32" y2="68" /><line x1="72" y1="28" x2="68" y2="32" /></g></g></svg>
+const KatamariIcon = ({ className="w-6 h-6" }) => (
+  <svg viewBox="0 0 100 100" className={className}><g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" /><circle cx="50" cy="50" r="28" fill="currentColor" opacity="0.9" /><circle cx="50" cy="50" r="18" fill="none" stroke="#fff" strokeWidth="3" strokeDasharray="3 5" opacity="0.5"/><g stroke="#fff" strokeWidth="5" strokeLinecap="round" opacity="0.8"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g></g></svg>
 );
+const PacmanIcon = ({ className="w-6 h-6" }) => (
+  <svg viewBox="0 0 100 100" className={className}>
+    <path fill="currentColor" d="M50,50 L95,25 A45,45 0 1,0 95,75 Z">
+      <animate attributeName="d" values="M50,50 L95,25 A45,45 0 1,0 95,75 Z; M50,50 L95,49 A45,45 0 1,0 95,51 Z; M50,50 L95,25 A45,45 0 1,0 95,75 Z" dur="0.4s" repeatCount="indefinite" />
+    </path>
+  </svg>
+);
+
 const Search = p => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
 const Library = p => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></>} />;
 const PlusSquare = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
@@ -308,6 +316,16 @@ const MInput = ({ label, value, onChange, onBlur, type="text", placeholder="", m
   </div>
 );
 
+const MSlider = ({ label, value, min, max, onChange, darkMode, unit='', step="1" }) => (
+  <div className="flex flex-col mb-3 w-full">
+    <div className="flex justify-between items-end mb-2">
+      <label className={`text-[10px] font-black uppercase tracking-widest ${darkMode?'text-gray-400':'text-gray-900'}`}>{label}</label>
+      <span className={`text-[10px] font-black px-2 py-0.5 border-[2px] ${darkMode?'border-gray-300 bg-gray-800 text-white':'border-black bg-white text-black'}`}>{value}{unit}</span>
+    </div>
+    <input type="range" min={min} max={max} step={step} value={value} onChange={onChange} className={`w-full h-3 bg-gray-200 border-[2px] ${darkMode?'border-gray-300 bg-gray-700':'border-black bg-gray-200'} accent-pink-500 appearance-none rounded-none cursor-pointer`} />
+  </div>
+);
+
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText="Sim", cancelText="Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
@@ -366,15 +384,16 @@ const MondrianPieChart = ({ data, darkMode }) => {
 const MondrianLineAreaChart = ({ data, darkMode, isArea }) => {
    if(!data || !data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
    const max = data.reduce((m, d) => Math.max(m, d?.value || 0), 1);
-   const pts = data.map((d, i) => `${(i / Math.max(1, data.length - 1)) * 100},${100 - ((d?.value || 0) / max * 100)}`).join(' ');
+   // Adicionado padding no cálculo para não colar nas bordas do SVG
+   const pts = data.map((d, i) => `${(i / Math.max(1, data.length - 1)) * 90 + 5},${95 - ((d?.value || 0) / max * 80)}`).join(' ');
    return (
      <div className="w-full h-32 relative flex flex-col">
-       <svg viewBox="0 -10 100 120" preserveAspectRatio="none" className="w-full flex-1 overflow-visible">
-         {isArea && <polygon points={`0,100 ${pts} 100,100`} fill="#22d3ee" fillOpacity={darkMode ? "0.6" : "0.3"} />}
+       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full flex-1 overflow-visible">
+         {isArea && <polygon points={`5,100 ${pts} 95,100`} fill="#22d3ee" fillOpacity={darkMode ? "0.6" : "0.3"} />}
          <polyline points={pts} fill="none" stroke={isArea ? "#ec4899" : "#fbbf24"} strokeWidth="2.5" strokeLinejoin="round" />
          {data.map((d, i) => {
-           const cx = (i / Math.max(1, data.length - 1)) * 100;
-           const cy = 100 - ((d?.value || 0) / max * 100);
+           const cx = (i / Math.max(1, data.length - 1)) * 90 + 5;
+           const cy = 95 - ((d?.value || 0) / max * 80);
            return (
              <g key={i} className="group cursor-pointer">
                <circle cx={cx} cy={cy} r="3" fill="#ec4899" stroke={darkMode ? "#374151" : "#fff"} strokeWidth="1" />
@@ -396,19 +415,19 @@ const MondrianScatterChart = ({ data, darkMode }) => {
    if(!data || !data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem dados</div>;
    const maxY = data.reduce((m, d) => Math.max(m, d?.y || 0), 100);
    return (
-     <div className="relative w-full h-32">
+     <div className="relative w-full h-32 pb-2">
        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-         {[25,50,75].map(l => <line key={l} x1="0" x2="100" y1={l} y2={l} stroke={darkMode ? "#374151" : "#e5e7eb"} strokeWidth="1"/>)}
-         <line x1="0" x2="0" y1="0" y2="100" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
-         <line x1="0" x2="100" y1="100" y2="100" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
+         {[15, 55, 95].map(l => <line key={l} x1="5" x2="95" y1={l} y2={l} stroke={darkMode ? "#374151" : "#e5e7eb"} strokeWidth="1"/>)}
+         <line x1="5" x2="5" y1="5" y2="95" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
+         <line x1="5" x2="95" y1="95" y2="95" stroke={darkMode ? "#9ca3af" : "#1f2937"} strokeWidth="1.5"/>
          {data.map((d, i) => {
            if (!d) return null;
-           const cx = (((d.x||1) - 1) / 4) * 90 + 5; 
-           const cy = 100 - (((d.y||0) / maxY) * 90 + 5);
+           const cx = (((d.x||1) - 1) / 4) * 80 + 10; 
+           const cy = 95 - (((d.y||0) / maxY) * 80);
            return <circle key={i} cx={cx} cy={cy} r="4" fill="#22d3ee" stroke={darkMode?"#1f2937":"#000"} strokeWidth="1.5"><title>{d.label || 'Item'}</title></circle>
          })}
        </svg>
-       <div className="absolute -bottom-4 left-0 right-0 flex justify-between text-[7px] font-black opacity-60"><span>Nota 1</span><span>Nota 5</span></div>
+       <div className="absolute -bottom-2 left-0 right-0 flex justify-between text-[7px] font-black opacity-60"><span>Nota 1</span><span>Nota 5</span></div>
      </div>
    )
 };
@@ -424,8 +443,8 @@ const MondrianTreemap = ({ data, darkMode }) => {
          if(!perc) return null;
          return (
            <div key={i} className={`flex items-center justify-center p-1 border-[1px] ${darkMode?'border-gray-300':'border-black'} ${getMondrianColor(i+1, darkMode)} overflow-hidden`} style={{ width: `${Math.max(18, perc)}%`, flexGrow: perc }}>
-             <div className="flex flex-col items-center">
-                <span className={`text-[8px] font-black uppercase truncate drop-shadow-md ${darkMode?'text-white':'text-black'}`}>{d.label || '--'}</span>
+             <div className="flex flex-col items-center w-full">
+                <span className={`text-[8px] font-black uppercase truncate w-full text-center drop-shadow-md ${darkMode?'text-white':'text-black'}`} title={d.label}>{d.label || '--'}</span>
                 <span className={`text-[10px] font-black drop-shadow-md ${darkMode?'text-white':'text-black'}`}>{d.value}</span>
              </div>
            </div>
@@ -438,14 +457,15 @@ const MondrianTreemap = ({ data, darkMode }) => {
 const MondrianGauge = ({ value, max, label, darkMode }) => {
   const v = Number(value) || 0; const m = Number(max) || 0;
   const perc = m > 0 ? Math.min(100, Math.max(0, (v / m) * 100)) : 0;
-  const c = Math.PI * 40; 
+  // Circunferência do semi-círculo (raio 35)
+  const c = Math.PI * 35; 
   return (
-     <div className="relative w-full flex flex-col items-center justify-center pt-2 pb-2 h-full">
-        <svg viewBox="0 0 100 55" className="w-full max-w-[140px] drop-shadow-md overflow-visible">
-           <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke={darkMode ? "#374151" : "#e5e7eb"} strokeWidth="14" strokeLinecap="square"/>
-           <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#fbbf24" strokeWidth="14" strokeDasharray={`${(perc/100)*c} ${c}`} strokeLinecap="square"/>
+     <div className="relative w-full flex flex-col items-center justify-center pt-2 pb-2 h-full overflow-hidden">
+        <svg viewBox="0 0 100 60" className="w-full max-w-[140px] drop-shadow-md overflow-visible">
+           <path d="M 15 50 A 35 35 0 0 1 85 50" fill="none" stroke={darkMode ? "#374151" : "#e5e7eb"} strokeWidth="12" strokeLinecap="square"/>
+           <path d="M 15 50 A 35 35 0 0 1 85 50" fill="none" stroke="#fbbf24" strokeWidth="12" strokeDasharray={`${(perc/100)*c} ${c}`} strokeLinecap="square"/>
         </svg>
-        <div className="absolute bottom-4 flex flex-col items-center">
+        <div className="absolute bottom-2 flex flex-col items-center">
           <div className={`text-2xl font-black ${darkMode ? 'text-amber-400' : 'text-amber-500'} drop-shadow-sm`}>{perc.toFixed(0)}%</div>
           <div className="text-[8px] font-black uppercase tracking-widest opacity-70 mt-1">{label}</div>
         </div>
@@ -456,8 +476,8 @@ const MondrianGauge = ({ value, max, label, darkMode }) => {
 const MondrianTimelineChart = ({ data, darkMode }) => {
   if(!data || !data.length) return <div className="p-4 opacity-50 text-[10px] font-black uppercase text-center w-full">Sem marcos</div>;
   return (
-    <div className="w-full flex items-center justify-between overflow-x-auto scrollbar-hide py-8 px-4 relative">
-      <div className={`absolute top-1/2 left-4 right-4 h-2 -translate-y-1/2 ${darkMode ? 'bg-gray-300' : 'bg-black'} z-0`} />
+    <div className="w-full flex items-center justify-between overflow-x-auto scrollbar-hide py-8 px-8 relative">
+      <div className={`absolute top-1/2 left-8 right-8 h-2 -translate-y-1/2 ${darkMode ? 'bg-gray-300' : 'bg-black'} z-0`} />
       {(data || []).map((d, i) => d && (
          <div key={i} className="relative z-10 flex flex-col items-center min-w-[70px] group flex-1">
             <div className="absolute bottom-full mb-3 text-[8px] font-black uppercase tracking-widest bg-pink-500 text-white px-2 py-1 truncate max-w-[120px] border-[3px] border-black opacity-0 group-hover:opacity-100 transition-opacity">{d?.title || 'Sem Título'}</div>
@@ -855,7 +875,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterRating, setFilterRating] = useState('Todas');
   
-  // Reforço extremo: garantir que items é um array, garantir que cada item não é null
   const dashItems = useMemo(() => (items || []).filter(item => {
     if (!item) return false;
     let mC = true, mS = true, mR = true;
@@ -867,7 +886,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   
   const tD = dashItems.length;
   
-  // Fallbacks reforçados para todos os reduce
   const byType = dashItems.reduce((a, i) => { 
     if(!i) return a;
     const type = i.type || 'Outro';
@@ -1128,6 +1146,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         {openSection === 'apa' && (
           <div className="p-4 flex flex-col gap-4">
             <MButton onClick={()=>setDarkMode(!darkMode)} darkMode={darkMode} variant="black">{darkMode?'Modo Claro':'Modo Escuro'}</MButton>
+            <div className={`flex flex-col gap-2 mt-2 p-3 border-[4px] ${darkMode?'border-gray-300':'border-black'}`}>
+              <MSlider label="Velocidade Letreiro" min="5" max="100" value={settings?.marqueeSpeed||35} onChange={e=>setSettings({...settings, marqueeSpeed: Number(e.target.value)})} darkMode={darkMode} unit="s" />
+              <MSlider label="Brilho Letreiro" min="10" max="100" value={settings?.marqueeBrightness||50} onChange={e=>setSettings({...settings, marqueeBrightness: Number(e.target.value)})} darkMode={darkMode} unit="%" />
+            </div>
           </div>
         )}
       </MContainer>
@@ -1309,6 +1331,9 @@ export default function App() {
   const tmps = completedGames.map(g=>Number(g.tempoHoras)||0).filter(t=>t>0);
   const aTm = tmps.length ? (tmps.reduce((a,b)=>a+b,0)/tmps.length).toFixed(1) : 0;
 
+  // Letreiro
+  const latestGamesText = completedGames.slice(-4).reverse().map(g => g.nome.toUpperCase()).join(' • ');
+
   if (isFetchingCloud && !showSuccessSplash) return <div className={`min-h-screen ${darkMode?'bg-gray-900 text-white':'bg-black text-white'} flex items-center justify-center font-sans font-black`}><KatamariIcon className="w-16 h-16 animate-spin text-cyan-400" /></div>;
   if (showSuccessSplash) return <div className="min-h-screen bg-black text-white flex items-center justify-center font-sans font-black"><h1 className="text-4xl text-pink-500">Memorabilia</h1></div>;
 
@@ -1343,17 +1368,33 @@ export default function App() {
             </div>
 
             <div className="flex flex-row gap-2 mt-2 w-full">
-               <div className={`flex-1 flex flex-col md:flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase w-1/2 ${darkMode?'border-gray-300 bg-gray-800 text-white':'border-black bg-gray-100 text-black'}`}>
-                <div className="flex-1"><div className="border-b-[2px] border-current pb-0.5 mb-1 flex justify-between"><span>Física</span><span>{(items||[]).length}</span></div><div className="flex justify-between"><span>Lidas:</span><span>{rPerc}%</span></div></div>
-                <div className="flex-1 flex flex-col justify-between"><div className="flex justify-between text-amber-500 cursor-pointer" onClick={()=>setRotIdx((rotIdx+1)%rotStats.length)}><span className="truncate">{rotStats[rotIdx]}</span></div><div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Med:</span><span>★ {aRt}</span></div></div>
+               {/* LADO ESQUERDO DA BARRA (ACERVO FÍSICO) */}
+               <div className={`flex-1 flex flex-row gap-2 p-1.5 border-[3px] text-[8px] lg:text-[9px] font-black uppercase w-1/2 ${darkMode?'border-gray-300 bg-gray-800 text-white':'border-black bg-gray-100 text-black'}`}>
+                <div className="flex-1 flex flex-col justify-between">
+                  <div className="border-b-[2px] border-current pb-0.5 mb-1 flex justify-between"><span>Págs:</span><span>{totP}</span></div>
+                  <div className="flex justify-between"><span>Lidas:</span><span>{rPerc}%</span></div>
+                </div>
+                <div className="flex-1 flex flex-col justify-between border-l-[2px] border-current pl-1.5 ml-1.5">
+                  <div className="flex justify-between text-amber-500 cursor-pointer" onClick={()=>setRotIdx((rotIdx+1)%rotStats.length)}><span className="truncate w-full text-right" title="Clique para alterar">{rotStats[rotIdx]}</span></div>
+                  <div className="flex justify-between text-cyan-500 mt-auto pt-0.5"><span>Med:</span><span>★ {aRt}</span></div>
+                </div>
               </div>
 
+              {/* LADO DIREITO DA BARRA (JOGOS ZERADOS E MARQUEE LED) */}
               <div className={`flex-1 flex flex-col border-[3px] text-[8px] lg:text-[9px] font-black uppercase overflow-hidden relative w-1/2 ${darkMode?'border-gray-300 bg-black text-white':'border-black bg-black text-white'}`}>
                  <div className="p-1.5 border-b-[2px] border-gray-800 pb-0.5 mb-0.5 flex justify-between z-10 bg-black"><span>Zerados</span><span className="text-pink-500">REC</span></div>
                  <div className="flex-1 flex items-center overflow-hidden w-full relative led-board min-h-[24px]">
-                    <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${settings?.marqueeSpeed||35}s linear infinite`, width: 'max-content' }}>
-                      <div className="flex items-center py-1 text-cyan-400 font-led tracking-normal px-4">FINALIZADOS: {tJ} <Ghost className="w-4 h-4 inline ml-4 text-pink-500" /></div>
-                      <div className="flex items-center py-1 text-cyan-400 font-led tracking-normal px-4">FINALIZADOS: {tJ} <Ghost className="w-4 h-4 inline ml-4 text-pink-500" /></div>
+                    <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${settings?.marqueeSpeed||35}s linear infinite`, width: 'max-content', filter: `brightness(${settings?.marqueeBrightness || 50}%)` }}>
+                      {[1,2].map(k => (
+                        <div key={k} className="flex items-center py-1 text-cyan-400 font-led tracking-normal px-4">
+                           FINALIZADOS: {tJ}
+                           <KatamariIcon className="w-5 h-5 mx-6 text-pink-500" />
+                           {latestGamesText || "NENHUM ZERADO AINDA"}
+                           <PacmanIcon className="w-5 h-5 mx-6 text-amber-400" />
+                           TEMPO MÉDIO: {aTm}H
+                           <KatamariIcon className="w-5 h-5 mx-6 text-white" />
+                        </div>
+                      ))}
                     </div>
                   </div>
               </div>
