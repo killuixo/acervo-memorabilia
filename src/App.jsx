@@ -265,7 +265,6 @@ const processCompletedGamesCSV = (csvText) => {
   return parsed;
 };
 
-// HTML Export mantido minimizado para poupar espaço
 const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
   const cleanItems = items.map(i => ({
     id: i.id, type: i.type, title: i.title, author_developer: i.author_developer, 
@@ -322,7 +321,7 @@ const Search = (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path 
 const Library = (p) => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></>} />;
 const PlusSquare = (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
 const BarChart2 = (p) => <Icon {...p} path={<><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></>} />;
-const Settings = (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0-2.73-.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />;
+const Settings = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" /></>} />;
 const Camera = (p) => <Icon {...p} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
 const Sun = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />;
 const Moon = (p) => <Icon {...p} path={<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>} />;
@@ -1027,8 +1026,32 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     if (totalDash === 0) return {};
     const validYears = dashItems.filter(i => i.year && !isNaN(parseInt(i.year)));
     const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
+    
     const validLengths = dashItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
-    const epico = validLengths.length > 0 ? validLengths.reduce((a, b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b) : null;
+    let epico = null;
+    if (validLengths.length > 0) {
+        const titleToPages = {};
+        validLengths.forEach(i => {
+            const normTitle = normalizeWorkTitle(i.title);
+            if (!titleToPages[normTitle]) {
+                titleToPages[normTitle] = { total: 0, sampleItem: i };
+            }
+            titleToPages[normTitle].total += parseInt(i.pages_or_time);
+        });
+
+        let maxPages = 0;
+        let bestNorm = '';
+        for (const [norm, data] of Object.entries(titleToPages)) {
+            if (data.total > maxPages) {
+                maxPages = data.total;
+                bestNorm = norm;
+            }
+        }
+        if (bestNorm) {
+            epico = { ...titleToPages[bestNorm].sampleItem, title: normalizeWorkTitle(titleToPages[bestNorm].sampleItem.title).toUpperCase(), pages_or_time: maxPages };
+        }
+    }
+
     const vergonha = dashItems.filter(i => {
        const isDisc = (activeCategories['Discos'] || []).includes(i.type);
        return i.status === 'Não Iniciado' && !isDisc;
@@ -1540,7 +1563,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </MContainer>
       )}
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
         <button onClick={() => toggleSection('aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Sun className="w-4 h-4" /> Aparência & Interface</span>
           <span className="text-lg font-mono">{openSection === 'aparencia' ? '−' : '+'}</span>
@@ -1608,7 +1631,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
         <button onClick={() => toggleSection('arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><ListIcon className="w-4 h-4" /> Gestão de Classes</span>
           <span className="text-lg font-mono">{openSection === 'arquivologia' ? '−' : '+'}</span>
@@ -1667,35 +1690,35 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
         <button onClick={() => toggleSection('integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
-          <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações (Opcional)</span>
+          <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações & APIs</span>
           <span className="text-lg font-mono">{openSection === 'integracoes' ? '−' : '+'}</span>
         </button>
         {openSection === 'integracoes' && (
-          <div className="p-4 flex flex-col gap-3">
-            <MInput darkMode={darkMode} label="Google Gemini API Key (Scan IA)" type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
-            <MInput darkMode={darkMode} label="Google Sheets Webhook URL (Sincronizar e Salvar)" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
-            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
+          <div className="p-4 flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+               <div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Camera className="w-4 h-4"/> Gemini API (Scan IA)</div>
+               <MInput darkMode={darkMode} label="API Key" type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
+            </div>
+            
+            <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}>
+               <div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Share className="w-4 h-4"/> Google Sheets Webhook</div>
+               <MInput darkMode={darkMode} label="Webhook URL (Sincronizar e Salvar)" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} placeholder="https://script.google.com/..." />
+            </div>
+
+            <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}>
+               <div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Headphones className="w-4 h-4"/> Last.FM (Sincronização)</div>
+               <MInput darkMode={darkMode} label="Username Last.FM" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} placeholder="Seu nome de usuário..." />
+               <MInput darkMode={darkMode} label="API Key Last.FM" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} placeholder="Sua chave da API..." />
+            </div>
+            
+            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
           </div>
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}>
-        <button onClick={() => toggleSection('lastfm')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'lastfm' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
-          <span className="flex items-center gap-2"><Headphones className="w-4 h-4" /> Integração Last.FM</span>
-          <span className="text-lg font-mono">{openSection === 'lastfm' ? '−' : '+'}</span>
-        </button>
-        {openSection === 'lastfm' && (
-          <div className="p-4 flex flex-col gap-3">
-            <MInput darkMode={darkMode} label="Username Last.FM" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} placeholder="Seu nome de usuário..." />
-            <MInput darkMode={darkMode} label="API Key Last.FM" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} placeholder="Sua chave da API..." />
-            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar Configurações</MButton>
-          </div>
-        )}
-      </MContainer>
-
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/40 text-white' : 'bg-cyan-100 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
         <button onClick={() => toggleSection('sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Sincronizar Jogos Zerados</span>
           <span className="text-lg font-mono">{openSection === 'sincronizar' ? '−' : '+'}</span>
@@ -1711,7 +1734,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
         <button onClick={() => toggleSection('blogger')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'blogger' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Share className="w-4 h-4" /> Exportar Web (Blogger)</span>
           <span className="text-lg font-mono">{openSection === 'blogger' ? '−' : '+'}</span>
@@ -1733,7 +1756,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
         <button onClick={() => toggleSection('backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}>
           <span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local (.CSV Principal)</span>
           <span className="text-lg font-mono">{openSection === 'backup' ? '−' : '+'}</span>
@@ -2071,8 +2094,27 @@ export default function App() {
 
     const validLengths = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)) && ((activeCategories['Livros']||[]).includes(i.type)));
     if (validLengths.length > 0) {
-        const longest = validLengths.reduce((a,b) => parseInt(a.pages_or_time) > parseInt(b.pages_or_time) ? a : b);
-        stats.push(`Mais Longo: ${longest.pages_or_time} Págs`);
+        const titleToPages = {};
+        validLengths.forEach(i => {
+            const normTitle = normalizeWorkTitle(i.title);
+            if (!titleToPages[normTitle]) {
+                titleToPages[normTitle] = { total: 0, rawTitle: i.title };
+            }
+            titleToPages[normTitle].total += parseInt(i.pages_or_time);
+        });
+        
+        let maxPages = 0;
+        let maxTitleObj = null;
+        for (const [norm, data] of Object.entries(titleToPages)) {
+            if (data.total > maxPages) {
+                maxPages = data.total;
+                maxTitleObj = data;
+            }
+        }
+        if (maxTitleObj) {
+            const displayStr = normalizeWorkTitle(maxTitleObj.rawTitle).toUpperCase();
+            stats.push(`Mais Longo: ${maxPages} Págs (${displayStr.substring(0,10)}...)`);
+        }
     }
 
     const authorCounts = items.reduce((acc, i) => { 
@@ -2149,6 +2191,8 @@ export default function App() {
   
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
+  
+  // Utilizando o colorCycle vinculado ao textShadow via currentColor para manter o glow correspondente perfeito!
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
@@ -2252,21 +2296,23 @@ export default function App() {
     );
   }
 
-  // TELA 3: APP PRINCIPAL (Agora Flexível/Responsivo)
+  // TELA 3: APP PRINCIPAL
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
+      {/* Aqui a nova animação de cores titleColorCycle foi adicionada */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         .font-led { font-family: 'Press Start 2P', monospace; }
         .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; }
         @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
+        @keyframes titleColorCycle {
+          0%, 100% { color: #f472b6; } /* pink-400 */
+          33% { color: #22d3ee; } /* cyan-400 */
+          66% { color: #fbbf24; } /* amber-400 */
+        }
       `}</style>
 
-      {/* A mudança principal está aqui:
-        - Mobile: flex-col (fica igual antes, navbar embaixo)
-        - Desktop (md:): flex-row (navbar vira sidebar à esquerda)
-      */}
-      <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'white'}`}>
 
         {/* SIDEBAR PARA DESKTOP (Escondida no Mobile) */}
         <nav className={`hidden md:flex flex-col w-20 lg:w-48 flex-none border-r-[4px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
@@ -2303,9 +2349,18 @@ export default function App() {
           <header className={`flex-none p-3 lg:p-4 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
             <div className="flex justify-between items-start">
               <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
-                <h1 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none">Memorabilia</h1>
+                {/* Aqui o título recebeu a animação vinculada à velocidade e ao textShadowStyle */}
+                <h1 
+                  className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none"
+                  style={{
+                    ...textShadowStyle,
+                    animation: `titleColorCycle ${Math.max(3, speed / 4)}s linear infinite`
+                  }}
+                >
+                  Memorabilia
+                </h1>
                 
-                {/* Last.FM & Sugestões: Colocados permanentemente lado a lado com flex-row w-full */}
+                {/* Last.FM & Sugestões */}
                 <div className="flex flex-row gap-2 mt-2 w-full h-[38px] md:h-[42px]">
                   {settings?.lastfmUser ? (
                     <div 
@@ -2346,7 +2401,6 @@ export default function App() {
               </div>
               
               <div className="w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2 md:hidden">
-                {/* No desktop a logo já está na sidebar, mostramos apenas os Toasts de sucesso aqui */}
                 {toast.visible ? (
                   toast.type === 'error' 
                     ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
@@ -2355,7 +2409,6 @@ export default function App() {
                   <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200 md:hidden" />
                 )}
               </div>
-              {/* Espaço para o Toast no Desktop (fica no lugar da logo) */}
               <div className="hidden md:flex w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 items-center justify-center transition-all duration-300 relative ml-2">
                  {toast.visible && (
                    toast.type === 'error' 
