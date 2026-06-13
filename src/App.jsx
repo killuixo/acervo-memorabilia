@@ -178,6 +178,12 @@ const normalizeWorkTitle = (title) => {
        .trim();
 };
 
+const getSortableName = (name) => {
+  if (!name) return '';
+  // Remove os artigos the, a, an, o, os, as (mas NÃO remove Los ou El)
+  return String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '');
+};
+
 const parseTimeStr = (timeStr) => {
   if (!timeStr) return 0;
   const str = String(timeStr).trim();
@@ -412,6 +418,12 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   if (variant === 'cyan' || variant === 'blue') bgClass = darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black';
   if (variant === 'amber' || variant === 'yellow') bgClass = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black';
   if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
+  
+  // Variações super claras para menu de Ajustes
+  if (variant === 'light-cyan') bgClass = darkMode ? 'bg-cyan-900/50 text-cyan-200' : 'bg-cyan-100 text-cyan-900';
+  if (variant === 'light-pink') bgClass = darkMode ? 'bg-pink-900/50 text-pink-200' : 'bg-pink-100 text-pink-900';
+  if (variant === 'light-amber') bgClass = darkMode ? 'bg-amber-900/50 text-amber-200' : 'bg-amber-100 text-amber-900';
+
   return (
     <button disabled={disabled} onClick={(e) => { if(onClick) onClick(e); }} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bgClass} ${className}`}>
       {icon && icon} {children}
@@ -518,13 +530,22 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       }
       let valA = a[sortBy] || '';
       let valB = b[sortBy] || '';
+      
       if (['year', 'rating', 'pages_or_time'].includes(sortBy)) {
         valA = parseFloat(valA) || 0;
         valB = parseFloat(valB) || 0;
         return sortOrder === 'asc' ? valA - valB : valB - valA;
       }
-      valA = String(valA).toLowerCase();
-      valB = String(valB).toLowerCase();
+      
+      // Remover artigos the, a, o, os, as para não sujar a ordem alfabética!
+      if (sortBy === 'author_developer' || sortBy === 'title') {
+         valA = getSortableName(valA).toLowerCase();
+         valB = getSortableName(valB).toLowerCase();
+      } else {
+         valA = String(valA).toLowerCase();
+         valB = String(valB).toLowerCase();
+      }
+      
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
       return 0;
@@ -611,8 +632,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="number" darkMode={darkMode} />
-            <MInput label={(activeCategories['Livros']||[]).includes(editedItem.type || '') ? 'Págs' : 'Horas/Min'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="number" darkMode={darkMode} />
-            <div className="col-span-2"><MInput label="Editora" value={editedItem.publisher || ''} onChange={e => setEditedItem({...editedItem, publisher: e.target.value})} darkMode={darkMode} /></div>
+            <MInput label={(activeCategories['Livros']||[]).includes(editedItem.type || '') ? 'Págs' : 'Horas/Min/Faixas'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="text" darkMode={darkMode} />
+            <div className="col-span-2"><MInput label="Editora/Gravadora" value={editedItem.publisher || ''} onChange={e => setEditedItem({...editedItem, publisher: e.target.value})} darkMode={darkMode} /></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <MInput label="URL da Capa" value={editedItem.cover_url || ''} onChange={e => setEditedItem({...editedItem, cover_url: e.target.value})} darkMode={darkMode} />
@@ -809,11 +830,79 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   const fetchMultiDatabase = async (barcode) => {
     const cleanCode = barcode.replace(/[-\s]/g, "");
-    updateStatus('loading', 'Buscando nos bancos de dados...');
+    updateStatus('loading', 'Buscando nos bancos de dados (Discogs, MB, etc)...');
     try {
       let foundItem = { barcode: cleanCode, title: '', author_developer: '', publisher: '', year: '', pages_or_time: '', type: 'Livro', cover_url: '', description: '' };
       let found = false;
 
+      // 1. Tentar Discogs primeiro (Se o usuário configurou o token)
+      if (!found && settings?.discogsToken && cleanCode.length > 5) {
+        try {
+          const discogsRes = await fetch(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
+          const discogsData = await discogsRes.json();
+          if (discogsData.results && discogsData.results.length > 0) {
+            const item = discogsData.results[0];
+            const titleParts = item.title ? item.title.split(' - ') : [];
+            let artist = titleParts.length > 1 ? titleParts[0].trim() : '';
+            let album = titleParts.length > 1 ? titleParts.slice(1).join(' - ').trim() : (item.title || '');
+
+            let discType = 'CD';
+            if (item.format) {
+               const formatStr = item.format.join(' ').toLowerCase();
+               if (formatStr.includes('vinyl') || formatStr.includes('lp')) discType = 'Vinil';
+               if (formatStr.includes('cassette')) discType = 'Fita Cassete';
+            }
+
+            foundItem = { 
+              ...foundItem, 
+              title: album, 
+              author_developer: artist, 
+              year: item.year || '', 
+              publisher: item.label && item.label.length > 0 ? item.label[0] : '', 
+              cover_url: item.cover_image || '', 
+              type: discType 
+            };
+            found = true;
+          }
+        } catch(e) { console.warn("Erro no Discogs", e); }
+      }
+
+      // 2. Tentar MusicBrainz com busca avançada (Incluindo tracklists e formatos)
+      if (!found && (!cleanCode.startsWith("978") && !cleanCode.startsWith("979"))) {
+        try {
+          const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
+          const mbData = await mbRes.json();
+          if (mbData.releases && mbData.releases.length > 0) {
+            const release = mbData.releases[0];
+            
+            let mediaFormat = 'CD';
+            let trackCount = '';
+            if (release.media && release.media.length > 0) {
+               const fmt = release.media[0].format || '';
+               if (fmt.toLowerCase().includes('vinyl') || fmt.toLowerCase().includes('12"')) mediaFormat = 'Vinil';
+               else if (fmt.toLowerCase().includes('cassette')) mediaFormat = 'Fita Cassete';
+               
+               if (release.media[0]['track-count']) {
+                  trackCount = `${release.media[0]['track-count']} faixas`;
+               }
+            }
+
+            foundItem = { 
+               ...foundItem, 
+               title: release.title || "", 
+               author_developer: release["artist-credit"] ? release["artist-credit"].map(a => a.name).join(", ") : "", 
+               publisher: release.label ? release.label : (release["label-info"]?.length > 0 && release["label-info"][0].label ? release["label-info"][0].label.name : ""), 
+               year: release.date ? release.date.substring(0, 4) : "", 
+               type: mediaFormat,
+               pages_or_time: trackCount,
+               cover_url: `https://coverartarchive.org/release/${release.id}/front` 
+            };
+            found = true;
+          }
+        } catch(e) { }
+      }
+
+      // 3. UPC Item DB (Games, CDs genéricos, Filmes)
       if (!found && cleanCode.length >= 10 && cleanCode.length <= 13) {
         try {
           const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
@@ -830,18 +919,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) {}
       }
 
-      if (!found && (!cleanCode.startsWith("978") && !cleanCode.startsWith("979"))) {
-        try {
-          const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json`);
-          const mbData = await mbRes.json();
-          if (mbData.releases && mbData.releases.length > 0) {
-            const release = mbData.releases[0];
-            foundItem = { ...foundItem, title: release.title || "", author_developer: release["artist-credit"] ? release["artist-credit"].map(a => a.name).join(", ") : "", publisher: release.label ? release.label : (release["label-info"]?.length > 0 && release["label-info"][0].label ? release["label-info"][0].label.name : ""), year: release.date ? release.date.substring(0, 4) : "", type: 'CD', cover_url: `https://coverartarchive.org/release/${release.id}/front` };
-            found = true;
-          }
-        } catch(e) { }
-      }
-
+      // 4. Google Books (Livros e HQs)
       if (!found) {
         try {
           const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
@@ -855,6 +933,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { }
       }
 
+      // 5. Open Library (Livros e HQs)
       if (!found) {
         try {
           const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
@@ -946,7 +1025,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             <MInput darkMode={darkMode} label="Autor / Desenvolvedor" value={formData.author_developer} onChange={e => setFormData({...formData, author_developer: e.target.value})} />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2 w-full">
               <div className="md:col-span-3"><MInput darkMode={darkMode} label="Editora / Gravadora" value={formData.publisher} onChange={e => setFormData({...formData, publisher: e.target.value})} /></div>
-              <div className="md:col-span-1"><MInput darkMode={darkMode} label="Págs/Tempo" type="number" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
+              <div className="md:col-span-1"><MInput darkMode={darkMode} label="Págs/Faixas/Min" type="text" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <MInput darkMode={darkMode} label="URL da Capa (Opcional)" value={formData.cover_url} onChange={e => setFormData({...formData, cover_url: e.target.value})} />
@@ -1001,17 +1080,24 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
   
-  const byAuthor = dashItems.reduce((acc, i) => { 
-    if (i.author_developer) { 
-      const author = i.author_developer;
+  // Agrupando pelo nome "ignorando artigos", mas preservando o nome original de exibição!
+  const byAuthor = dashItems.reduce((acc, i) => {
+    if (i.author_developer) {
+      const rawAuthor = i.author_developer.trim();
+      const normAuthor = getSortableName(rawAuthor).toLowerCase();
       const normTitle = normalizeWorkTitle(i.title);
-      if (!acc[author]) acc[author] = new Set();
-      acc[author].add(normTitle);
-    } 
-    return acc; 
+      
+      if (!acc[normAuthor]) {
+         acc[normAuthor] = { display: rawAuthor, titles: new Set() };
+      }
+      acc[normAuthor].titles.add(normTitle);
+    }
+    return acc;
   }, {});
   
-  const sortedAuthors = Object.entries(byAuthor).map(([author, titlesSet]) => [author, titlesSet.size]).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const sortedAuthors = Object.entries(byAuthor)
+    .map(([key, data]) => [data.display, data.titles.size])
+    .sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
   
   const byDecade = dashItems.reduce((acc, i) => {
@@ -1027,6 +1113,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     const validYears = dashItems.filter(i => i.year && !isNaN(parseInt(i.year)));
     const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
     
+    // Calcula o mais longo (Épico) combinando os volumes da mesma obra
     const validLengths = dashItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
     let epico = null;
     if (validLengths.length > 0) {
@@ -1103,7 +1190,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
             <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
             <div>
                <div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.epico.title || 'Sem Título')}</div>
-               <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {((activeCategories['Livros']||[]).includes(stats.epico.type)) ? 'Págs' : 'Horas'}</div>
+               <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {((activeCategories['Livros']||[]).includes(stats.epico.type)) ? 'Págs Totais' : 'Tempo (Total)'}</div>
             </div>
           </MContainer>
         )}
@@ -1577,7 +1664,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               </button>
             </div>
             
-            <div className="border-t-[4px] border-current pt-3 opacity-90 flex flex-col gap-5">
+            <div className={`border-t-[4px] ${darkMode ? 'border-amber-900' : 'border-amber-200'} pt-3 opacity-90 flex flex-col gap-5`}>
                <div>
                    <div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><MonitorPlay className="w-4 h-4"/> Velocidade do Painel LED</div>
                    <div className="flex flex-col gap-2 w-full mt-2">
@@ -1657,7 +1744,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                   <input type="text" placeholder="Nome (Ex: Master System)" value={newSubclass.name} onChange={e => setNewSubclass({...newSubclass, name: e.target.value})} className={`flex-1 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
                   <input type="text" placeholder="Código (Ex: 470)" value={newSubclass.code} onChange={e => setNewSubclass({...newSubclass, code: e.target.value})} className={`w-24 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
                 </div>
-                <MButton darkMode={darkMode} onClick={handleAddSubclass} variant="cyan" className="py-2 text-[10px]">Adicionar Subclasse</MButton>
+                <MButton darkMode={darkMode} onClick={handleAddSubclass} variant="light-cyan" className="py-2 text-[10px]">Adicionar Subclasse</MButton>
               </div>
             </div>
 
@@ -1701,6 +1788,11 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                <div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Camera className="w-4 h-4"/> Gemini API (Scan IA)</div>
                <MInput darkMode={darkMode} label="API Key" type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} placeholder="Para scanner visual..." />
             </div>
+
+            <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}>
+               <div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><DiscIcon className="w-4 h-4"/> Discogs API (Discos/Vinis)</div>
+               <MInput darkMode={darkMode} label="Discogs Personal Token" type="password" value={settings?.discogsToken || ''} onChange={e => setSettings({...settings, discogsToken: e.target.value})} placeholder="Token gerado no discogs.com..." />
+            </div>
             
             <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}>
                <div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Share className="w-4 h-4"/> Google Sheets Webhook</div>
@@ -1713,7 +1805,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                <MInput darkMode={darkMode} label="API Key Last.FM" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} placeholder="Sua chave da API..." />
             </div>
             
-            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
+            <MButton darkMode={darkMode} onClick={handleSaveSettings} variant="light-pink" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
           </div>
         )}
       </MContainer>
@@ -1726,7 +1818,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         {openSection === 'sincronizar' && (
           <div className="p-4 flex flex-col gap-3">
             <p className="text-[10px] opacity-80 font-bold leading-relaxed text-justify">Faça o upload manual do seu .CSV atualizado de jogos finalizados para alimentar a aba "Zerados".</p>
-            <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-800 text-white' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 text-black'} `}>
+            <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-amber-900/50 text-amber-200' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-amber-100 text-amber-900'} `}>
               <Upload className="w-4 h-4 flex-shrink-0" /> Importar CSV de Jogos
               <input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} />
             </label>
@@ -1745,10 +1837,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               Gere um arquivo <span className="font-black underline">HTML estático e responsivo</span> do seu catálogo. Se a sua Webhook do Google Sheets estiver configurada, o blog carregará seus itens mais novos sozinhos toda vez que alguém acessar a página!
             </p>
             <div className="flex gap-2 flex-col sm:flex-row mt-2">
-               <MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="pink" className="flex-1 py-3 text-white">
+               <MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="light-cyan" className="flex-1 py-3">
                  <Download className="w-4 h-4" /> Baixar HTML
                </MButton>
-               <MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 text-pink-600 border-black">
+               <MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 border-black">
                  <CopyIcon className="w-4 h-4" /> Copiar Código
                </MButton>
             </div>
@@ -1763,8 +1855,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         </button>
         {openSection === 'backup' && (
           <div className="p-4 flex gap-2 flex-col sm:flex-row">
-            <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-white text-black'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
-            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-white text-black'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+            <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
           </div>
         )}
       </MContainer>
@@ -1787,7 +1879,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
-  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '' });
+  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '', discogsToken: '' });
   const [isLocalStorageLoaded, setIsLocalStorageLoaded] = useState(false);
   
   // Controle de Loading e Tela de Sucesso
@@ -2119,15 +2211,22 @@ export default function App() {
 
     const authorCounts = items.reduce((acc, i) => { 
        if(i.author_developer) {
-          const author = i.author_developer;
+          const rawAuthor = i.author_developer.trim();
+          const normAuthor = getSortableName(rawAuthor).toLowerCase();
           const normTitle = normalizeWorkTitle(i.title);
-          if (!acc[author]) acc[author] = new Set();
-          acc[author].add(normTitle);
+          
+          if (!acc[normAuthor]) {
+             acc[normAuthor] = { display: rawAuthor, titles: new Set() };
+          }
+          acc[normAuthor].titles.add(normTitle);
        }
        return acc; 
     }, {});
     
-    const topAuthorEntry = Object.entries(authorCounts).map(([a, s]) => [a, s.size]).sort((a,b)=>b[1]-a[1])[0];
+    const topAuthorEntry = Object.entries(authorCounts)
+      .map(([normAuthor, data]) => [data.display, data.titles.size])
+      .sort((a,b)=>b[1]-a[1])[0];
+      
     if (topAuthorEntry && topAuthorEntry[1] > 1) {
         stats.push(`+ Freq: ${String(topAuthorEntry[0] || '').substring(0, 15)} (${topAuthorEntry[1]} Obras)`);
     }
@@ -2192,7 +2291,6 @@ export default function App() {
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
   
-  // Utilizando o colorCycle vinculado ao textShadow via currentColor para manter o glow correspondente perfeito!
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
@@ -2299,7 +2397,6 @@ export default function App() {
   // TELA 3: APP PRINCIPAL
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      {/* Aqui a nova animação de cores titleColorCycle foi adicionada */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         .font-led { font-family: 'Press Start 2P', monospace; }
@@ -2349,7 +2446,6 @@ export default function App() {
           <header className={`flex-none p-3 lg:p-4 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
             <div className="flex justify-between items-start">
               <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
-                {/* Aqui o título recebeu a animação vinculada à velocidade e ao textShadowStyle */}
                 <h1 
                   className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none"
                   style={{
