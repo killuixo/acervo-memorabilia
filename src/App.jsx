@@ -184,6 +184,13 @@ const getSortableName = (name) => {
   return String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '');
 };
 
+const getValidYear = (val) => {
+  if (!val) return NaN;
+  // Extrai corretamente qualquer ano de 4 dígitos entre 1000 e 2099, ignorando textos ao redor.
+  const match = String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/);
+  return match ? parseInt(match[0], 10) : NaN;
+};
+
 const parseTimeStr = (timeStr) => {
   if (!timeStr) return 0;
   const str = String(timeStr).trim();
@@ -1059,12 +1066,20 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
 const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterCat, setFilterCat] = useState('Todas');
+  const [filterSubtype, setFilterSubtype] = useState('Todos');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterRating, setFilterRating] = useState('Todas');
   const dashItems = useMemo(() => {
     return items.filter(item => {
       let mCat = true, mStatus = true, mRating = true;
-      if (filterCat !== 'Todas') { const catTypes = activeCategories[filterCat] || []; mCat = catTypes.includes(item.type); }
+      if (filterCat !== 'Todas') { 
+        if (filterSubtype !== 'Todos') {
+          mCat = item.type === filterSubtype;
+        } else {
+          const catTypes = activeCategories[filterCat] || []; 
+          mCat = catTypes.includes(item.type); 
+        }
+      }
       if (filterStatus !== 'Todos') {
          const isDisc = (activeCategories['Discos'] || []).includes(item.type);
          if (isDisc) mStatus = false;
@@ -1101,7 +1116,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
   
   const byDecade = dashItems.reduce((acc, i) => {
-    const year = parseInt(i.year);
+    const year = getValidYear(i.year);
     if (!isNaN(year) && year > 1800) { const decade = Math.floor(year / 10) * 10; acc[decade] = (acc[decade] || 0) + 1; }
     return acc;
   }, {});
@@ -1110,8 +1125,8 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   
   const stats = useMemo(() => {
     if (totalDash === 0) return {};
-    const validYears = dashItems.filter(i => i.year && !isNaN(parseInt(i.year)));
-    const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b) : null;
+    const validYears = dashItems.filter(i => !isNaN(getValidYear(i.year)));
+    const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => getValidYear(a.year) < getValidYear(b.year) ? a : b) : null;
     
     // Calcula o mais longo (Épico) combinando os volumes da mesma obra
     const validLengths = dashItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
@@ -1152,16 +1167,22 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
           <FilterIcon className="w-4 h-4" /> Filtros Interativos
         </div>
-        <div className="flex gap-2 flex-col md:flex-row">
-          <select value={filterCat} onChange={e => { setFilterCat(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+        <div className="flex gap-2 flex-col md:flex-row flex-wrap">
+          <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterSubtype('Todos'); }} className={`flex-1 min-w-[100px] p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Tudo</option>
             {Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
-          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          {filterCat !== 'Todas' && activeCategories[filterCat] && (
+            <select value={filterSubtype} onChange={e => setFilterSubtype(e.target.value)} className={`flex-1 min-w-[100px] p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-900 text-cyan-100' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 text-cyan-900'}`}>
+              <option value="Todos">Todos (Subtipo)</option>
+              {activeCategories[filterCat].map(sub => <option key={sub} value={sub}>{sub}</option>)}
+            </select>
+          )}
+          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); }} className={`flex-1 min-w-[100px] p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Status</option>
             {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
-          <select value={filterRating} onChange={e => { setFilterRating(e.target.value); }} className={`flex-1 p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+          <select value={filterRating} onChange={e => { setFilterRating(e.target.value); }} className={`flex-1 min-w-[100px] p-1 border-[3px] text-[9px] font-black uppercase outline-none ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Notas</option>
             {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Estrelas</option>)}
           </select>
@@ -1182,7 +1203,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         {stats.reliquia && (
           <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black'}>
             <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div>
-            <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {stats.reliquia.year}</div></div>
+            <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {getValidYear(stats.reliquia.year)}</div></div>
           </MContainer>
         )}
         {stats.epico && (
@@ -2176,12 +2197,12 @@ export default function App() {
     if (typeCounts['Quadrinho']) stats.push(`${typeCounts['Quadrinho']} HQs & Mangás`);
     if (typeCounts['DVD']) stats.push(`${typeCounts['DVD']} Filmes (DVD)`);
 
-    const validYears = items.filter(i => i.year && !isNaN(parseInt(i.year)));
+    const validYears = items.filter(i => !isNaN(getValidYear(i.year)));
     if (validYears.length > 0) {
-      const oldest = validYears.reduce((a, b) => parseInt(a.year) < parseInt(b.year) ? a : b);
-      const newest = validYears.reduce((a, b) => parseInt(a.year) > parseInt(b.year) ? a : b);
-      stats.push(`Relíquia: ${oldest.year} (${String(oldest.title || 'S/ Tít.').substring(0,12)}...)`);
-      stats.push(`Recente: ${newest.year} (${String(newest.title || 'S/ Tít.').substring(0,12)}...)`);
+      const oldest = validYears.reduce((a, b) => getValidYear(a.year) < getValidYear(b.year) ? a : b);
+      const newest = validYears.reduce((a, b) => getValidYear(a.year) > getValidYear(b.year) ? a : b);
+      stats.push(`Relíquia: ${getValidYear(oldest.year)} (${String(oldest.title || 'S/ Tít.').substring(0,12)}...)`);
+      stats.push(`Recente: ${getValidYear(newest.year)} (${String(newest.title || 'S/ Tít.').substring(0,12)}...)`);
     }
 
     const validLengths = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)) && ((activeCategories['Livros']||[]).includes(i.type)));
