@@ -92,7 +92,7 @@ const playChipBeep = (type) => {
 };
 
 // ==========================================
-// GERADOR DE ID
+// GERADOR DE ID E FUNÇÕES UTILITÁRIAS
 // ==========================================
 let globalSequenceCache = null;
 
@@ -127,9 +127,6 @@ const generateId = (itemsArray = []) => {
   return `${timeBase}-${seqStr}`;
 };
 
-// ==========================================
-// FUNÇÕES UTILITÁRIAS GLOBAIS E EXPORTADOR
-// ==========================================
 const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -278,6 +275,7 @@ const processCompletedGamesCSV = (csvText) => {
   return parsed;
 };
 
+// HTML Export
 const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
   const cleanItems = items.map(i => ({
     id: i.id, type: i.type, title: i.title, author_developer: i.author_developer, 
@@ -289,7 +287,6 @@ const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl)
     nome: g.nome, console: g.console, genero: g.genero, tempoHoras: g.tempoHoras, 
     nota: g.nota, suporte: g.suporte, suporteStr: g.suporteStr, anoFim: g.anoFim
   }));
-
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Acervo Memorabilia</title><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6"><h1>Memorabilia HTML Export (Código simplificado aqui para brevidade)</h1></body></html>`;
 };
 
@@ -426,7 +423,6 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   if (variant === 'amber' || variant === 'yellow') bgClass = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black';
   if (variant === 'black') bgClass = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
   
-  // Variações super claras para menu de Ajustes
   if (variant === 'light-cyan') bgClass = darkMode ? 'bg-cyan-900/50 text-cyan-200' : 'bg-cyan-100 text-cyan-900';
   if (variant === 'light-pink') bgClass = darkMode ? 'bg-pink-900/50 text-pink-200' : 'bg-pink-100 text-pink-900';
   if (variant === 'light-amber') bgClass = darkMode ? 'bg-amber-900/50 text-amber-200' : 'bg-amber-100 text-amber-900';
@@ -544,7 +540,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         return sortOrder === 'asc' ? valA - valB : valB - valA;
       }
       
-      // Remover artigos the, a, o, os, as para não sujar a ordem alfabética!
       if (sortBy === 'author_developer' || sortBy === 'title') {
          valA = getSortableName(valA).toLowerCase();
          valB = getSortableName(valB).toLowerCase();
@@ -555,6 +550,24 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+
+      // === SISTEMA DE DESEMPATE ===
+      if (sortBy === 'author_developer') {
+         // 1. Desempate por Ano (Obras sem ano caem para o final da fila (0))
+         const yearA = getValidYear(a.year) || 0;
+         const yearB = getValidYear(b.year) || 0;
+         if (yearA !== yearB) {
+            return sortOrder === 'asc' ? yearA - yearB : yearB - yearA;
+         }
+         
+         // 2. Desempate por Título (A ordenação natural "numeric: true" 
+         // coloca "Vol 2" antes de "Vol 10" nativamente!)
+         const titleA = String(a.title || '').toLowerCase();
+         const titleB = String(b.title || '').toLowerCase();
+         const titleComp = titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
+         return sortOrder === 'asc' ? titleComp : -titleComp;
+      }
+
       return 0;
     });
 
@@ -638,7 +651,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </a>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="number" darkMode={darkMode} />
+            <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="text" darkMode={darkMode} />
             <MInput label={(activeCategories['Livros']||[]).includes(editedItem.type || '') ? 'Págs' : 'Horas/Min/Faixas'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="text" darkMode={darkMode} />
             <div className="col-span-2"><MInput label="Editora/Gravadora" value={editedItem.publisher || ''} onChange={e => setEditedItem({...editedItem, publisher: e.target.value})} darkMode={darkMode} /></div>
           </div>
@@ -842,7 +855,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       let foundItem = { barcode: cleanCode, title: '', author_developer: '', publisher: '', year: '', pages_or_time: '', type: 'Livro', cover_url: '', description: '' };
       let found = false;
 
-      // 1. Tentar Discogs primeiro (Se o usuário configurou o token)
+      // 1. Tentar Discogs primeiro
       if (!found && settings?.discogsToken && cleanCode.length > 5) {
         try {
           const discogsRes = await fetch(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
@@ -874,7 +887,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { console.warn("Erro no Discogs", e); }
       }
 
-      // 2. Tentar MusicBrainz com busca avançada (Incluindo tracklists e formatos)
+      // 2. Tentar MusicBrainz com busca avançada
       if (!found && (!cleanCode.startsWith("978") && !cleanCode.startsWith("979"))) {
         try {
           const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
@@ -909,7 +922,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { }
       }
 
-      // 3. UPC Item DB (Games, CDs genéricos, Filmes)
+      // 3. UPC Item DB
       if (!found && cleanCode.length >= 10 && cleanCode.length <= 13) {
         try {
           const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
@@ -926,7 +939,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) {}
       }
 
-      // 4. Google Books (Livros e HQs)
+      // 4. Google Books
       if (!found) {
         try {
           const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
@@ -940,7 +953,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { }
       }
 
-      // 5. Open Library (Livros e HQs)
+      // 5. Open Library
       if (!found) {
         try {
           const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
@@ -1027,7 +1040,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2 w-full">
               <div className="md:col-span-3"><MInput darkMode={darkMode} label="Título *" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
-              <div className="md:col-span-1"><MInput darkMode={darkMode} label="Ano" type="number" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})} /></div>
+              <div className="md:col-span-1"><MInput darkMode={darkMode} label="Ano" type="text" value={formData.year} onChange={e => setFormData({...formData, year: e.target.value})} /></div>
             </div>
             <MInput darkMode={darkMode} label="Autor / Desenvolvedor" value={formData.author_developer} onChange={e => setFormData({...formData, author_developer: e.target.value})} />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2 w-full">
@@ -1069,6 +1082,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterSubtype, setFilterSubtype] = useState('Todos');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterRating, setFilterRating] = useState('Todas');
+  
   const dashItems = useMemo(() => {
     return items.filter(item => {
       let mCat = true, mStatus = true, mRating = true;
@@ -1088,14 +1102,13 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       if (filterRating !== 'Todas') mRating = item.rating === parseInt(filterRating);
       return mCat && mStatus && mRating;
     });
-  }, [items, filterCat, filterStatus, filterRating, activeCategories]);
+  }, [items, filterCat, filterSubtype, filterStatus, filterRating, activeCategories]);
   
   const totalDash = dashItems.length;
   const byType = dashItems.reduce((acc, i) => { acc[i.type || 'Outro'] = (acc[i.type || 'Outro'] || 0) + 1; return acc; }, {});
   const sortedTypes = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
   
-  // Agrupando pelo nome "ignorando artigos", mas preservando o nome original de exibição!
   const byAuthor = dashItems.reduce((acc, i) => {
     if (i.author_developer) {
       const rawAuthor = i.author_developer.trim();
@@ -1128,7 +1141,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     const validYears = dashItems.filter(i => !isNaN(getValidYear(i.year)));
     const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => getValidYear(a.year) < getValidYear(b.year) ? a : b) : null;
     
-    // Calcula o mais longo (Épico) combinando os volumes da mesma obra
     const validLengths = dashItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
     let epico = null;
     if (validLengths.length > 0) {
@@ -1238,13 +1250,14 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           {decadesKeys.length > 0 && (
             <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
-              <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+              <div className="flex items-end gap-2 h-32 pt-6 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
                 {decadesKeys.map((decadeStr, idx) => {
                   const count = byDecade[decadeStr]; const heightPerc = (count / maxDecade) * 100;
                   return (
-                    <div key={decadeStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
-                      <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                      <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                    <div key={decadeStr} className="flex-1 min-w-[30px] h-full flex items-end group">
+                      <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 flex justify-center relative ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(2, heightPerc)}%` }}>
+                        <div className="text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-1">{count}</div>
+                      </div>
                    </div>
                   );
                 })}
@@ -1458,14 +1471,15 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         {yearsKeys.length > 0 && (
           <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
-            <div className="flex items-end gap-2 h-32 pt-4 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
+            <div className="flex items-end gap-2 h-32 pt-6 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
               {yearsKeys.map((yearStr, idx) => {
                 const count = byYear[yearStr];
                 const heightPerc = (count / maxYear) * 100;
                 return (
-                  <div key={yearStr} className="flex flex-col items-center flex-1 min-w-[30px] group">
-                    <div className="text-[10px] font-black mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count}</div>
-                    <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${heightPerc}%` }}></div>
+                  <div key={yearStr} className="flex-1 min-w-[30px] h-full flex items-end group">
+                    <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 flex justify-center relative ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(2, heightPerc)}%` }}>
+                      <div className="text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-1">{count}</div>
+                    </div>
                    </div>
                 );
               })}
@@ -2311,7 +2325,6 @@ export default function App() {
   
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
-  
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
@@ -2415,7 +2428,7 @@ export default function App() {
     );
   }
 
-  // TELA 3: APP PRINCIPAL
+  // TELA 3: APP PRINCIPAL (Agora Flexível/Responsivo)
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <style>{`
@@ -2424,13 +2437,17 @@ export default function App() {
         .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; }
         @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
         @keyframes titleColorCycle {
-          0%, 100% { color: #f472b6; } /* pink-400 */
-          33% { color: #22d3ee; } /* cyan-400 */
-          66% { color: #fbbf24; } /* amber-400 */
+          0%, 100% { color: #f472b6; }
+          33% { color: #22d3ee; }
+          66% { color: #fbbf24; }
         }
       `}</style>
 
-      <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'white'}`}>
+      {/* A mudança principal está aqui:
+        - Mobile: flex-col (fica igual antes, navbar embaixo)
+        - Desktop (md:): flex-row (navbar vira sidebar à esquerda)
+      */}
+      <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
 
         {/* SIDEBAR PARA DESKTOP (Escondida no Mobile) */}
         <nav className={`hidden md:flex flex-col w-20 lg:w-48 flex-none border-r-[4px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
@@ -2477,7 +2494,7 @@ export default function App() {
                   Memorabilia
                 </h1>
                 
-                {/* Last.FM & Sugestões */}
+                {/* Last.FM & Sugestões: Colocados permanentemente lado a lado com flex-row w-full */}
                 <div className="flex flex-row gap-2 mt-2 w-full h-[38px] md:h-[42px]">
                   {settings?.lastfmUser ? (
                     <div 
@@ -2518,6 +2535,7 @@ export default function App() {
               </div>
               
               <div className="w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2 md:hidden">
+                {/* No desktop a logo já está na sidebar, mostramos apenas os Toasts de sucesso aqui */}
                 {toast.visible ? (
                   toast.type === 'error' 
                     ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> 
@@ -2526,6 +2544,7 @@ export default function App() {
                   <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200 md:hidden" />
                 )}
               </div>
+              {/* Espaço para o Toast no Desktop (fica no lugar da logo) */}
               <div className="hidden md:flex w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 items-center justify-center transition-all duration-300 relative ml-2">
                  {toast.visible && (
                    toast.type === 'error' 
