@@ -177,13 +177,16 @@ const normalizeWorkTitle = (title) => {
 
 const getSortableName = (name) => {
   if (!name) return '';
-  // Remove os artigos the, a, an, o, os, as (mas NÃO remove Los ou El)
   return String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '');
+};
+
+const isVariousArtists = (name) => {
+  const lower = String(name || '').toLowerCase().trim();
+  return ['various', 'vários', 'varios', 'various artists', 'variados'].includes(lower);
 };
 
 const getValidYear = (val) => {
   if (!val) return NaN;
-  // Extrai corretamente qualquer ano de 4 dígitos entre 1000 e 2099, ignorando textos ao redor.
   const match = String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/);
   return match ? parseInt(match[0], 10) : NaN;
 };
@@ -205,6 +208,13 @@ const getExternalLinkInfo = (type, title, specificLink = '') => {
   if (['CD', 'Vinil', 'Fita Cassete'].includes(type)) return { url: `https://www.discogs.com/search?q=${q}&type=all`, isExact: false };
   if (['Livro', 'Quadrinho', 'Revista'].includes(type)) return { url: `https://www.skoob.com.br/livro/lista/busca:${q}`, isExact: false };
   return { url: `https://gamefaqs.gamespot.com/search?game=${q}`, isExact: false };
+};
+
+const getMetricInfo = (itemType, activeCategories) => {
+  if ((activeCategories['Livros'] || []).includes(itemType)) return { label: 'Págs', desc: 'Páginas' };
+  if ((activeCategories['Discos'] || []).includes(itemType)) return { label: 'Faixas', desc: 'Faixas' };
+  if ((activeCategories['Games'] || []).includes(itemType)) return { label: 'Horas', desc: 'Horas de Jogo' };
+  return { label: 'Und', desc: 'Métrica' };
 };
 
 const processCompletedGamesCSV = (csvText) => {
@@ -277,16 +287,6 @@ const processCompletedGamesCSV = (csvText) => {
 
 // HTML Export
 const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
-  const cleanItems = items.map(i => ({
-    id: i.id, type: i.type, title: i.title, author_developer: i.author_developer, 
-    year: i.year, publisher: i.publisher, status: i.status, rating: i.rating || 0, 
-    pages_or_time: i.pages_or_time, description: i.description, 
-    cover_url: i.cover_url, wiki_info: i.wiki_info, archive_code: i.archive_code
-  }));
-  const cleanCompleted = completedGames.map(g => ({
-    nome: g.nome, console: g.console, genero: g.genero, tempoHoras: g.tempoHoras, 
-    nota: g.nota, suporte: g.suporte, suporteStr: g.suporteStr, anoFim: g.anoFim
-  }));
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Acervo Memorabilia</title><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6"><h1>Memorabilia HTML Export (Código simplificado aqui para brevidade)</h1></body></html>`;
 };
 
@@ -362,6 +362,8 @@ const ListIcon = (p) => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/
 const Share = (p) => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
 const CopyIcon = (p) => <Icon {...p} path={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />;
 const Headphones = (p) => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
+const Music = (p) => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
+
 
 // ==========================================
 // PWA ENGINE
@@ -499,19 +501,18 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
   }).join(', ');
 
   return (
-    <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+    <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
       <div className={`text-[10px] font-black uppercase tracking-widest mb-4 w-full border-b-[4px] pb-2 text-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
         {title}
       </div>
-      <div className={`relative w-28 h-28 rounded-full border-[4px] flex-shrink-0 ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`} style={{ background: `conic-gradient(${gradientParts})` }}>
-        {/* Furo do donut centralizado */}
-        <div className={`absolute inset-0 m-auto w-12 h-12 rounded-full border-[4px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}></div>
+      <div className={`relative w-24 h-24 rounded-full border-[4px] flex-shrink-0 ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`} style={{ background: `conic-gradient(${gradientParts})` }}>
+        <div className={`absolute inset-0 m-auto w-10 h-10 rounded-full border-[4px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}></div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-6 w-full px-2">
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-4 w-full px-1">
         {data.map((item, idx) => (
           <div key={idx} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
             <div className={`w-3 h-3 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div>
-            <span className="truncate max-w-[70px]">{item.label}</span> ({item.value})
+            <span className="truncate max-w-[60px]">{item.label}</span> ({item.value})
           </div>
         ))}
       </div>
@@ -542,12 +543,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [activeSubtype, setActiveSubtype] = useState('Todos');
+  const [activeLetter, setActiveLetter] = useState('Todos');
   const [sortBy, setSortBy] = useState('id');
   const [sortOrder, setSortOrder] = useState('desc');
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   
   const itemsPerPage = 12; 
+  const ALPHABET = ['Todos', '#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
   
   const filteredItems = useMemo(() => {
     let result = items.map((item, index) => ({ ...item, _originalIndex: index }));
@@ -563,6 +566,26 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         if (activeSubtype === 'Todos') matchesCategory = (activeCategories[activeCategory] || []).includes(item.type || '');
         else matchesCategory = (item.type || '') === activeSubtype;
       }
+
+      // LÓGICA DO FILTRO A-Z: 
+      // Quando filtrando por autor, se for "various", analisa pela letra do Título.
+      if (activeLetter !== 'Todos' && (sortBy === 'author_developer' || sortBy === 'title')) {
+          let targetFieldStr = sortBy === 'author_developer' ? String(item.author_developer || '') : String(item.title || '');
+          
+          if (sortBy === 'author_developer' && isVariousArtists(targetFieldStr)) {
+              targetFieldStr = String(item.title || '');
+          }
+
+          const sortableStr = getSortableName(targetFieldStr);
+          const firstChar = sortableStr.charAt(0).toUpperCase();
+          
+          if (activeLetter === '#') {
+             matchesCategory = matchesCategory && /^[0-9]/.test(firstChar);
+          } else {
+             matchesCategory = matchesCategory && firstChar.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === activeLetter;
+          }
+      }
+
       return matchesSearch && matchesCategory;
     });
 
@@ -570,6 +593,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       if (sortBy === 'id') {
          return sortOrder === 'asc' ? a._originalIndex - b._originalIndex : b._originalIndex - a._originalIndex;
       }
+      
       let valA = a[sortBy] || '';
       let valB = b[sortBy] || '';
       
@@ -579,7 +603,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         return sortOrder === 'asc' ? valA - valB : valB - valA;
       }
       
-      if (sortBy === 'author_developer' || sortBy === 'title') {
+      if (sortBy === 'author_developer') {
+         if (isVariousArtists(valA)) valA = getSortableName(a.title).toLowerCase();
+         else valA = getSortableName(valA).toLowerCase();
+         
+         if (isVariousArtists(valB)) valB = getSortableName(b.title).toLowerCase();
+         else valB = getSortableName(valB).toLowerCase();
+      } else if (sortBy === 'title') {
          valA = getSortableName(valA).toLowerCase();
          valB = getSortableName(valB).toLowerCase();
       } else {
@@ -592,15 +622,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
       // === SISTEMA DE DESEMPATE ===
       if (sortBy === 'author_developer') {
-         // 1. Desempate por Ano (Obras sem ano caem para o final da fila (0))
          const yearA = getValidYear(a.year) || 0;
          const yearB = getValidYear(b.year) || 0;
-         if (yearA !== yearB) {
-            return sortOrder === 'asc' ? yearA - yearB : yearB - yearA;
-         }
+         if (yearA !== yearB) return sortOrder === 'asc' ? yearA - yearB : yearB - yearA;
          
-         // 2. Desempate por Título (A ordenação natural "numeric: true" 
-         // coloca "Vol 2" antes de "Vol 10" nativamente!)
          const titleA = String(a.title || '').toLowerCase();
          const titleB = String(b.title || '').toLowerCase();
          const titleComp = titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
@@ -611,7 +636,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     });
 
     return result;
-  }, [items, search, activeCategory, activeSubtype, sortBy, sortOrder, activeCategories]);
+  }, [items, search, activeCategory, activeSubtype, activeLetter, sortBy, sortOrder, activeCategories]);
 
   const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
@@ -659,9 +684,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     } catch (e) { setWikiError(`Erro: ${e.message}`); playChipBeep('error'); onShowToast('error'); } finally { setLoadingWiki(false); }
   };
 
+  // DETALHES DO ITEM
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
     const linkInfo = getExternalLinkInfo(editedItem.type, editedItem.title);
+    const metricLabel = getMetricInfo(editedItem.type, activeCategories).label;
 
     return (
       <div className="flex flex-col h-full pb-20 relative max-w-4xl mx-auto w-full">
@@ -691,7 +718,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="text" darkMode={darkMode} />
-            <MInput label={(activeCategories['Livros']||[]).includes(editedItem.type || '') ? 'Págs' : 'Horas/Min/Faixas'} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="text" darkMode={darkMode} />
+            <MInput label={metricLabel} value={editedItem.pages_or_time || ''} onChange={e => setEditedItem({...editedItem, pages_or_time: e.target.value})} type="text" darkMode={darkMode} />
             <div className="col-span-2"><MInput label="Editora/Gravadora" value={editedItem.publisher || ''} onChange={e => setEditedItem({...editedItem, publisher: e.target.value})} darkMode={darkMode} /></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -762,6 +789,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     );
   }
 
+  // LISTA PRINCIPAL
   return (
     <div className="flex flex-col h-full">
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -772,7 +800,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </div>
           
           <div className="flex gap-1 items-center flex-shrink-0">
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={`w-[85px] p-2 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}>
+            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setActiveLetter('Todos'); setPage(0); }} className={`w-[85px] p-2 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}>
               <option value="id">Adição</option>
               <option value="title">Título</option>
               <option value="author_developer">Autor</option>
@@ -780,7 +808,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <option value="rating">Nota</option>
               <option value="pages_or_time">Tamanho</option>
             </select>
-            <button onClick={() => { setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); }} className={`w-8 h-[34px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>
+            <button onClick={() => { setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); setPage(0); }} className={`w-8 h-[34px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>
               {sortOrder === 'asc' ? '↑' : '↓'}
             </button>
           </div>
@@ -795,7 +823,19 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             {activeCategories[activeCategory].map(type => <button key={`sub-${type}`} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === type ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
           </div>
         )}
+
+        {/* SUBMENU ALFABÉTICO */}
+        {(sortBy === 'title' || sortBy === 'author_developer') && (
+           <div className={`flex gap-1 overflow-x-auto pb-1 scrollbar-hide mt-1 pt-2 border-t-[3px] ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              {ALPHABET.map(letter => (
+                <button key={`alpha-${letter}`} onClick={() => { setActiveLetter(letter); setPage(0); }} className={`flex-shrink-0 w-7 h-7 flex items-center justify-center text-[10px] font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[1px_1px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[1px_1px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeLetter === letter ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>
+                  {letter}
+                </button>
+              ))}
+           </div>
+        )}
       </MContainer>
+      
       <div className="flex-1 overflow-y-auto pb-20 px-1">
         {paginatedItems.length === 0 ? (
           <div className="text-center p-10 opacity-50 text-sm font-sans font-black uppercase tracking-widest">Nenhum item encontrado.</div>
@@ -807,7 +847,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 <MContainer darkMode={darkMode} className="flex-1 flex p-2 rounded-r-sm" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
                   <div className="flex-1 flex flex-col justify-between overflow-hidden">
                     <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 truncate">{item.type || '--'} • {item.year || '--'}</div>
+                      <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 truncate">{item.type || '--'} • {item.year || '--'} • {item.pages_or_time ? `${item.pages_or_time} ${getMetricInfo(item.type, activeCategories).label}` : ''}</div>
                       <div className="text-sm font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title || 'S/ Título'}</div>
                       <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer || '--'}</div>
                     </div>
@@ -894,7 +934,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       let foundItem = { barcode: cleanCode, title: '', author_developer: '', publisher: '', year: '', pages_or_time: '', type: 'Livro', cover_url: '', description: '' };
       let found = false;
 
-      // 1. Tentar Discogs primeiro
       if (!found && settings?.discogsToken && cleanCode.length > 5) {
         try {
           const discogsRes = await fetch(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
@@ -926,7 +965,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { console.warn("Erro no Discogs", e); }
       }
 
-      // 2. Tentar MusicBrainz com busca avançada
       if (!found && (!cleanCode.startsWith("978") && !cleanCode.startsWith("979"))) {
         try {
           const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
@@ -942,7 +980,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
                else if (fmt.toLowerCase().includes('cassette')) mediaFormat = 'Fita Cassete';
                
                if (release.media[0]['track-count']) {
-                  trackCount = `${release.media[0]['track-count']} faixas`;
+                  trackCount = `${release.media[0]['track-count']}`;
                }
             }
 
@@ -961,7 +999,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { }
       }
 
-      // 3. UPC Item DB
       if (!found && cleanCode.length >= 10 && cleanCode.length <= 13) {
         try {
           const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
@@ -978,7 +1015,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) {}
       }
 
-      // 4. Google Books
       if (!found) {
         try {
           const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
@@ -992,7 +1028,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         } catch(e) { }
       }
 
-      // 5. Open Library
       if (!found) {
         try {
           const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
@@ -1041,6 +1076,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   };
 
   const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(formData.type);
+  const metricInfo = getMetricInfo(formData.type, activeCategories);
   
   return (
     <div className="flex flex-col h-full pb-20 max-w-3xl mx-auto w-full">
@@ -1084,7 +1120,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             <MInput darkMode={darkMode} label="Autor / Desenvolvedor" value={formData.author_developer} onChange={e => setFormData({...formData, author_developer: e.target.value})} />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2 w-full">
               <div className="md:col-span-3"><MInput darkMode={darkMode} label="Editora / Gravadora" value={formData.publisher} onChange={e => setFormData({...formData, publisher: e.target.value})} /></div>
-              <div className="md:col-span-1"><MInput darkMode={darkMode} label="Págs/Faixas/Min" type="text" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
+              <div className="md:col-span-1"><MInput darkMode={darkMode} label={metricInfo.label} type="text" value={formData.pages_or_time} onChange={e => setFormData({...formData, pages_or_time: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <MInput darkMode={darkMode} label="URL da Capa (Opcional)" value={formData.cover_url} onChange={e => setFormData({...formData, cover_url: e.target.value})} />
@@ -1143,21 +1179,18 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     });
   }, [items, filterCat, filterSubtype, filterStatus, filterRating, activeCategories]);
   
-  // PREPARAÇÃO DE DADOS PARA GRÁFICOS PIZZA (DONUT) DO DASHBOARD
   const chartColors = getChartColors(darkMode);
   
   const catCounts = {};
   const statusCounts = {};
 
   dashItems.forEach(item => {
-    // 1. Contagem por Categoria Pai
     let foundCat = 'Outros';
     for (const [cat, subs] of Object.entries(activeCategories)) {
        if ((subs || []).includes(item.type)) { foundCat = cat; break; }
     }
     catCounts[foundCat] = (catCounts[foundCat] || 0) + 1;
 
-    // 2. Contagem por Status
     const isDisc = (activeCategories['Discos'] || []).includes(item.type);
     const st = isDisc ? 'Música (Acervo)' : (item.status || 'Não Iniciado');
     statusCounts[st] = (statusCounts[st] || 0) + 1;
@@ -1168,7 +1201,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     .sort((a,b) => b.value - a.value);
 
   const statusChartData = Object.entries(statusCounts)
-    .map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 2) % chartColors.length] })) // offset de cor
+    .map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 2) % chartColors.length] }))
     .sort((a,b) => b.value - a.value);
 
   const totalDash = dashItems.length;
@@ -1179,11 +1212,13 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const byAuthor = dashItems.reduce((acc, i) => {
     if (i.author_developer) {
       const rawAuthor = i.author_developer.trim();
-      const normAuthor = getSortableName(rawAuthor).toLowerCase();
       const normTitle = normalizeWorkTitle(i.title);
       
+      let normAuthor = getSortableName(rawAuthor).toLowerCase();
+      if (isVariousArtists(rawAuthor)) normAuthor = "vários artistas / compilações";
+      
       if (!acc[normAuthor]) {
-         acc[normAuthor] = { display: rawAuthor, titles: new Set() };
+         acc[normAuthor] = { display: isVariousArtists(rawAuthor) ? 'Vários Artistas' : rawAuthor, titles: new Set() };
       }
       acc[normAuthor].titles.add(normTitle);
     }
@@ -1240,13 +1275,47 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     return { reliquia, epico, vergonha };
   }, [dashItems, totalDash, activeCategories]);
 
+  // Auditoria Musical Dinâmica (Discos)
+  const musicItems = dashItems.filter(i => (activeCategories['Discos'] || []).includes(i.type));
+  const hasMusicStats = musicItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Discos');
+  
+  const musicStats = useMemo(() => {
+     if (!hasMusicStats) return null;
+     const ouvidos = musicItems.filter(i => (Number(i.rating) || 0) > 0);
+     const qtyOuvidos = ouvidos.length;
+     const mediaNota = qtyOuvidos > 0 ? (ouvidos.reduce((acc, i) => acc + Number(i.rating), 0) / qtyOuvidos).toFixed(1) : 0;
+     
+     let totalFaixas = 0;
+     const trackByArtist = {};
+     
+     musicItems.forEach(i => {
+         const faixas = parseInt(i.pages_or_time) || 0;
+         totalFaixas += faixas;
+         
+         if (i.author_developer) {
+            let auth = isVariousArtists(i.author_developer) ? "Vários Artistas" : getSortableName(i.author_developer);
+            trackByArtist[auth] = (trackByArtist[auth] || 0) + faixas;
+         }
+     });
+     
+     const mediaFaixas = musicItems.length > 0 ? Math.round(totalFaixas / musicItems.length) : 0;
+     
+     let topArtist = { name: '--', count: 0 };
+     for (const [art, count] of Object.entries(trackByArtist)) {
+         if (count > topArtist.count && art !== "Vários Artistas") {
+             topArtist = { name: art, count };
+         }
+     }
+
+     return { qtyOuvidos, mediaNota, totalFaixas, mediaFaixas, topArtist };
+  }, [musicItems, hasMusicStats]);
+
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
           <FilterIcon className="w-4 h-4" /> Filtros Interativos
         </div>
-        {/* FILTROS MELHORADOS: Agora em Grid e ocupando menos espaço vertical */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
           <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterSubtype('Todos'); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Tudo</option>
@@ -1295,20 +1364,45 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
             <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
             <div>
                <div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.epico.title || 'Sem Título')}</div>
-               <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {((activeCategories['Livros']||[]).includes(stats.epico.type)) ? 'Págs Totais' : 'Tempo (Total)'}</div>
+               <div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {getMetricInfo(stats.epico.type, activeCategories).label} Totais</div>
             </div>
           </MContainer>
         )}
       </div>
 
+      {hasMusicStats && (
+        <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-indigo-900/40 text-white' : 'bg-indigo-100 text-black'}>
+           <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
+              <Music className="w-4 h-4" /> Auditoria Musical (Discos no Filtro: {musicItems.length})
+           </div>
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex flex-col">
+                 <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Discos Ouvidos</span>
+                 <span className="text-xl font-black">{musicStats.qtyOuvidos} <span className="text-[10px]">({musicStats.mediaNota}★)</span></span>
+              </div>
+              <div className="flex flex-col">
+                 <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Total Faixas</span>
+                 <span className="text-xl font-black">{musicStats.totalFaixas} <span className="text-[10px]">Músicas</span></span>
+              </div>
+              <div className="flex flex-col">
+                 <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Média Faixas/Disco</span>
+                 <span className="text-xl font-black">{musicStats.mediaFaixas} <span className="text-[10px]">Músicas/Und</span></span>
+              </div>
+              <div className="flex flex-col">
+                 <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest truncate">Mais Faixas: {musicStats.topArtist.name}</span>
+                 <span className="text-xl font-black truncate">{musicStats.topArtist.count} <span className="text-[10px]">Músicas</span></span>
+              </div>
+           </div>
+        </MContainer>
+      )}
+
       {totalDash === 0 && <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest opacity-50">Nenhum dado para este filtro.</div>}
 
       {totalDash > 0 && (
         <>
-          {/* GRÁFICOS DE DONUT / PIZZA */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {catChartData.length > 0 && <MondrianDonutChart title="Divisão por Categoria" data={catChartData} darkMode={darkMode} />}
-            {statusChartData.length > 0 && <MondrianDonutChart title="Progresso de Consumo" data={statusChartData} darkMode={darkMode} />}
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4">
+            {catChartData.length > 0 && <MondrianDonutChart title="Categorias" data={catChartData} darkMode={darkMode} />}
+            {statusChartData.length > 0 && <MondrianDonutChart title="Progresso" data={statusChartData} darkMode={darkMode} />}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1394,7 +1488,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
   const chartColors = getChartColors(darkMode);
   
-  // PREPARAÇÃO DE DADOS PARA GRÁFICOS PIZZA (DONUT) DE ZERADOS
   const supportCounts = {};
   const consoleChartCounts = {};
 
@@ -1408,7 +1501,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     .sort((a,b) => b.value - a.value);
 
   const consoleChartData = Object.entries(consoleChartCounts)
-    .slice(0, 5) // Mostrando top 5 consoles no donut para não estourar
+    .slice(0, 5)
     .map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx+3) % chartColors.length] }))
     .sort((a,b) => b.value - a.value);
 
@@ -1449,7 +1542,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     );
   }
 
-  // --- MODO DETALHE ---
   if (selectedGame) {
     const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link);
     return (
@@ -1503,14 +1595,12 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     );
   }
 
-  // --- MODO DASHBOARD / LISTA ---
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-7xl mx-auto w-full">
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
           <div className="flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros de Zerados</div>
         </div>
-        {/* FILTROS DE ZERADOS MELHORADOS: Grid para layout condensado */}
         <div className="grid grid-cols-3 gap-2 w-full">
           <select value={filterConsole} onChange={e => { setFilterConsole(e.target.value); setPage(0); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Consoles</option>
@@ -1528,7 +1618,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         </div>
       </MContainer>
 
-      {/* BLOCO DE ESTATÍSTICAS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black'}>
           <GamepadIcon className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} />
@@ -1553,13 +1642,11 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
       {totalJogos > 0 && (
         <>
-           {/* GRÁFICOS DE PIZZA (DONUT) */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {supportChartData.length > 0 && <MondrianDonutChart title="Formato (Mídia)" data={supportChartData} darkMode={darkMode} />}
+           <div className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4">
+              {supportChartData.length > 0 && <MondrianDonutChart title="Formato" data={supportChartData} darkMode={darkMode} />}
               {consoleChartData.length > 0 && <MondrianDonutChart title="Top Plataformas" data={consoleChartData} darkMode={darkMode} />}
            </div>
 
-           {/* BLOCO DE GRÁFICOS EM BARRA E TIMELINE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Consoles Dominantes</div>
@@ -1602,7 +1689,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         </>
       )}
 
-      {/* BLOCO DA LISTA PAGINADA */}
       <div className={`text-[10px] font-black uppercase tracking-widest border-b-[4px] pb-2 mt-4 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
         Lista Completa ({paginatedGames.length} de {filteredGames.length})
       </div>
@@ -2028,18 +2114,15 @@ export default function App() {
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '', discogsToken: '' });
   const [isLocalStorageLoaded, setIsLocalStorageLoaded] = useState(false);
   
-  // Controle de Loading e Tela de Sucesso
   const [isFetchingCloud, setIsFetchingCloud] = useState(false);
   const [showSuccessSplash, setShowSuccessSplash] = useState(false);
   
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // Feedback Global Dinâmico
   const [toast, setToast] = useState({ visible: false, type: 'success' });
   const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
   
-  // Chaves para forçar reset ao clicar nos botões do menu
   const [libraryResetKey, setLibraryResetKey] = useState(0);
   const [completedResetKey, setCompletedResetKey] = useState(0);
 
@@ -2171,7 +2254,6 @@ export default function App() {
     setIsLocalStorageLoaded(true);
   }, []);
 
-  // Last.FM Lógicas unificadas (Interativo)
   const [lfmPeriodIdx, setLfmPeriodIdx] = useState(0); 
   const [lfmStatIdx, setLfmStatIdx] = useState(0);
   const [lfmCache, setLfmCache] = useState({});
@@ -2205,8 +2287,6 @@ export default function App() {
 
   useEffect(() => {
     if (!settings?.lastfmUser || !settings?.lastfmApiKey || !isLoaded) return;
-    
-    // O índice 0 é sempre a música recente, não precisa de cache de período
     if (lfmStatIdx === 0) return;
 
     const period = LFM_PERIODS[lfmPeriodIdx];
@@ -2257,7 +2337,6 @@ export default function App() {
     lfmPressTimer.current = setTimeout(() => {
       isLfmLongPress.current = true;
       setLfmPeriodIdx(prev => (prev + 1) % LFM_PERIODS.length);
-      // Se estava na estatística 0 (recente), pula para a 1 para o usuário ver a mudança de período
       if (lfmStatIdx === 0) setLfmStatIdx(1); 
       playChipBeep('save');
     }, 500);
@@ -2273,7 +2352,6 @@ export default function App() {
     playChipBeep('success');
   };
 
-  // Montando o Display final do Last.FM para renderizar (apenas strings)
   let lfmLabelStr = 'Last.FM:';
   let lfmDisplayStr = 'Sem dados';
   let isPulsingLfm = false;
@@ -2357,7 +2435,9 @@ export default function App() {
 
     const authorCounts = items.reduce((acc, i) => { 
        if(i.author_developer) {
-          const rawAuthor = i.author_developer.trim();
+          let rawAuthor = i.author_developer.trim();
+          if (isVariousArtists(rawAuthor)) rawAuthor = 'Vários Artistas';
+
           const normAuthor = getSortableName(rawAuthor).toLowerCase();
           const normTitle = normalizeWorkTitle(i.title);
           
@@ -2373,7 +2453,7 @@ export default function App() {
       .map(([normAuthor, data]) => [data.display, data.titles.size])
       .sort((a,b)=>b[1]-a[1])[0];
       
-    if (topAuthorEntry && topAuthorEntry[1] > 1) {
+    if (topAuthorEntry && topAuthorEntry[1] > 1 && topAuthorEntry[0] !== 'Vários Artistas') {
         stats.push(`+ Freq: ${String(topAuthorEntry[0] || '').substring(0, 15)} (${topAuthorEntry[1]} Obras)`);
     }
 
@@ -2513,7 +2593,6 @@ export default function App() {
 
   const handleCompClick = () => { setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
 
-  // TELA 1: CARREGAMENTO (Katamari)
   if (isFetchingCloud && !showSuccessSplash) {
     return (
        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
@@ -2525,7 +2604,6 @@ export default function App() {
     );
   }
 
-  // TELA 2: SUCESSO (Logo + Título + Escala Lídio tocando)
   if (showSuccessSplash) {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden bg-black text-white`} style={{ backgroundImage: 'radial-gradient(circle, #222 1.5px, transparent 1.5px)', backgroundSize: '4px 4px' }}>
@@ -2539,7 +2617,6 @@ export default function App() {
     );
   }
 
-  // TELA 3: APP PRINCIPAL (Responsivo Desktop/Mobile)
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <style>{`
@@ -2556,7 +2633,6 @@ export default function App() {
 
       <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
 
-        {/* SIDEBAR PARA DESKTOP (Escondida no Mobile) */}
         <nav className={`hidden md:flex flex-col w-20 lg:w-48 flex-none border-r-[4px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="p-4 border-b-[4px] border-current flex items-center justify-center lg:justify-start gap-2 h-20">
              <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-8 h-8 object-contain" />
@@ -2585,7 +2661,6 @@ export default function App() {
           </div>
         </nav>
 
-        {/* CONTAINER PRINCIPAL DO CONTEÚDO (Header + Main) */}
         <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
           
           <header className={`flex-none p-3 lg:p-4 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
@@ -2703,7 +2778,6 @@ export default function App() {
             {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
           </main>
 
-          {/* BOTTOM NAVIGATION PARA MOBILE (Escondida no Desktop) */}
           <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
             <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}>
               <Library className="w-5 h-5 mb-1" />
