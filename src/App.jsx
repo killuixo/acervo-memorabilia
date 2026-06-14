@@ -484,7 +484,7 @@ const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)
   </div>
 );
 
-// Novo componente de Gráfico de Pizza/Donut Mondrian (Menor e Lado a Lado no Mobile)
+// Novo componente de Gráfico de Pizza/Donut Mondrian
 const MondrianDonutChart = ({ title, data, darkMode }) => {
   const total = data.reduce((acc, item) => acc + item.value, 0);
   if (total === 0) return null;
@@ -499,18 +499,19 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
   }).join(', ');
 
   return (
-    <MContainer darkMode={darkMode} className="p-2 md:p-4 flex flex-col items-center h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-      <div className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-2 md:mb-4 w-full border-b-[3px] md:border-b-[4px] pb-1 md:pb-2 text-center ${darkMode ? 'border-gray-300' : 'border-black'} truncate`}>
+    <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+      <div className={`text-[10px] font-black uppercase tracking-widest mb-4 w-full border-b-[4px] pb-2 text-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
         {title}
       </div>
-      <div className={`relative w-20 h-20 md:w-28 md:h-28 rounded-full border-[3px] md:border-[4px] flex-shrink-0 ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] md:shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`} style={{ background: `conic-gradient(${gradientParts})` }}>
-        <div className={`absolute inset-0 m-auto w-8 h-8 md:w-12 md:h-12 rounded-full border-[3px] md:border-[4px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}></div>
+      <div className={`relative w-28 h-28 rounded-full border-[4px] flex-shrink-0 ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`} style={{ background: `conic-gradient(${gradientParts})` }}>
+        {/* Furo do donut centralizado */}
+        <div className={`absolute inset-0 m-auto w-12 h-12 rounded-full border-[4px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}></div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 mt-3 md:mt-6 w-full px-1">
+      <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-6 w-full px-2">
         {data.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-1 text-[7px] md:text-[8px] font-black uppercase tracking-widest">
-            <div className={`w-2 h-2 md:w-3 md:h-3 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div>
-            <span className="truncate max-w-[50px] md:max-w-[70px]">{item.label}</span> ({item.value})
+          <div key={idx} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
+            <div className={`w-3 h-3 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div>
+            <span className="truncate max-w-[70px]">{item.label}</span> ({item.value})
           </div>
         ))}
       </div>
@@ -589,10 +590,17 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
 
+      // === SISTEMA DE DESEMPATE ===
       if (sortBy === 'author_developer') {
+         // 1. Desempate por Ano (Obras sem ano caem para o final da fila (0))
          const yearA = getValidYear(a.year) || 0;
          const yearB = getValidYear(b.year) || 0;
-         if (yearA !== yearB) return sortOrder === 'asc' ? yearA - yearB : yearB - yearA;
+         if (yearA !== yearB) {
+            return sortOrder === 'asc' ? yearA - yearB : yearB - yearA;
+         }
+         
+         // 2. Desempate por Título (A ordenação natural "numeric: true" 
+         // coloca "Vol 2" antes de "Vol 10" nativamente!)
          const titleA = String(a.title || '').toLowerCase();
          const titleB = String(b.title || '').toLowerCase();
          const titleComp = titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
@@ -1113,7 +1121,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const [filterSubtype, setFilterSubtype] = useState('Todos');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterRating, setFilterRating] = useState('Todas');
-  const [timelineScale, setTimelineScale] = useState('decade'); // Nova escala da linha do tempo
   
   const dashItems = useMemo(() => {
     return items.filter(item => {
@@ -1143,18 +1150,17 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const statusCounts = {};
 
   dashItems.forEach(item => {
+    // 1. Contagem por Categoria Pai
     let foundCat = 'Outros';
     for (const [cat, subs] of Object.entries(activeCategories)) {
        if ((subs || []).includes(item.type)) { foundCat = cat; break; }
     }
     catCounts[foundCat] = (catCounts[foundCat] || 0) + 1;
 
-    // Ignora Discos no cálculo de Status (Progresso de Consumo)
+    // 2. Contagem por Status
     const isDisc = (activeCategories['Discos'] || []).includes(item.type);
-    if (!isDisc) {
-      const st = item.status || 'Não Iniciado';
-      statusCounts[st] = (statusCounts[st] || 0) + 1;
-    }
+    const st = isDisc ? 'Música (Acervo)' : (item.status || 'Não Iniciado');
+    statusCounts[st] = (statusCounts[st] || 0) + 1;
   });
 
   const catChartData = Object.entries(catCounts)
@@ -1162,7 +1168,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     .sort((a,b) => b.value - a.value);
 
   const statusChartData = Object.entries(statusCounts)
-    .map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 2) % chartColors.length] }))
+    .map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 2) % chartColors.length] })) // offset de cor
     .sort((a,b) => b.value - a.value);
 
   const totalDash = dashItems.length;
@@ -1189,21 +1195,13 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     .sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
   
-  // LINHA DO TEMPO BASEADA NA ESCALA (Década vs Ano)
-  const byTime = dashItems.reduce((acc, i) => {
+  const byDecade = dashItems.reduce((acc, i) => {
     const year = getValidYear(i.year);
-    if (!isNaN(year) && year > 1800) { 
-      if (timelineScale === 'decade') {
-         const decade = Math.floor(year / 10) * 10; 
-         acc[decade] = (acc[decade] || 0) + 1; 
-      } else {
-         acc[year] = (acc[year] || 0) + 1; 
-      }
-    }
+    if (!isNaN(year) && year > 1800) { const decade = Math.floor(year / 10) * 10; acc[decade] = (acc[decade] || 0) + 1; }
     return acc;
   }, {});
-  const timeKeys = Object.keys(byTime).sort();
-  const maxTime = timeKeys.length > 0 ? Math.max(...Object.values(byTime)) : 1;
+  const decadesKeys = Object.keys(byDecade).sort();
+  const maxDecade = decadesKeys.length > 0 ? Math.max(...Object.values(byDecade)) : 1;
   
   const stats = useMemo(() => {
     if (totalDash === 0) return {};
@@ -1248,6 +1246,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
           <FilterIcon className="w-4 h-4" /> Filtros Interativos
         </div>
+        {/* FILTROS MELHORADOS: Agora em Grid e ocupando menos espaço vertical */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
           <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterSubtype('Todos'); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todas">Tudo</option>
@@ -1306,10 +1305,10 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
       {totalDash > 0 && (
         <>
-          {/* GRÁFICOS DE PIZZA (DONUT) - Agora em Grid forçada para ficarem Lado a Lado */}
-          <div className="grid grid-cols-2 gap-2 md:gap-4">
-            {catChartData.length > 0 && <MondrianDonutChart title="Categorias" data={catChartData} darkMode={darkMode} />}
-            {statusChartData.length > 0 && <MondrianDonutChart title="Progresso" data={statusChartData} darkMode={darkMode} />}
+          {/* GRÁFICOS DE DONUT / PIZZA */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {catChartData.length > 0 && <MondrianDonutChart title="Divisão por Categoria" data={catChartData} darkMode={darkMode} />}
+            {statusChartData.length > 0 && <MondrianDonutChart title="Progresso de Consumo" data={statusChartData} darkMode={darkMode} />}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1327,20 +1326,14 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
               </div>
             </MContainer>
 
-            {timeKeys.length > 0 && (
+            {decadesKeys.length > 0 && (
               <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-                <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
-                  <div className="flex items-center gap-2"><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
-                  <select value={timelineScale} onChange={e => setTimelineScale(e.target.value)} className={`p-1 border-[2px] text-[8px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-white border-black text-black'}`}>
-                    <option value="decade">Por Década</option>
-                    <option value="year">Por Ano</option>
-                  </select>
-                </div>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
                 <div className="flex items-end gap-2 h-32 pt-6 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
-                  {timeKeys.map((timeStr, idx) => {
-                    const count = byTime[timeStr]; const heightPerc = (count / maxTime) * 100;
+                  {decadesKeys.map((decadeStr, idx) => {
+                    const count = byDecade[decadeStr]; const heightPerc = (count / maxDecade) * 100;
                     return (
-                      <div key={timeStr} className="flex-1 min-w-[30px] h-full flex items-end group">
+                      <div key={decadeStr} className="flex-1 min-w-[30px] h-full flex items-end group">
                         <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 flex justify-center relative ${getMondrianColor(idx + 2, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(2, heightPerc)}%` }}>
                           <div className="text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-1">{count}</div>
                         </div>
@@ -1349,7 +1342,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
                   })}
                 </div>
                 <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
-                  {timeKeys.map(timeStr => <div key={`label-${timeStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{timeStr}{timelineScale === 'decade' ? 's' : ''}</div>)}
+                  {decadesKeys.map(decadeStr => <div key={`label-${decadeStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{decadeStr}s</div>)}
                 </div>
               </MContainer>
             )}
@@ -1364,7 +1357,6 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const [filterConsole, setFilterConsole] = useState('Todos');
   const [filterGenre, setFilterGenre] = useState('Todos');
   const [filterSupport, setFilterSupport] = useState('Todos');
-  const [timelineScale, setTimelineScale] = useState('year'); // Escala para jogos
   const [page, setPage] = useState(0);
   const [selectedGame, setSelectedGame] = useState(null);
   const itemsPerPage = 24;
@@ -1416,7 +1408,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
     .sort((a,b) => b.value - a.value);
 
   const consoleChartData = Object.entries(consoleChartCounts)
-    .slice(0, 5) 
+    .slice(0, 5) // Mostrando top 5 consoles no donut para não estourar
     .map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx+3) % chartColors.length] }))
     .sort((a,b) => b.value - a.value);
 
@@ -1433,22 +1425,15 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   const byGenre = filteredGames.reduce((acc, g) => { acc[g.genero] = (acc[g.genero] || 0) + 1; return acc; }, {});
   const topGenres = Object.entries(byGenre).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxGenre = topGenres.length > 0 ? topGenres[0][1] : 1;
-  
-  // LINHA DO TEMPO BASEADA NA ESCALA (Década vs Ano)
-  const byTime = filteredGames.reduce((acc, g) => {
+  const byYear = filteredGames.reduce((acc, g) => {
     const year = parseInt(g.anoFim);
     if (!isNaN(year) && year > 1950 && year < 2100) { 
-      if (timelineScale === 'decade') {
-        const decade = Math.floor(year / 10) * 10;
-        acc[decade] = (acc[decade] || 0) + 1;
-      } else {
         acc[year] = (acc[year] || 0) + 1; 
-      }
     }
     return acc;
   }, {});
-  const timeKeys = Object.keys(byTime).sort();
-  const maxTime = timeKeys.length > 0 ? Math.max(...Object.values(byTime)) : 1;
+  const yearsKeys = Object.keys(byYear).sort();
+  const maxYear = yearsKeys.length > 0 ? Math.max(...Object.values(byYear)) : 1;
   
   if (completedGames.length === 0) {
     return (
@@ -1525,6 +1510,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
         <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current">
           <div className="flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros de Zerados</div>
         </div>
+        {/* FILTROS DE ZERADOS MELHORADOS: Grid para layout condensado */}
         <div className="grid grid-cols-3 gap-2 w-full">
           <select value={filterConsole} onChange={e => { setFilterConsole(e.target.value); setPage(0); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
             <option value="Todos">Consoles</option>
@@ -1568,9 +1554,9 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
       {totalJogos > 0 && (
         <>
            {/* GRÁFICOS DE PIZZA (DONUT) */}
-           <div className="grid grid-cols-2 gap-2 md:gap-4">
-              {supportChartData.length > 0 && <MondrianDonutChart title="Formato" data={supportChartData} darkMode={darkMode} />}
-              {consoleChartData.length > 0 && <MondrianDonutChart title="Top Consoles" data={consoleChartData} darkMode={darkMode} />}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {supportChartData.length > 0 && <MondrianDonutChart title="Formato (Mídia)" data={supportChartData} darkMode={darkMode} />}
+              {consoleChartData.length > 0 && <MondrianDonutChart title="Top Plataformas" data={consoleChartData} darkMode={darkMode} />}
            </div>
 
            {/* BLOCO DE GRÁFICOS EM BARRA E TIMELINE */}
@@ -1591,21 +1577,15 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
               </div>
             </MContainer>
 
-            {timeKeys.length > 0 && (
+            {yearsKeys.length > 0 && (
               <MContainer darkMode={darkMode} className="p-4 flex flex-col md:col-span-2" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-                <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
-                  <div className="flex items-center gap-2"><span>Linha do Tempo</span><Calendar className="w-4 h-4" /></div>
-                  <select value={timelineScale} onChange={e => setTimelineScale(e.target.value)} className={`p-1 border-[2px] text-[8px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-white border-black text-black'}`}>
-                    <option value="decade">Por Década</option>
-                    <option value="year">Por Ano</option>
-                  </select>
-                </div>
+                <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Conclusão)</span><Calendar className="w-4 h-4" /></div>
                 <div className="flex items-end gap-2 h-32 pt-6 border-b-[3px] border-current overflow-x-auto scrollbar-hide">
-                  {timeKeys.map((timeStr, idx) => {
-                    const count = byTime[timeStr];
-                    const heightPerc = (count / maxTime) * 100;
+                  {yearsKeys.map((yearStr, idx) => {
+                    const count = byYear[yearStr];
+                    const heightPerc = (count / maxYear) * 100;
                     return (
-                      <div key={timeStr} className="flex-1 min-w-[30px] h-full flex items-end group">
+                      <div key={yearStr} className="flex-1 min-w-[30px] h-full flex items-end group">
                         <div className={`w-full border-[3px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 flex justify-center relative ${getMondrianColor(idx + 1, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(2, heightPerc)}%` }}>
                           <div className="text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-1">{count}</div>
                         </div>
@@ -1614,7 +1594,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
                   })}
                 </div>
                 <div className="flex justify-between gap-2 mt-2 px-1 overflow-x-auto scrollbar-hide">
-                  {timeKeys.map(timeStr => <div key={`label-${timeStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{timeStr}{timelineScale === 'decade' ? 's' : ''}</div>)}
+                  {yearsKeys.map(yearStr => <div key={`label-${yearStr}`} className="flex-1 min-w-[30px] text-center text-[8px] font-black uppercase tracking-widest">{yearStr}</div>)}
                 </div>
               </MContainer>
             )}
@@ -2717,7 +2697,7 @@ export default function App() {
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             
             {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
-            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={globalAiState} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
+            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
             {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
             {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
             {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
