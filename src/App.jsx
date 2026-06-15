@@ -285,9 +285,228 @@ const processCompletedGamesCSV = (csvText) => {
   return parsed;
 };
 
-// HTML Export
+// HTML Export (Widget Blogger/Wordpress)
 const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Acervo Memorabilia</title><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6"><h1>Memorabilia HTML Export (Código simplificado aqui para brevidade)</h1></body></html>`;
+  const safeItems = JSON.stringify(items).replace(/</g, '\\u003c');
+  const safeCompleted = JSON.stringify(completedGames).replace(/</g, '\\u003c');
+  const safeCategories = JSON.stringify(activeCategories).replace(/</g, '\\u003c');
+
+  return `<!-- INÍCIO DO WIDGET MEMORABILIA -->
+<div id="m-widget">
+  <style>
+    #m-widget { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; max-width: 1024px; margin: 0 auto; color: #000; background: transparent; padding: 10px; line-height: 1.5; }
+    #m-widget * { box-sizing: border-box; }
+    #m-widget .m-box { border: 4px solid #000; box-shadow: 4px 4px 0px #000; background-color: #fff; }
+    #m-widget .m-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 15px 20px; margin-bottom: 20px; }
+    #m-widget .m-title { font-size: 24px; font-weight: 900; text-transform: uppercase; margin: 0; line-height: 1; letter-spacing: -1px; }
+    #m-widget .m-subtitle { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #ec4899; margin-top: 5px; display: block; }
+    #m-widget .m-btn { padding: 8px 16px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; border: 4px solid #000; box-shadow: 4px 4px 0px #000; cursor: pointer; transition: all 0.1s; }
+    #m-widget .m-btn:active, #m-widget .m-btn.active { transform: translate(4px, 4px); box-shadow: none; }
+    #m-widget .m-btn-cyan { background-color: #22d3ee; color: #000; }
+    #m-widget .m-btn-amber { background-color: #fbbf24; color: #000; }
+    #m-widget .m-btn-inactive { opacity: 0.5; background-color: #f3f4f6; }
+    #m-widget .m-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; }
+    #m-widget .m-item { display: flex; height: 130px; cursor: default; }
+    #m-widget .m-color-bar { width: 20px; border: 4px solid #000; border-right: none; }
+    #m-widget .m-item-content { flex: 1; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+    #m-widget .m-meta { font-size: 9px; font-weight: 900; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #m-widget .m-item-title { font-size: 14px; font-weight: 900; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+    #m-widget .m-author { font-size: 10px; font-weight: bold; opacity: 0.8; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+    #m-widget .m-stars { color: #f59e0b; font-size: 12px; font-weight: 900; letter-spacing: 2px; }
+    #m-widget .m-status { font-size: 8px; font-weight: 900; text-transform: uppercase; background: #f3f4f6; padding: 2px 4px; border: 2px solid #000; }
+    #m-widget .m-filters { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    #m-widget .m-input { flex: 1; min-width: 200px; padding: 12px; font-size: 12px; font-weight: bold; outline: none; }
+    #m-widget .m-select { padding: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; outline: none; background: #fff; cursor: pointer; }
+    #m-widget .m-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    #m-widget .m-stat-box { padding: 15px; text-align: center; }
+    #m-widget .m-stat-val { font-size: 32px; font-weight: 900; margin-bottom: 5px; line-height: 1; }
+    #m-widget .m-stat-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+    #m-widget .m-z-item { padding: 10px; display: flex; justify-content: space-between; transition: transform 0.2s; }
+    #m-widget .m-z-item:hover { transform: translateY(-4px); box-shadow: 4px 8px 0px #000; }
+    #m-widget .m-hidden { display: none !important; }
+  </style>
+
+  <div class="m-header m-box">
+    <div>
+      <h1 class="m-title">Memorabilia</h1>
+      <span class="m-subtitle">Coleção Pública</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button id="btn-acervo" class="m-btn m-btn-cyan active">Acervo (<span id="count-acervo">0</span>)</button>
+      <button id="btn-zerados" class="m-btn m-btn-amber m-btn-inactive">Zerados (<span id="count-zerados">0</span>)</button>
+    </div>
+  </div>
+
+  <div id="m-loader" style="text-align: center; padding: 40px; font-size: 10px; font-weight: 900; text-transform: uppercase; opacity: 0.5;">Carregando dados...</div>
+
+  <div id="view-acervo" class="m-hidden">
+    <div class="m-filters">
+      <input type="text" id="search-acervo" class="m-input m-box" placeholder="Buscar título ou autor...">
+      <select id="filter-type" class="m-select m-box">
+        <option value="Todos">Todas Categorias</option>
+      </select>
+    </div>
+    <div id="grid-acervo" class="m-grid"></div>
+  </div>
+
+  <div id="view-zerados" class="m-hidden">
+    <div class="m-stats-grid">
+      <div class="m-stat-box m-box" style="background-color: #22d3ee;">
+        <div class="m-stat-val" id="stat-jogos">0</div>
+        <div class="m-stat-label">Jogos Zerados</div>
+      </div>
+      <div class="m-stat-box m-box" style="background-color: #ec4899; color: #fff;">
+        <div class="m-stat-val" id="stat-horas">0h</div>
+        <div class="m-stat-label">Tempo Total</div>
+      </div>
+      <div class="m-stat-box m-box" style="background-color: #fbbf24;">
+        <div class="m-stat-val" id="stat-nota">0</div>
+        <div class="m-stat-label">Média Geral</div>
+      </div>
+    </div>
+    <div id="grid-zerados" class="m-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));"></div>
+  </div>
+
+  <script>
+    (function() {
+      const STATIC_ITEMS = ${safeItems};
+      const STATIC_COMPLETED = ${safeCompleted};
+      const CATEGORIES = ${safeCategories};
+      const SHEET_URL = "${sheetUrl || ''}";
+
+      let items = STATIC_ITEMS;
+      let completed = STATIC_COMPLETED;
+
+      const el = (id) => document.getElementById(id);
+      const getColors = (idx) => {
+        const c = ['#ec4899', '#22d3ee', '#fbbf24', '#fff'];
+        return c[idx % c.length];
+      };
+
+      const initUI = () => {
+        el('m-loader').classList.add('m-hidden');
+        el('count-acervo').innerText = items.length;
+        el('count-zerados').innerText = completed.length;
+        
+        el('stat-jogos').innerText = completed.length;
+        const horas = completed.reduce((acc, g) => acc + (Number(g.tempoHoras)||0), 0).toFixed(1);
+        el('stat-horas').innerText = horas + 'h';
+        const notas = completed.filter(g => (Number(g.nota)||0) > 0);
+        const media = notas.length > 0 ? (notas.reduce((a, b) => a + (Number(b.nota)||0), 0) / notas.length).toFixed(1) : 0;
+        el('stat-nota').innerText = '★ ' + media;
+
+        const filterType = el('filter-type');
+        Object.keys(CATEGORIES).forEach(cat => {
+          const grp = document.createElement('optgroup');
+          grp.label = "--- " + cat.toUpperCase() + " ---";
+          CATEGORIES[cat].forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub; opt.textContent = sub;
+            grp.appendChild(opt);
+          });
+          filterType.appendChild(grp);
+        });
+
+        renderAcervo();
+        renderZerados();
+        switchView('acervo');
+
+        el('search-acervo').addEventListener('input', renderAcervo);
+        filterType.addEventListener('change', renderAcervo);
+        
+        el('btn-acervo').addEventListener('click', () => switchView('acervo'));
+        el('btn-zerados').addEventListener('click', () => switchView('zerados'));
+      };
+
+      const switchView = (v) => {
+        if(v === 'acervo') {
+          el('view-acervo').classList.remove('m-hidden');
+          el('view-zerados').classList.add('m-hidden');
+          el('btn-acervo').classList.add('active'); el('btn-acervo').classList.remove('m-btn-inactive');
+          el('btn-zerados').classList.remove('active'); el('btn-zerados').classList.add('m-btn-inactive');
+        } else {
+          el('view-zerados').classList.remove('m-hidden');
+          el('view-acervo').classList.add('m-hidden');
+          el('btn-zerados').classList.add('active'); el('btn-zerados').classList.remove('m-btn-inactive');
+          el('btn-acervo').classList.remove('active'); el('btn-acervo').classList.add('m-btn-inactive');
+        }
+      };
+
+      const renderAcervo = () => {
+        const q = el('search-acervo').value.toLowerCase();
+        const t = el('filter-type').value;
+        const filtered = items.filter(i => {
+          const mQ = (i.title||'').toLowerCase().includes(q) || (i.author_developer||'').toLowerCase().includes(q);
+          const mT = t === 'Todos' || i.type === t;
+          return mQ && mT;
+        });
+
+        const grid = el('grid-acervo');
+        grid.innerHTML = '';
+        if(filtered.length === 0) {
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; font-size: 10px; font-weight: bold; opacity: 0.5;">Nenhum item.</div>';
+          return;
+        }
+
+        filtered.forEach((item, idx) => {
+          const div = document.createElement('div');
+          div.className = 'm-item';
+          const r = item.rating || 0;
+          const stars = '★'.repeat(r) + '☆'.repeat(5-r);
+          const statHTML = item.status ? \`<div class="m-status">\${item.status}</div>\` : '';
+          
+          div.innerHTML = \`
+            <div class="m-color-bar" style="background-color: \${getColors(idx)}"></div>
+            <div class="m-item-content m-box" style="border-left: none;">
+              <div>
+                <div class="m-meta">\${item.type || '--'} • \${item.year || '--'}</div>
+                <h3 class="m-item-title">\${item.title || 'S/ Título'}</h3>
+                <div class="m-author">\${item.author_developer || '--'}</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px;">
+                <div class="m-stars">\${stars}</div>
+                \${statHTML}
+              </div>
+            </div>
+          \`;
+          grid.appendChild(div);
+        });
+      };
+
+      const renderZerados = () => {
+        const grid = el('grid-zerados');
+        grid.innerHTML = '';
+        if(completed.length === 0) return;
+        completed.forEach(g => {
+          const div = document.createElement('div');
+          div.className = 'm-z-item m-box';
+          div.innerHTML = \`
+            <div style="flex: 1; overflow: hidden; padding-right: 10px;">
+              <div style="font-size: 14px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">\${g.nome}</div>
+              <div style="font-size: 9px; font-weight: bold; text-transform: uppercase; opacity: 0.7; margin: 4px 0;">\${g.console} • \${g.genero}</div>
+              <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; color: #0891b2;">\${g.suporte}</div>
+            </div>
+            <div style="border-left: 3px solid #000; padding-left: 10px; text-align: right; min-width: 60px;">
+              <div style="font-size: 12px; font-weight: 900; color: #f59e0b;">★ \${g.nota}/10</div>
+              <div style="font-size: 8px; font-weight: bold; opacity: 0.7; margin-top: 5px;">\${Number(g.tempoHoras||0).toFixed(1)}h</div>
+            </div>
+          \`;
+          grid.appendChild(div);
+        });
+      };
+
+      if (SHEET_URL && SHEET_URL.startsWith('http')) {
+        fetch(SHEET_URL)
+          .then(r => r.json())
+          .then(data => { if(Array.isArray(data)) items = data; initUI(); })
+          .catch(e => { console.warn('Erro API Sheets', e); initUI(); });
+      } else {
+        initUI();
+      }
+    })();
+  </script>
+</div>
+<!-- FIM DO WIDGET MEMORABILIA -->`;
 };
 
 // ==========================================
@@ -539,6 +758,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [contextMenuItem, setContextMenuItem] = useState(null); // Estado do menu de contexto
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
@@ -551,6 +771,28 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   
   const itemsPerPage = 12; 
   const ALPHABET = ['Todos', '#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
+
+  // Referências para a lógica de Segurar/Long Press
+  const pressTimer = useRef(null);
+  const isLongPress = useRef(false);
+
+  const handleItemPressStart = (item) => {
+    isLongPress.current = false;
+    pressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      setContextMenuItem(item);
+      playChipBeep('success'); 
+    }, 500);
+  };
+
+  const handleItemPressEnd = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  };
+
+  const handleItemClick = (item) => {
+    if (isLongPress.current) return;
+    handleSelect(item);
+  };
   
   const filteredItems = useMemo(() => {
     let result = items.map((item, index) => ({ ...item, _originalIndex: index }));
@@ -792,6 +1034,46 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   // LISTA PRINCIPAL
   return (
     <div className="flex flex-col h-full">
+      <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem?.title || 'este item'}" da coleção?`} onConfirm={confirmDelete} onCancel={() => {setItemToDelete(null); setEditedItem(null);}} darkMode={darkMode} confirmText="Apagar" />
+      
+      {/* MENU DE CONTEXTO (LONG PRESS) */}
+      {contextMenuItem && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setContextMenuItem(null)}>
+          <MContainer darkMode={darkMode} className="w-full max-w-xs p-0 flex flex-col overflow-hidden animate-in zoom-in duration-200" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} onClick={(e) => e.stopPropagation()}>
+             <div className={`p-4 border-b-[4px] ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'} flex justify-between items-center`}>
+                <div className="flex flex-col overflow-hidden pr-2">
+                   <span className="text-sm font-black truncate leading-tight">{contextMenuItem.title}</span>
+                   <span className="text-[9px] uppercase tracking-widest opacity-70 truncate mt-0.5">{contextMenuItem.author_developer || '--'}</span>
+                </div>
+                <button onClick={() => setContextMenuItem(null)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
+             </div>
+             
+             <div className="flex flex-col">
+                <button onClick={() => { handleSelect(contextMenuItem); setContextMenuItem(null); }} className={`p-4 flex items-center gap-3 text-[11px] font-black uppercase tracking-widest border-b-[4px] ${darkMode ? 'border-gray-700 hover:bg-gray-800 text-white' : 'border-gray-200 hover:bg-gray-50 text-black'} transition-colors text-left`}>
+                   <Settings className="w-5 h-5" /> Editar Detalhes
+                </button>
+                <button onClick={() => { window.open(`https://open.spotify.com/search/${encodeURIComponent((contextMenuItem.title || '') + ' ' + (contextMenuItem.author_developer || ''))}`, '_blank'); setContextMenuItem(null); }} className={`p-4 flex items-center gap-3 text-[11px] font-black uppercase tracking-widest border-b-[4px] ${darkMode ? 'border-gray-700 hover:bg-cyan-900/30' : 'border-gray-200 hover:bg-cyan-50'} transition-colors text-cyan-600 dark:text-cyan-400 text-left`}>
+                   <Headphones className="w-5 h-5" /> Ouvir Online (Spotify)
+                </button>
+                <button onClick={() => { 
+                  const query = contextMenuItem.barcode ? contextMenuItem.barcode : encodeURIComponent((contextMenuItem.title || '') + ' ' + (contextMenuItem.author_developer || ''));
+                  window.open(`https://www.discogs.com/search?q=${query}&type=all`, '_blank'); 
+                  setContextMenuItem(null); 
+                }} className={`p-4 flex items-center gap-3 text-[11px] font-black uppercase tracking-widest border-b-[4px] ${darkMode ? 'border-gray-700 hover:bg-amber-900/30' : 'border-gray-200 hover:bg-amber-50'} transition-colors text-amber-600 dark:text-amber-500 text-left`}>
+                   <DiscIcon className="w-5 h-5" /> Buscar Preço (Discogs)
+                </button>
+                <button onClick={() => { 
+                   setEditedItem(contextMenuItem);
+                   setItemToDelete(contextMenuItem.id);
+                   setContextMenuItem(null);
+                }} className={`p-4 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-colors text-pink-600 dark:text-pink-400 text-left`}>
+                   <XIcon className="w-4 h-4" /> Apagar Item
+                </button>
+             </div>
+          </MContainer>
+        </div>
+      )}
+
       <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="flex gap-2 w-full items-center">
           <div className="relative flex-1">
@@ -842,10 +1124,21 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {paginatedItems.map((item, idx) => (
-              <div key={item.id} className="flex flex-row h-32 cursor-pointer active:scale-[0.98] transition-transform hover:-translate-y-1 hover:shadow-lg" onClick={() => handleSelect(item)}>
+              <div 
+                key={item.id} 
+                className="flex flex-row h-32 cursor-pointer active:scale-[0.98] transition-transform hover:-translate-y-1 hover:shadow-lg" 
+                onContextMenu={(e) => e.preventDefault()}
+                onTouchStart={() => handleItemPressStart(item)}
+                onTouchEnd={handleItemPressEnd}
+                onTouchMove={handleItemPressEnd}
+                onMouseDown={() => handleItemPressStart(item)}
+                onMouseUp={handleItemPressEnd}
+                onMouseLeave={handleItemPressEnd}
+                onClick={() => handleItemClick(item)}
+              >
                 <MContainer darkMode={darkMode} className="w-5 border-r-0 rounded-l-sm" colorClass={getMondrianColor(idx, darkMode)} />
                 <MContainer darkMode={darkMode} className="flex-1 flex p-2 rounded-r-sm" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
-                  <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                  <div className="flex-1 flex flex-col justify-between overflow-hidden pointer-events-none">
                     <div>
                       <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 truncate">{item.type || '--'} • {item.year || '--'} • {item.pages_or_time ? `${item.pages_or_time} ${getMetricInfo(item.type, activeCategories).label}` : ''}</div>
                       <div className="text-sm font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title || 'S/ Título'}</div>
@@ -856,7 +1149,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                         <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-300 bg-cyan-900 text-cyan-300' : 'border-black bg-amber-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div>
                       ) : <div></div>}
                       <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
-                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                         {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer pointer-events-auto ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
                       </div>
                     </div>
                  </div>
