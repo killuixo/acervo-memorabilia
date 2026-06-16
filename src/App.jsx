@@ -187,9 +187,8 @@ const processCompletedGamesCSV = (csvText) => {
   return parsed;
 };
 
-// Export Html Widget (Omitido o corpo gigante para manter limpo, mas a lógica original se mantém igual)
+// Export Html Widget
 const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
-  // Mantendo a função HTML intacta e compacta
   const safeItems = JSON.stringify(items).replace(/</g, '\\u003c'); const safeCompleted = JSON.stringify(completedGames).replace(/</g, '\\u003c'); const safeCategories = JSON.stringify(activeCategories).replace(/</g, '\\u003c');
   return `<!-- INÍCIO DO WIDGET MEMORABILIA --><div id="m-widget"><style>#m-widget{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:1024px;margin:0 auto;color:#000;background:transparent;padding:10px;line-height:1.5}#m-widget *{box-sizing:border-box}#m-widget .m-box{border:4px solid #000;box-shadow:4px 4px 0px #000;background-color:#fff}#m-widget .m-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;padding:15px 20px;margin-bottom:20px}#m-widget .m-title{font-size:24px;font-weight:900;text-transform:uppercase;margin:0;line-height:1;letter-spacing:-1px}#m-widget .m-subtitle{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#ec4899;margin-top:5px;display:block}#m-widget .m-btn{padding:8px 16px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;border:4px solid #000;box-shadow:4px 4px 0px #000;cursor:pointer;transition:all 0.1s}#m-widget .m-btn:active,#m-widget .m-btn.active{transform:translate(4px,4px);box-shadow:none}#m-widget .m-btn-cyan{background-color:#22d3ee;color:#000}#m-widget .m-btn-amber{background-color:#fbbf24;color:#000}#m-widget .m-btn-inactive{opacity:0.5;background-color:#f3f4f6}#m-widget .m-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:15px}#m-widget .m-item{display:flex;height:130px;cursor:default}#m-widget .m-color-bar{width:20px;border:4px solid #000;border-right:none}#m-widget .m-item-content{flex:1;padding:10px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}#m-widget .m-meta{font-size:9px;font-weight:900;text-transform:uppercase;opacity:0.6;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#m-widget .m-item-title{font-size:14px;font-weight:900;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0}#m-widget .m-author{font-size:10px;font-weight:bold;opacity:0.8;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}#m-widget .m-stars{color:#f59e0b;font-size:12px;font-weight:900;letter-spacing:2px}#m-widget .m-status{font-size:8px;font-weight:900;text-transform:uppercase;background:#f3f4f6;padding:2px 4px;border:2px solid #000}#m-widget .m-filters{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap}#m-widget .m-input{flex:1;min-width:200px;padding:12px;font-size:12px;font-weight:bold;outline:none}#m-widget .m-select{padding:12px;font-size:10px;font-weight:900;text-transform:uppercase;outline:none;background:#fff;cursor:pointer}#m-widget .m-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:15px}#m-widget .m-stat-box{padding:15px;text-align:center}#m-widget .m-stat-val{font-size:32px;font-weight:900;margin-bottom:5px;line-height:1}#m-widget .m-stat-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px}#m-widget .m-z-item{padding:10px;display:flex;justify-content:space-between;transition:transform 0.2s}#m-widget .m-z-item:hover{transform:translateY(-4px);box-shadow:4px 8px 0px #000}#m-widget .m-hidden{display:none !important}</style><div class="m-header m-box"><div><h1 class="m-title">Memorabilia</h1><span class="m-subtitle">Coleção Pública</span></div><div style="display:flex;gap:10px"><button id="btn-acervo" class="m-btn m-btn-cyan active">Acervo (<span id="count-acervo">0</span>)</button><button id="btn-zerados" class="m-btn m-btn-amber m-btn-inactive">Zerados (<span id="count-zerados">0</span>)</button></div></div><div id="m-loader" style="text-align:center;padding:40px;font-size:10px;font-weight:900;text-transform:uppercase;opacity:0.5">Carregando dados...</div><div id="view-acervo" class="m-hidden"><div class="m-filters"><input type="text" id="search-acervo" class="m-input m-box" placeholder="Buscar título ou autor..."><select id="filter-type" class="m-select m-box"><option value="Todos">Todas Categorias</option></select></div><div id="grid-acervo" class="m-grid"></div></div><div id="view-zerados" class="m-hidden"><div class="m-stats-grid"><div class="m-stat-box m-box" style="background-color:#22d3ee"><div class="m-stat-val" id="stat-jogos">0</div><div class="m-stat-label">Jogos Zerados</div></div><div class="m-stat-box m-box" style="background-color:#ec4899;color:#fff"><div class="m-stat-val" id="stat-horas">0h</div><div class="m-stat-label">Tempo Total</div></div><div class="m-stat-box m-box" style="background-color:#fbbf24"><div class="m-stat-val" id="stat-nota">0</div><div class="m-stat-label">Média Geral</div></div></div><div id="grid-zerados" class="m-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))"></div></div><script>(function(){const STATIC_ITEMS=${safeItems};const STATIC_COMPLETED=${safeCompleted};const CATEGORIES=${safeCategories};const SHEET_URL="${sheetUrl||''}";let items=STATIC_ITEMS;let completed=STATIC_COMPLETED;const el=id=>document.getElementById(id);const getColors=idx=>{const c=['#ec4899','#22d3ee','#fbbf24','#fff'];return c[idx%c.length]};const initUI=()=>{el('m-loader').classList.add('m-hidden');el('count-acervo').innerText=items.length;el('count-zerados').innerText=completed.length;el('stat-jogos').innerText=completed.length;const horas=completed.reduce((acc,g)=>acc+(Number(g.tempoHoras)||0),0).toFixed(1);el('stat-horas').innerText=horas+'h';const notas=completed.filter(g=>(Number(g.nota)||0)>0);const media=notas.length>0?(notas.reduce((a,b)=>a+(Number(b.nota)||0),0)/notas.length).toFixed(1):0;el('stat-nota').innerText='★ '+media;const filterType=el('filter-type');Object.keys(CATEGORIES).forEach(cat=>{const grp=document.createElement('optgroup');grp.label="--- "+cat.toUpperCase()+" ---";CATEGORIES[cat].forEach(sub=>{const opt=document.createElement('option');opt.value=sub;opt.textContent=sub;grp.appendChild(opt)});filterType.appendChild(grp)});renderAcervo();renderZerados();switchView('acervo');el('search-acervo').addEventListener('input',renderAcervo);filterType.addEventListener('change',renderAcervo);el('btn-acervo').addEventListener('click',()=>switchView('acervo'));el('btn-zerados').addEventListener('click',()=>switchView('zerados'))};const switchView=v=>{if(v==='acervo'){el('view-acervo').classList.remove('m-hidden');el('view-zerados').classList.add('m-hidden');el('btn-acervo').classList.add('active');el('btn-acervo').classList.remove('m-btn-inactive');el('btn-zerados').classList.remove('active');el('btn-zerados').classList.add('m-btn-inactive')}else{el('view-zerados').classList.remove('m-hidden');el('view-acervo').classList.add('m-hidden');el('btn-zerados').classList.add('active');el('btn-zerados').classList.remove('m-btn-inactive');el('btn-acervo').classList.remove('active');el('btn-acervo').classList.add('m-btn-inactive')}};const renderAcervo=()=>{const q=el('search-acervo').value.toLowerCase();const t=el('filter-type').value;const filtered=items.filter(i=>{const mQ=(i.title||'').toLowerCase().includes(q)||(i.author_developer||'').toLowerCase().includes(q);const mT=t==='Todos'||i.type===t;return mQ&&mT});const grid=el('grid-acervo');grid.innerHTML='';if(filtered.length===0){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;font-size:10px;font-weight:bold;opacity:0.5;">Nenhum item.</div>';return}filtered.forEach((item,idx)=>{const div=document.createElement('div');div.className='m-item';const r=item.rating||0;const stars='★'.repeat(r)+'☆'.repeat(5-r);const statHTML=item.status?\`<div class="m-status">\${item.status}</div>\`:'';div.innerHTML=\`<div class="m-color-bar" style="background-color:\${getColors(idx)}"></div><div class="m-item-content m-box" style="border-left:none;"><div><div class="m-meta">\${item.type||'--'} • \${item.year||'--'}</div><h3 class="m-item-title">\${item.title||'S/ Título'}</h3><div class="m-author">\${item.author_developer||'--'}</div></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px;"><div class="m-stars">\${stars}</div>\${statHTML}</div></div>\`;grid.appendChild(div)})};const renderZerados=()=>{const grid=el('grid-zerados');grid.innerHTML='';if(completed.length===0)return;completed.forEach(g=>{const div=document.createElement('div');div.className='m-z-item m-box';div.innerHTML=\`<div style="flex:1;overflow:hidden;padding-right:10px;"><div style="font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">\${g.nome}</div><div style="font-size:9px;font-weight:bold;text-transform:uppercase;opacity:0.7;margin:4px 0;">\${g.console} • \${g.genero}</div><div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#0891b2;">\${g.suporte}</div></div><div style="border-left:3px solid #000;padding-left:10px;text-align:right;min-width:60px;"><div style="font-size:12px;font-weight:900;color:#f59e0b;">★ \${g.nota}/10</div><div style="font-size:8px;font-weight:bold;opacity:0.7;margin-top:5px;">\${Number(g.tempoHoras||0).toFixed(1)}h</div></div>\`;grid.appendChild(div)})};if(SHEET_URL&&SHEET_URL.startsWith('http')){fetch(SHEET_URL).then(r=>r.json()).then(data=>{if(Array.isArray(data))items=data;initUI()}).catch(e=>{console.warn('Erro API',e);initUI()})}else{initUI()}})();</script></div><!-- FIM DO WIDGET MEMORABILIA -->`;
 };
@@ -377,7 +376,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
   const handleItemPressStart = (item) => {
     isLongPress.current = false;
-    pressTimer.current = setTimeout(() => { isLongPress.current = true; setContextMenuItem(item); playChipBeep('success'); }, 500);
+    pressTimer.current = setTimeout(() => { isLongPress.current = true; setContextMenuItem(item); }, 500);
   };
   const handleItemPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
   const handleItemClick = (item) => { if (!isLongPress.current) handleSelect(item); };
@@ -447,13 +446,22 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       const data = await res.json(); if (data.error) throw new Error(data.error.message);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
-    } catch (e) { setWikiError(e.message); playChipBeep('error'); } finally { setLoadingWiki(false); }
+    } catch (e) {
+      let errorMsg = e.message;
+      if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
+        errorMsg = "Limite da IA excedido (Quota). Tente novamente mais tarde.";
+      }
+      setWikiError(errorMsg); playChipBeep('error'); 
+    } finally { setLoadingWiki(false); }
   };
 
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
+    const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
     const linkInfo = getExternalLinkInfo(editedItem.type, editedItem.title);
     const metricLabel = getMetricInfo(editedItem.type, activeCategories).label;
+    const imageContainerClass = isDiscItem ? "w-40 h-40 md:w-56 md:h-56 aspect-square" : "w-32 h-44 md:w-48 md:h-64 aspect-[3/4]";
+    
     return (
       <div className="flex flex-col h-full pb-20 relative max-w-4xl mx-auto w-full">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title}"?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
@@ -466,7 +474,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </MContainer>
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4 flex-col md:flex-row md:items-start">
-            <MContainer darkMode={darkMode} className="w-32 h-44 md:w-48 md:h-64 flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0" colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
+            <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0`} colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
               {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
@@ -588,7 +596,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                     </div>
                     <div className="flex justify-between items-end mt-auto">
                       {[...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(item.type) ? <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-300 bg-cyan-900 text-cyan-300' : 'border-black bg-amber-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div> : <div />}
-                      <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>{Math.max(1, 5).toString().split('').map((_, i) => <Star key={i} onClick={() => updateRatingList(item.id, i+1)} className={`w-[18px] h-[18px] cursor-pointer pointer-events-auto ${(i+1) <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}</div>
+                      <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>{ [1, 2, 3, 4, 5].map((star) => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer pointer-events-auto ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}</div>
                     </div>
                  </div>
                 </MContainer>
@@ -714,7 +722,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       playChipBeep('success'); updateStatus('success', 'Encontrado com velocidade!');
       setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
     } catch (e) {
-      playChipBeep('error'); updateStatus('error', 'Não encontrado em nenhum banco. Preencha manualmente.');
+      playChipBeep('error'); updateStatus('error', 'Item não localizado em nenhum banco de dados. Por favor, preencha manualmente.');
     }
   };
 
@@ -864,7 +872,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   const sortedAuthors = Object.entries(byAuthor).map(([key, data]) => [data.display, data.titles.size]).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
   
-  // Gráfico de Linha do Tempo (Mais preciso)
   const byYear = dashItems.reduce((acc, i) => {
     const y = getValidYear(i.year);
     if (!isNaN(y) && y >= 1900 && y <= new Date().getFullYear() + 5) { acc[y] = (acc[y] || 0) + 1; }
@@ -892,7 +899,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         if (bestNorm) epico = { ...titleToPages[bestNorm].sampleItem, title: normalizeWorkTitle(titleToPages[bestNorm].sampleItem.title).toUpperCase(), pages_or_time: maxPages };
     }
 
-    // Regra Otimizada para "Vergonha" (Livros/Games não iniciados + Discos 0 estrelas)
     const vergonha = dashItems.filter(i => {
        const isDisc = (activeCategories['Discos'] || []).includes(i.type);
        if (isDisc) return (Number(i.rating) || 0) === 0;
@@ -902,7 +908,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     return { reliquia, epico, vergonha };
   }, [dashItems, totalDash, activeCategories]);
 
-  // Auditoria Musical Dinâmica (Discos) OTIMIZADA
   const musicItems = dashItems.filter(i => (activeCategories['Discos'] || []).includes(i.type));
   const hasMusicStats = musicItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Discos');
   
@@ -916,7 +921,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      let totalFaixas = 0;
      const trackByArtist = {};
      
-     // Conta faixas e filtra discos que TEM informação preenchida para fazer a média exata
      const discsWithTracks = musicItems.filter(i => parseInt(i.pages_or_time) > 0);
      
      discsWithTracks.forEach(i => {
@@ -1110,7 +1114,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         const item = {};
         headers.forEach((h, idx) => {
           let key = h;
-          if (h === 'ID') key = 'id'; else if (h === 'Código Arquivístico') key = 'archive_code'; else if (h === 'Tipo') key = 'type'; else if (h === 'Título') key = 'title'; else if (h === 'Autor/Desenvolvedor') key = 'author_developer'; else if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year'; else if (h === 'Editora/Gravadora') key = 'publisher'; else if (h === 'Status') key = 'status'; else if (h === 'Nota') key = 'rating'; else if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time'; else if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode'; else if (h === 'Descrição') key = 'description'; else if (h === 'URL da Capa') key = 'cover_url'; else if (h === 'Localização') key = 'location'; else if (h === 'Anotações') key = 'notes'; else if (h === 'Wiki') key = 'wiki_info';
+          if (h === 'ID') key = 'id'; else if (h === 'Código Arquivístico') key = 'archive_code'; else if (h === 'Tipo') key = 'title'; else if (h === 'Autor/Desenvolvedor') key = 'author_developer'; else if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year'; else if (h === 'Editora/Gravadora') key = 'publisher'; else if (h === 'Status') key = 'status'; else if (h === 'Nota') key = 'rating'; else if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time'; else if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode'; else if (h === 'Descrição') key = 'description'; else if (h === 'URL da Capa') key = 'cover_url'; else if (h === 'Localização') key = 'location'; else if (h === 'Anotações') key = 'notes'; else if (h === 'Wiki') key = 'wiki_info';
           item[key] = validRows[i][idx] ? validRows[i][idx].trim() : '';
         });
         if (item.id || item.title) { item.id = item.id || generateId(newItems); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
@@ -1272,7 +1276,13 @@ export default function App() {
       let text = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!text) throw new Error("Vazio.");
       text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
       setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com IA!'); playChipBeep('save'); showToast('success');
-    } catch (e) { setAiBoxState('error'); setAiBoxMessage(`Erro: ${e.message}`); playChipBeep('error'); showToast('error'); }
+    } catch (e) {
+      let errorMsg = e.message;
+      if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
+         errorMsg = "Limite da IA excedido (Quota). Aguarde um instante e tente novamente.";
+      }
+      setAiBoxState('error'); setAiBoxMessage(`Erro: ${errorMsg}`); playChipBeep('error'); showToast('error'); 
+    }
   };
 
   useEffect(() => {
@@ -1331,9 +1341,9 @@ export default function App() {
   }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded, lfmStatIdx, lfmPeriodIdx, lfmCache]);
 
   const lfmPressTimer = useRef(null); const isLfmLongPress = useRef(false);
-  const handleLfmPressStart = () => { isLfmLongPress.current = false; lfmPressTimer.current = setTimeout(() => { isLfmLongPress.current = true; setLfmPeriodIdx(p => (p + 1) % LFM_PERIODS.length); if (lfmStatIdx === 0) setLfmStatIdx(1); playChipBeep('save'); }, 500); };
+  const handleLfmPressStart = () => { isLfmLongPress.current = false; lfmPressTimer.current = setTimeout(() => { isLfmLongPress.current = true; setLfmPeriodIdx(p => (p + 1) % LFM_PERIODS.length); if (lfmStatIdx === 0) setLfmStatIdx(1); }, 500); };
   const handleLfmPressEnd = () => { if (lfmPressTimer.current) clearTimeout(lfmPressTimer.current); };
-  const handleLfmClick = () => { if (!isLfmLongPress.current) { setLfmStatIdx(p => (p + 1) % LFM_STATS.length); playChipBeep('success'); } };
+  const handleLfmClick = () => { if (!isLfmLongPress.current) { setLfmStatIdx(p => (p + 1) % LFM_STATS.length); } };
 
   let lfmLabelStr = 'Last.FM:'; let lfmDisplayStr = 'Sem dados'; let isPulsingLfm = false;
   if (!settings?.lastfmUser) lfmDisplayStr = 'Configure em Ajustes';
