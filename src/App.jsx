@@ -400,23 +400,28 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     result.sort((a, b) => {
       if (sortBy === 'id') return sortOrder === 'asc' ? a._originalIndex - b._originalIndex : b._originalIndex - a._originalIndex;
       let valA = a[sortBy] || ''; let valB = b[sortBy] || '';
+      
       if (['year', 'rating', 'pages_or_time'].includes(sortBy)) {
         return sortOrder === 'asc' ? (parseFloat(valA)||0) - (parseFloat(valB)||0) : (parseFloat(valB)||0) - (parseFloat(valA)||0);
       }
+      
       if (sortBy === 'author_developer') {
-         valA = getSortableName(isVariousArtists(valA) ? a.title : valA).toLowerCase();
-         valB = getSortableName(isVariousArtists(valB) ? b.title : valB).toLowerCase();
+         valA = getSortableName(isVariousArtists(valA) ? a.title : valA);
+         valB = getSortableName(isVariousArtists(valB) ? b.title : valB);
       } else if (sortBy === 'title') {
-         valA = getSortableName(valA).toLowerCase(); valB = getSortableName(valB).toLowerCase();
+         valA = getSortableName(valA); valB = getSortableName(valB);
       } else {
-         valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase();
+         valA = String(valA); valB = String(valB);
       }
-      if (valA < valB) return sortOrder === 'asc' ? -1 : 1; if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      
+      const comp = valA.localeCompare(valB, 'pt-BR', { sensitivity: 'base', numeric: true });
+      if (comp !== 0) return sortOrder === 'asc' ? comp : -comp;
+      
       if (sortBy === 'author_developer') {
          const yA = getValidYear(a.year) || 0; const yB = getValidYear(b.year) || 0;
          if (yA !== yB) return sortOrder === 'asc' ? yA - yB : yB - yA;
-         const comp = String(a.title || '').toLowerCase().localeCompare(String(b.title || '').toLowerCase(), undefined, { numeric: true, sensitivity: 'base' });
-         return sortOrder === 'asc' ? comp : -comp;
+         const comp2 = String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR', { sensitivity: 'base', numeric: true });
+         return sortOrder === 'asc' ? comp2 : -comp2;
       }
       return 0;
     });
@@ -555,29 +560,29 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </MContainer>
         </div>
       )}
-      <MContainer darkMode={darkMode} className="p-3 mb-4 flex flex-col gap-3 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+      <MContainer darkMode={darkMode} className="p-2 mb-2 flex flex-col gap-1.5 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="flex gap-2 w-full items-center">
           <div className="relative flex-1">
-            <Search className={`absolute left-2.5 top-2.5 h-4 w-4 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
-            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full p-2 pl-8 border-[4px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-xs font-bold outline-none`} />
+            <Search className={`absolute left-2 top-[6px] h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
+            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full py-1.5 px-2 pl-7 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[10px] font-bold outline-none`} />
           </div>
           <div className="flex gap-1 items-center flex-shrink-0">
-            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setActiveLetter('Todos'); setPage(0); }} className={`w-[85px] p-2 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}><option value="id">Adição</option><option value="title">Título</option><option value="author_developer">Autor</option><option value="year">Ano</option><option value="rating">Nota</option><option value="pages_or_time">Tamanho</option></select>
-            <button onClick={() => { setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); setPage(0); }} className={`w-8 h-[34px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{sortOrder === 'asc' ? '↑' : '↓'}</button>
+            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setActiveLetter('Todos'); setPage(0); }} className={`w-[75px] py-1.5 px-1 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}><option value="id">Adição</option><option value="title">Título</option><option value="author_developer">Autor</option><option value="year">Ano</option><option value="rating">Nota</option><option value="pages_or_time">Tamanho</option></select>
+            <button onClick={() => { setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); setPage(0); }} className={`w-7 h-[28px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{sortOrder === 'asc' ? '↑' : '↓'}</button>
           </div>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={`cat-${cat}`} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeCategory === cat ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
+          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={`cat-${cat}`} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-2 py-1 text-[9px] uppercase tracking-wider font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeCategory === cat ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
         </div>
         {activeCategory !== 'Todos' && activeCategories[activeCategory] && activeCategories[activeCategory].length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            <button onClick={() => { setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === 'Todos' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
-            {activeCategories[activeCategory].map(type => <button key={`sub-${type}`} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-3 py-1.5 text-[10px] uppercase tracking-wider font-black border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === type ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
+            <button onClick={() => { setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-2 py-1 text-[9px] uppercase tracking-wider font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === 'Todos' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
+            {activeCategories[activeCategory].map(type => <button key={`sub-${type}`} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-2 py-1 text-[9px] uppercase tracking-wider font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === type ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
           </div>
         )}
         {(sortBy === 'title' || sortBy === 'author_developer') && (
-           <div className={`flex gap-1 overflow-x-auto pb-1 scrollbar-hide mt-1 pt-2 border-t-[3px] ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              {ALPHABET.map(letter => <button key={`alpha-${letter}`} onClick={() => { setActiveLetter(letter); setPage(0); }} className={`flex-shrink-0 w-7 h-7 flex items-center justify-center text-[10px] font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[1px_1px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[1px_1px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeLetter === letter ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{letter}</button>)}
+           <div className={`flex gap-0.5 overflow-x-auto pb-0.5 scrollbar-hide mt-0.5 pt-1 border-t-[2px] ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              {ALPHABET.map(letter => <button key={`alpha-${letter}`} onClick={() => { setActiveLetter(letter); setPage(0); }} className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[8px] sm:text-[9px] font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[1px_1px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[1px_1px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeLetter === letter ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{letter}</button>)}
            </div>
         )}
       </MContainer>
