@@ -680,12 +680,22 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                  </div>
 
                  {/* Bloco de Imagem e Avaliação (Direita) */}
-                 <div className={`w-20 sm:w-24 flex-shrink-0 flex flex-col items-center justify-between border-l-[3px] pl-2 py-0.5 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                 <div className={`w-24 sm:w-28 flex-shrink-0 flex flex-col items-center justify-between border-l-[3px] pl-2 py-0.5 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                     <div className={`w-full ${(activeCategories['Discos'] || []).includes(item.type) ? 'aspect-square' : 'aspect-[3/4]'} border-[3px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
                        {item.cover_url ? <img src={item.cover_url} alt="Capa" className="w-full h-full object-cover"/> : <LibraryBig className={`w-6 h-6 ${darkMode ? 'text-gray-500' : 'text-gray-400'} opacity-50`}/>}
                     </div>
-                    <div className="flex flex-wrap justify-center gap-0.5 pointer-events-auto" onClick={e => e.stopPropagation()}>
-                       {[1, 2, 3, 4, 5].map((star) => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[14px] h-[14px] sm:w-[16px] sm:h-[16px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                    <div className="flex flex-nowrap justify-center items-center gap-0.5 pointer-events-auto w-full" onClick={e => e.stopPropagation()}>
+                       {item.rating === 5 ? (
+                         <div title="Obra-Prima! (Clique para redefinir a nota)">
+                           <Star 
+                             onClick={() => updateRatingList(item.id, 0)} 
+                             className="w-[24px] h-[24px] sm:w-[28px] sm:h-[28px] cursor-pointer fill-current drop-shadow-[0_0_5px_currentColor] active:scale-90 transition-transform" 
+                             style={{ animation: `titleColorCycle ${Math.max(3, (settings?.marqueeSpeed || 35) / 4)}s linear infinite` }} 
+                           />
+                         </div>
+                       ) : (
+                         [1, 2, 3, 4, 5].map((star) => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[13px] h-[13px] sm:w-[15px] sm:h-[15px] cursor-pointer flex-shrink-0 active:scale-90 transition-transform ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)
+                       )}
                     </div>
                  </div>
 
