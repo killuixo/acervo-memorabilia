@@ -212,7 +212,7 @@ const Sun = p => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M1
 const Download = p => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
 const Upload = p => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></>} />;
 const ExternalLink = p => <Icon {...p} path={<><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></>} />;
-const Star = ({ className = '', onClick }) => <Icon onClick={onClick} className={className} fill={className.includes('fill') ? 'currentColor' : 'none'} path={<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>} />;
+const Star = ({ className = '', onClick, style }) => <Icon onClick={onClick} className={className} style={style} fill={className.includes('fill') ? 'currentColor' : 'none'} path={<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>} />;
 const ChevronLeft = p => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
 const ChevronRight = p => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
 const Check = p => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
@@ -386,8 +386,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               setSortBy('author_developer');
               setSortOrder('asc');
           } else if (!isFiltering && sortBy === 'author_developer' && search === '' && activeLetter === 'Todos') {
-              // Mantém as preferências se o usuário mudou explicitamente. 
-              // A prioridade solicitada entra em vigor quando o filtro é ATIVADO a partir do padrão.
+              // Mantém as preferências
           }
       } else {
           setSortBy(b); setSortOrder(o);
@@ -439,7 +438,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       
       if (sortBy === 'author_developer') {
          const yA = getValidYear(a.year) || 0; const yB = getValidYear(b.year) || 0;
-         if (yA !== yB) return sortOrder === 'asc' ? yA - yB : yB - yA; // Lançamento secundário se o autor for igual
+         if (yA !== yB) return sortOrder === 'asc' ? yA - yB : yB - yA; 
          const comp2 = String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR', { sensitivity: 'base', numeric: true });
          return sortOrder === 'asc' ? comp2 : -comp2;
       }
@@ -591,7 +590,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             <input type="text" placeholder="Buscar..." value={search} onChange={(e) => handleFilterUpdate(e.target.value, activeCategory, activeSubtype, activeLetter)} className={`w-full py-1.5 px-2 pl-7 border-[3px] outline-none font-sans text-[10px] font-black uppercase tracking-widest ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`} />
           </div>
 
-          {/* Seletor Compacto de Categorias (Substitui botões grandes) */}
+          {/* Seletor Compacto de Categorias */}
           <select 
              value={activeSubtype !== 'Todos' ? activeSubtype : (activeCategory !== 'Todos' ? `cat:${activeCategory}` : 'Todos')}
              onChange={(e) => {
@@ -617,7 +616,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
              ))}
           </select>
 
-          {/* Seletor Combinado de Ordenação (Substitui 2 caixas) */}
+          {/* Seletor Combinado de Ordenação */}
           <select 
             value={`${sortBy}-${sortOrder}`} 
             onChange={e => {
@@ -637,7 +636,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <option value="pages_or_time-desc">Ordem: Tamanho (Maior)</option>
           </select>
 
-          {/* Seletor do ABCdário (Apenas visível se ordenado por Título ou Autor) */}
+          {/* Seletor do ABCdário */}
           {(sortBy === 'title' || sortBy === 'author_developer') && (
             <select 
               value={activeLetter} 
@@ -690,7 +689,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                            <Star 
                              onClick={() => updateRatingList(item.id, 0)} 
                              className="w-[24px] h-[24px] sm:w-[28px] sm:h-[28px] cursor-pointer fill-current drop-shadow-[0_0_5px_currentColor] active:scale-90 transition-transform" 
-                             style={{ animation: `titleColorCycle ${Math.max(3, (settings?.marqueeSpeed || 35) / 4)}s linear infinite` }} 
+                             style={{ animation: `titleColorCycle ${settings?.marqueeSpeed || 35}s linear infinite` }} 
                            />
                          </div>
                        ) : (
@@ -759,7 +758,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     const fetchers = [];
 
-    // Promessas que formatam e filtram as respostas. Rejeitam se não acharem para que Promise.any funcione.
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
       const res = await fetch(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
