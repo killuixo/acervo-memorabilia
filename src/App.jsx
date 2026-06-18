@@ -362,17 +362,37 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [itemToDelete, setItemToDelete] = useState(null);
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [page, setPage] = useState(0);
+  
+  // Estados Compactados para Filtros
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [activeSubtype, setActiveSubtype] = useState('Todos');
   const [activeLetter, setActiveLetter] = useState('Todos');
   const [sortBy, setSortBy] = useState('id');
   const [sortOrder, setSortOrder] = useState('desc');
+  
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 12; 
-  const ALPHABET = ['Todos', '#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
   const pressTimer = useRef(null); const isLongPress = useRef(false);
+
+  const handleFilterUpdate = (newSearch, newCat, newSub, newLetter, explicitSort = false, b = sortBy, o = sortOrder) => {
+      setSearch(newSearch); setActiveCategory(newCat); setActiveSubtype(newSub); setActiveLetter(newLetter);
+      setPage(0);
+      
+      if (!explicitSort) {
+          const isFiltering = newSearch !== '' || newCat !== 'Todos' || newSub !== 'Todos' || newLetter !== 'Todos';
+          if (isFiltering && sortBy === 'id') {
+              setSortBy('author_developer');
+              setSortOrder('asc');
+          } else if (!isFiltering && sortBy === 'author_developer' && search === '' && activeLetter === 'Todos') {
+              // Mantém as preferências se o usuário mudou explicitamente. 
+              // A prioridade solicitada entra em vigor quando o filtro é ATIVADO a partir do padrão.
+          }
+      } else {
+          setSortBy(b); setSortOrder(o);
+      }
+  };
 
   const handleItemPressStart = (item) => {
     isLongPress.current = false;
@@ -419,7 +439,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       
       if (sortBy === 'author_developer') {
          const yA = getValidYear(a.year) || 0; const yB = getValidYear(b.year) || 0;
-         if (yA !== yB) return sortOrder === 'asc' ? yA - yB : yB - yA;
+         if (yA !== yB) return sortOrder === 'asc' ? yA - yB : yB - yA; // Lançamento secundário se o autor for igual
          const comp2 = String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR', { sensitivity: 'base', numeric: true });
          return sortOrder === 'asc' ? comp2 : -comp2;
       }
@@ -454,7 +474,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     } catch (e) {
       let errorMsg = e.message;
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
-        errorMsg = "Limite da IA excedido (Quota). Tente novamente mais tarde.";
+        errorMsg = "Limite da IA excedido. Tente novamente mais tarde.";
       }
       setWikiError(errorMsg); playChipBeep('error'); 
     } finally { setLoadingWiki(false); }
@@ -560,50 +580,115 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </MContainer>
         </div>
       )}
-      <MContainer darkMode={darkMode} className="p-2 mb-2 flex flex-col gap-1.5 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-        <div className="flex gap-2 w-full items-center">
-          <div className="relative flex-1">
+      
+      {/* HEADER DE FILTROS COMPACTADOS */}
+      <MContainer darkMode={darkMode} className="p-2 mb-2 flex flex-col gap-2 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+        <div className="flex flex-wrap gap-2 w-full items-center">
+          
+          {/* Caixa de Pesquisa Reduzida */}
+          <div className="relative w-32 md:w-48 flex-shrink-0">
             <Search className={`absolute left-2 top-[6px] h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
-            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className={`w-full py-1.5 px-2 pl-7 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[10px] font-bold outline-none`} />
+            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => handleFilterUpdate(e.target.value, activeCategory, activeSubtype, activeLetter)} className={`w-full py-1.5 px-2 pl-7 border-[3px] outline-none font-sans text-[10px] font-black uppercase tracking-widest ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`} />
           </div>
-          <div className="flex gap-1 items-center flex-shrink-0">
-            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setActiveLetter('Todos'); setPage(0); }} className={`w-[75px] py-1.5 px-1 border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-[8px] font-black uppercase tracking-widest outline-none`}><option value="id">Adição</option><option value="title">Título</option><option value="author_developer">Autor</option><option value="year">Ano</option><option value="rating">Nota</option><option value="pages_or_time">Tamanho</option></select>
-            <button onClick={() => { setSortOrder(o => o === 'asc' ? 'desc' : 'asc'); setPage(0); }} className={`w-7 h-[28px] flex items-center justify-center border-[3px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{sortOrder === 'asc' ? '↑' : '↓'}</button>
-          </div>
+
+          {/* Seletor Compacto de Categorias (Substitui botões grandes) */}
+          <select 
+             value={activeSubtype !== 'Todos' ? activeSubtype : (activeCategory !== 'Todos' ? `cat:${activeCategory}` : 'Todos')}
+             onChange={(e) => {
+                 const val = e.target.value;
+                 let nCat = 'Todos', nSub = 'Todos';
+                 if (val === 'Todos') { /* Mantém Todos */ }
+                 else if (val.startsWith('cat:')) { nCat = val.split(':')[1]; }
+                 else {
+                     for (const [c, subs] of Object.entries(activeCategories)) {
+                         if (subs.includes(val)) { nCat = c; nSub = val; break; }
+                     }
+                 }
+                 handleFilterUpdate(search, nCat, nSub, activeLetter);
+             }}
+             className={`flex-1 min-w-[120px] py-1.5 px-2 border-[3px] outline-none font-sans text-[9px] font-black uppercase tracking-widest cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
+          >
+             <option value="Todos">Filtro: Acervo Completo</option>
+             {Object.entries(activeCategories || {}).map(([cat, subs]) => (
+                 <optgroup key={cat} label={`--- ${cat.toUpperCase()} ---`}>
+                     <option value={`cat:${cat}`}>▸ Todos de {cat}</option>
+                     {(subs || []).map(sub => <option key={sub} value={sub}>• {sub}</option>)}
+                 </optgroup>
+             ))}
+          </select>
+
+          {/* Seletor Combinado de Ordenação (Substitui 2 caixas) */}
+          <select 
+            value={`${sortBy}-${sortOrder}`} 
+            onChange={e => {
+              const [b, o] = e.target.value.split('-');
+              handleFilterUpdate(search, activeCategory, activeSubtype, activeLetter, true, b, o);
+            }} 
+            className={`flex-1 min-w-[120px] py-1.5 px-2 border-[3px] outline-none font-sans text-[9px] font-black uppercase tracking-widest cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
+          >
+              <option value="id-desc">Ordem: Adição (Novos)</option>
+              <option value="id-asc">Ordem: Adição (Antigos)</option>
+              <option value="author_developer-asc">Ordem: Autor (A-Z)</option>
+              <option value="author_developer-desc">Ordem: Autor (Z-A)</option>
+              <option value="title-asc">Ordem: Título (A-Z)</option>
+              <option value="year-desc">Ordem: Lançamento (Novos)</option>
+              <option value="year-asc">Ordem: Lançamento (Antigos)</option>
+              <option value="rating-desc">Ordem: Nota (Maior)</option>
+              <option value="pages_or_time-desc">Ordem: Tamanho (Maior)</option>
+          </select>
+
+          {/* Seletor do ABCdário (Apenas visível se ordenado por Título ou Autor) */}
+          {(sortBy === 'title' || sortBy === 'author_developer') && (
+            <select 
+              value={activeLetter} 
+              onChange={e => handleFilterUpdate(search, activeCategory, activeSubtype, e.target.value)} 
+              className={`w-full md:w-auto flex-shrink-0 py-1.5 px-2 border-[3px] outline-none font-sans text-[9px] font-black uppercase tracking-widest cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-amber-700 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-amber-400 text-black'}`}
+            >
+               <option value="Todos">Letra: Todas</option>
+               <option value="#">Letra: # (Números)</option>
+               {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => <option key={l} value={l}>Letra: {l}</option>)}
+            </select>
+          )}
+
         </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-          {['Todos', ...Object.keys(activeCategories || {})].map(cat => <button key={`cat-${cat}`} onClick={() => { setActiveCategory(cat); setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-2 py-1 text-[9px] uppercase tracking-wider font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeCategory === cat ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{cat}</button>)}
-        </div>
-        {activeCategory !== 'Todos' && activeCategories[activeCategory] && activeCategories[activeCategory].length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-            <button onClick={() => { setActiveSubtype('Todos'); setPage(0); }} className={`whitespace-nowrap px-2 py-1 text-[9px] uppercase tracking-wider font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === 'Todos' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>Todos</button>
-            {activeCategories[activeCategory].map(type => <button key={`sub-${type}`} onClick={() => { setActiveSubtype(type); setPage(0); }} className={`whitespace-nowrap px-2 py-1 text-[9px] uppercase tracking-wider font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeSubtype === type ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{type}</button>)}
-          </div>
-        )}
-        {(sortBy === 'title' || sortBy === 'author_developer') && (
-           <div className={`flex gap-0.5 overflow-x-auto pb-0.5 scrollbar-hide mt-0.5 pt-1 border-t-[2px] ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              {ALPHABET.map(letter => <button key={`alpha-${letter}`} onClick={() => { setActiveLetter(letter); setPage(0); }} className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[8px] sm:text-[9px] font-black border-[2px] ${darkMode ? 'border-gray-300 shadow-[1px_1px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[1px_1px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${activeLetter === letter ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black') : (darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black')}`}>{letter}</button>)}
-           </div>
-        )}
       </MContainer>
+
       <div className="flex-1 overflow-y-auto pb-20 px-1">
         {paginatedItems.length === 0 ? <div className="text-center p-10 opacity-50 text-sm font-sans font-black uppercase tracking-widest">Nenhum item.</div> : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {paginatedItems.map((item, idx) => (
-              <div key={item.id} className="flex flex-row h-32 cursor-pointer active:scale-[0.98] transition-transform hover:-translate-y-1 hover:shadow-lg" onContextMenu={e => e.preventDefault()} onTouchStart={() => handleItemPressStart(item)} onTouchEnd={handleItemPressEnd} onTouchMove={handleItemPressEnd} onMouseDown={() => handleItemPressStart(item)} onMouseUp={handleItemPressEnd} onMouseLeave={handleItemPressEnd} onClick={() => handleItemClick(item)}>
-                <MContainer darkMode={darkMode} className="w-5 border-r-0 rounded-l-sm" colorClass={getMondrianColor(idx, darkMode)} />
-                <MContainer darkMode={darkMode} className="flex-1 flex p-2 rounded-r-sm" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
-                  <div className="flex-1 flex flex-col justify-between overflow-hidden pointer-events-none">
-                    <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 truncate">{item.type||'--'} • {item.year||'--'} • {item.pages_or_time ? `${item.pages_or_time} ${getMetricInfo(item.type, activeCategories).label}` : ''}</div>
-                      <div className="text-sm font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title || 'S/ Título'}</div>
-                      <div className="text-[11px] font-bold opacity-80 truncate uppercase tracking-wide mt-1">{item.author_developer || '--'}</div>
+              <div key={item.id} className="flex flex-row min-h-[140px] cursor-pointer active:scale-[0.98] transition-transform hover:-translate-y-1 hover:shadow-lg" onContextMenu={e => e.preventDefault()} onTouchStart={() => handleItemPressStart(item)} onTouchEnd={handleItemPressEnd} onTouchMove={handleItemPressEnd} onMouseDown={() => handleItemPressStart(item)} onMouseUp={handleItemPressEnd} onMouseLeave={handleItemPressEnd} onClick={() => handleItemClick(item)}>
+                
+                {/* Barra Lateral Colorida */}
+                <MContainer darkMode={darkMode} className="w-5 border-r-0 rounded-l-sm flex-shrink-0" colorClass={getMondrianColor(idx, darkMode)} />
+                
+                {/* Corpo do Card */}
+                <MContainer darkMode={darkMode} className="flex-1 flex flex-row p-2 rounded-r-sm" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
+                  
+                  {/* Bloco de Texto (Expansível) */}
+                  <div className="flex-1 flex flex-col justify-between pr-3 pointer-events-none">
+                    <div className="flex flex-col">
+                      <div className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1.5 break-words">
+                        {item.type||'--'} • {item.year||'--'} {item.pages_or_time ? `• ${item.pages_or_time} ${getMetricInfo(item.type, activeCategories).label}` : ''}
+                      </div>
+                      <div className="text-sm font-black leading-tight break-words whitespace-normal mb-1">{item.title || 'S/ Título'}</div>
+                      <div className="text-[10px] font-bold opacity-80 uppercase tracking-wide break-words whitespace-normal">{item.author_developer || '--'}</div>
                     </div>
-                    <div className="flex justify-between items-end mt-auto">
-                      {[...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(item.type) ? <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-300 bg-cyan-900 text-cyan-300' : 'border-black bg-amber-400 text-black'} font-black uppercase tracking-widest`}>{item.status || '--'}</div> : <div />}
-                      <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>{ [1, 2, 3, 4, 5].map((star) => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[18px] h-[18px] cursor-pointer pointer-events-auto ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}</div>
+                    <div className="mt-3 flex items-end">
+                      {[...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(item.type) ? <div className={`text-[8px] px-2 py-1 border-[3px] ${darkMode ? 'border-gray-300 bg-cyan-900 text-cyan-300' : 'border-black bg-amber-400 text-black'} font-black uppercase tracking-widest w-max`}>{item.status || '--'}</div> : <div />}
                     </div>
                  </div>
+
+                 {/* Bloco de Imagem e Avaliação (Direita) */}
+                 <div className={`w-20 sm:w-24 flex-shrink-0 flex flex-col items-center justify-between border-l-[3px] pl-2 py-0.5 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                    <div className={`w-full aspect-[3/4] border-[3px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
+                       {item.cover_url ? <img src={item.cover_url} alt="Capa" className="w-full h-full object-cover"/> : <LibraryBig className={`w-6 h-6 ${darkMode ? 'text-gray-500' : 'text-gray-400'} opacity-50`}/>}
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-0.5 pointer-events-auto" onClick={e => e.stopPropagation()}>
+                       {[1, 2, 3, 4, 5].map((star) => <Star key={star} onClick={() => updateRatingList(item.id, star)} className={`w-[14px] h-[14px] sm:w-[16px] sm:h-[16px] cursor-pointer ${star <= (item.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
+                    </div>
+                 </div>
+
                 </MContainer>
               </div>
             ))}
@@ -1119,7 +1204,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         const item = {};
         headers.forEach((h, idx) => {
           let key = h;
-          if (h === 'ID') key = 'id'; else if (h === 'Código Arquivístico') key = 'archive_code'; else if (h === 'Tipo') key = 'title'; else if (h === 'Autor/Desenvolvedor') key = 'author_developer'; else if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year'; else if (h === 'Editora/Gravadora') key = 'publisher'; else if (h === 'Status') key = 'status'; else if (h === 'Nota') key = 'rating'; else if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time'; else if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode'; else if (h === 'Descrição') key = 'description'; else if (h === 'URL da Capa') key = 'cover_url'; else if (h === 'Localização') key = 'location'; else if (h === 'Anotações') key = 'notes'; else if (h === 'Wiki') key = 'wiki_info';
+          if (h === 'ID') key = 'id'; else if (h === 'Código Arquivístico') key = 'archive_code'; else if (h === 'Tipo') key = 'title'; else if (h === 'Autor/Desenvolvedor') key = 'author_developer'; else if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year'; else if (h === 'Editora/Gravadora') key = 'publisher'; else if (h === 'Status') key = 'status'; else if (h === 'Nota') key = 'rating'; else if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time'; else if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode'; else if (h === 'Descrição') key = 'description'; else if (h === 'URL da Capa') key = 'location'; else if (h === 'Localização') key = 'location'; else if (h === 'Anotações') key = 'notes'; else if (h === 'Wiki') key = 'wiki_info';
           item[key] = validRows[i][idx] ? validRows[i][idx].trim() : '';
         });
         if (item.id || item.title) { item.id = item.id || generateId(newItems); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
