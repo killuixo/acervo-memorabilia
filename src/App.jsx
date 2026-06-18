@@ -681,7 +681,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
                  {/* Bloco de Imagem e Avaliação (Direita) */}
                  <div className={`w-20 sm:w-24 flex-shrink-0 flex flex-col items-center justify-between border-l-[3px] pl-2 py-0.5 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
-                    <div className={`w-full aspect-[3/4] border-[3px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
+                    <div className={`w-full ${(activeCategories['Discos'] || []).includes(item.type) ? 'aspect-square' : 'aspect-[3/4]'} border-[3px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
                        {item.cover_url ? <img src={item.cover_url} alt="Capa" className="w-full h-full object-cover"/> : <LibraryBig className={`w-6 h-6 ${darkMode ? 'text-gray-500' : 'text-gray-400'} opacity-50`}/>}
                     </div>
                     <div className="flex flex-wrap justify-center gap-0.5 pointer-events-auto" onClick={e => e.stopPropagation()}>
