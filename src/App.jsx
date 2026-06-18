@@ -151,6 +151,49 @@ const getMetricInfo = (itemType, activeCategories) => {
   return { label: 'Und', desc: 'Métrica' };
 };
 
+const isImageBroken = (url) => {
+  return new Promise((resolve) => {
+    if (!url || typeof url !== 'string' || url.trim() === '') return resolve(true);
+    const img = new Image();
+    img.onload = () => resolve(false);
+    img.onerror = () => resolve(true);
+    img.src = url;
+  });
+};
+
+const fetchCoverBySearch = async (item, settings, activeCategories) => {
+  const qTitle = encodeURIComponent(item.title || '');
+  const qAuthor = encodeURIComponent(item.author_developer || '');
+  const isBook = (activeCategories['Livros'] || []).includes(item.type);
+  const isDisc = (activeCategories['Discos'] || []).includes(item.type);
+
+  try {
+    if (isBook) {
+      const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${qTitle}+inauthor:${qAuthor}`);
+      const gbData = await gbRes.json();
+      if (gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) return gbData.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://");
+      
+      const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}`);
+      const olData = await olRes.json();
+      if (olData.docs?.[0]?.cover_i) return `https://covers.openlibrary.org/b/id/${olData.docs[0].cover_i}-L.jpg`;
+    } else if (isDisc && settings?.discogsToken) {
+      const dcRes = await fetch(`https://api.discogs.com/database/search?q=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&token=${settings.discogsToken}`);
+      const dcData = await dcRes.json();
+      if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) return dcData.results[0].cover_image;
+    } else {
+      let mediaType = "all";
+      if (isDisc) mediaType = "music";
+      else if ((activeCategories['Vídeo'] || []).includes(item.type)) mediaType = "movie";
+      else if ((activeCategories['Games'] || []).includes(item.type)) mediaType = "software";
+      
+      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&media=${mediaType}&limit=1`);
+      const itData = await itRes.json();
+      if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
+    }
+  } catch (e) { console.warn("Erro ao buscar capa", e); }
+  return null;
+};
+
 const processCompletedGamesCSV = (csvText) => {
   const rows = parseCSVText(csvText);
   if (rows.length < 2) return [];
@@ -236,6 +279,8 @@ const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 
 const CopyIcon = p => <Icon {...p} path={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />;
 const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
+const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
+const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
 
 // ==========================================
 // PWA ENGINE
@@ -1193,7 +1238,51 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, completedGames, setCompletedGames, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false); const [importData, setImportData] = useState(null); const [openSection, setOpenSection] = useState(null); const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
+  const coverSyncActiveRef = useRef(false); const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
   
+  useEffect(() => { return () => { coverSyncActiveRef.current = false; }; }, []);
+
+  const runCoverSync = async (mode) => {
+    coverSyncActiveRef.current = true;
+    setCoverSync({ active: true, progress: 0, total: items.length, log: 'Iniciando varredura...' });
+    let updatedItems = [...items];
+    let changedCount = 0;
+
+    for (let i = 0; i < updatedItems.length; i++) {
+        if (!coverSyncActiveRef.current) {
+            setCoverSync(prev => ({ ...prev, active: false, log: 'Busca cancelada pelo usuário.' }));
+            break;
+        }
+        let item = updatedItems[i];
+        let needsFetch = false;
+
+        setCoverSync(prev => ({ ...prev, progress: i, log: `Analisando: ${item.title}` }));
+
+        if (mode === 'all') needsFetch = true;
+        else if (mode === 'missing_errors') needsFetch = !item.cover_url || await isImageBroken(item.cover_url);
+        else if (mode === 'errors_only') needsFetch = item.cover_url && await isImageBroken(item.cover_url);
+
+        if (needsFetch) {
+            setCoverSync(prev => ({ ...prev, log: `Buscando capa: ${item.title}` }));
+            const newCover = await fetchCoverBySearch(item, settings, activeCategories);
+            if (newCover && newCover !== item.cover_url) {
+                updatedItems[i] = { ...item, cover_url: newCover };
+                changedCount++;
+                syncItemToSheets(updatedItems[i], settings?.googleSheetsUrl);
+            }
+            await new Promise(r => setTimeout(r, 600)); // Evita bloqueio da API
+        }
+    }
+    
+    if (coverSyncActiveRef.current) {
+        setItems(updatedItems);
+        setCoverSync({ active: false, progress: items.length, total: items.length, log: `Concluído! ${changedCount} atualizadas.` });
+        if (changedCount > 0) { playChipBeep('success'); onShowToast('success'); }
+    } else {
+        setItems(updatedItems); // Salva o progresso feito até cancelar
+    }
+  };
+
   const handleExportCSV = () => {
     if (items.length === 0) return;
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
@@ -1322,6 +1411,30 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         <button onClick={() => toggleSection('blogger')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'blogger' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Share className="w-4 h-4" /> Exportar Web</span><span className="text-lg font-mono">{openSection === 'blogger' ? '−' : '+'}</span></button>
         {openSection === 'blogger' && (
           <div className="p-4 flex gap-2 flex-col sm:flex-row"><MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="light-cyan" className="flex-1 py-3"><Download className="w-4 h-4" /> Baixar HTML</MButton><MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 border-black"><CopyIcon className="w-4 h-4" /> Copiar Código</MButton></div>
+        )}
+      </MContainer>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-indigo-900/20 text-white' : 'bg-indigo-50 text-black'}>
+        <button onClick={() => toggleSection('capas')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'capas' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Recuperação de Capas</span><span className="text-lg font-mono">{openSection === 'capas' ? '−' : '+'}</span></button>
+        {openSection === 'capas' && (
+          <div className="p-4 flex flex-col gap-3">
+            {coverSync.active ? (
+              <div className={`p-4 border-[4px] flex flex-col items-center justify-center text-center ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-white'}`}>
+                  <RefreshIcon className="w-8 h-8 mb-2 animate-spin text-cyan-500" />
+                  <div className="text-[10px] font-black uppercase tracking-widest mb-1">{coverSync.log}</div>
+                  <div className="w-full bg-gray-200 h-2 mb-3 border-[2px] border-black dark:border-gray-300"><div className="bg-cyan-500 h-full transition-all duration-300" style={{width: `${(coverSync.progress / Math.max(1, coverSync.total)) * 100}%`}}></div></div>
+                  <div className="text-[8px] font-bold mb-3">{coverSync.progress} / {coverSync.total} Itens Analisados</div>
+                  <MButton darkMode={darkMode} onClick={() => coverSyncActiveRef.current = false} variant="pink" className="py-2 text-[9px] w-full max-w-[200px]">Cancelar Busca</MButton>
+              </div>
+            ) : (
+              <>
+                <div className="text-[9px] font-bold opacity-80 mb-2">Selecione o modo de varredura automática de capas:</div>
+                <MButton darkMode={darkMode} onClick={() => runCoverSync('missing_errors')} variant="cyan" className="w-full py-3 text-[9px]"><Search className="w-4 h-4" /> Recuperar Faltantes e Com Erro</MButton>
+                <MButton darkMode={darkMode} onClick={() => runCoverSync('errors_only')} variant="amber" className="w-full py-3 text-[9px]"><AlertTriangle className="w-4 h-4" /> Corrigir Apenas Erros (Links Quebrados)</MButton>
+                <MButton darkMode={darkMode} onClick={() => runCoverSync('all')} variant="light-pink" className="w-full py-3 text-[9px]"><RefreshIcon className="w-4 h-4" /> Recarregar Todas (Forçar Substituição)</MButton>
+                {coverSync.log && !coverSync.active && <div className="text-[9px] font-black uppercase tracking-widest text-center mt-2 text-pink-500 border-[2px] p-2 border-pink-500 bg-pink-100 dark:bg-pink-900/30">{coverSync.log}</div>}
+              </>
+            )}
+          </div>
         )}
       </MContainer>
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
