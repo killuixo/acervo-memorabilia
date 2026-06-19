@@ -62,35 +62,49 @@ const playChipBeep = (type) => {
     const now = audioCtx.currentTime;
     const vol = 0.02; 
     if (type === 'save' || type === 'success') {
-      osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554.37, now + 0.05); 
-      gain.gain.setValueAtTime(vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.1);
+      osc.type = 'square'; 
+      osc.frequency.setValueAtTime(440, now); 
+      osc.frequency.setValueAtTime(554.37, now + 0.05); 
+      gain.gain.setValueAtTime(vol, now); 
+      gain.gain.linearRampToValueAtTime(0, now + 0.1);
       osc.start(now); osc.stop(now + 0.1);
     } else if (type === 'error') {
-      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.setValueAtTime(100, now + 0.1);
-      gain.gain.setValueAtTime(vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
+      osc.type = 'sawtooth'; 
+      osc.frequency.setValueAtTime(150, now); 
+      osc.frequency.setValueAtTime(100, now + 0.1);
+      gain.gain.setValueAtTime(vol, now); 
+      gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.start(now); osc.stop(now + 0.2);
     }
   } catch (e) {}
 };
 
 // ==========================================
-// FUNÇÕES UTILITÁRIAS
+// FUNÇÕES UTILITÁRIAS & ID GEN
 // ==========================================
-let globalSequenceCache = null;
 
+// CORREÇÃO: Função geradora de ID robusta, garantindo AAAAMMDD-HHMMSSms-####
 const generateId = (itemsArray = []) => {
   const now = new Date();
-  const timeBase = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}${String(now.getMilliseconds()).padStart(3, '0')}`;
-  if (globalSequenceCache === null) {
-     let maxSeq = 0;
-     itemsArray.forEach(item => {
-        const match = String(item.id || '').match(/-(\d{4})$/);
-        if (match && parseInt(match[1], 10) > maxSeq) maxSeq = parseInt(match[1], 10);
-     });
-     globalSequenceCache = maxSeq;
-  }
-  globalSequenceCache++;
-  return `${timeBase}-${String(globalSequenceCache).padStart(4, '0')}`;
+  const ms = String(now.getMilliseconds()).padStart(3, '0');
+  const timeBase = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}${ms}`;
+  
+  let maxSeq = 0;
+  itemsArray.forEach(item => {
+    if (item && item.id) {
+      const parts = String(item.id).split('-');
+      // O formato esperado é AAAAMMDD-HHMMSSms-#### (3 partes)
+      if (parts.length >= 3) {
+        const seq = parseInt(parts[2], 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
+        }
+      }
+    }
+  });
+  
+  const nextSeq = maxSeq + 1;
+  return `${timeBase}-${String(nextSeq).padStart(4, '0')}`;
 };
 
 const resizeImageForAPI = (file, maxWidth = 800) => {
@@ -288,19 +302,48 @@ const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 
 const usePWA = (iconUrl) => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  
   useEffect(() => {
-    const manifest = { name: "Memorabilia", short_name: "Memorabilia", description: "Sua coleção na palma da mão.", start_url: ".", display: "standalone", background_color: "#ffffff", theme_color: "#000000", icons: [ { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" }, { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" } ] };
+    const manifest = { 
+      name: "Memorabilia", 
+      short_name: "Memorabilia", 
+      description: "Sua coleção na palma da mão.", 
+      start_url: ".", 
+      display: "standalone", 
+      background_color: "#ffffff", 
+      theme_color: "#000000", 
+      icons: [ 
+        { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" }, 
+        { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" } 
+      ] 
+    };
     const manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
     let manifestLink = document.querySelector('link[rel="manifest"]');
-    if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
+    if (!manifestLink) { 
+      manifestLink = document.createElement('link'); 
+      manifestLink.rel = 'manifest'; 
+      document.head.appendChild(manifestLink); 
+    }
     manifestLink.href = manifestUrl;
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(new Blob([`self.addEventListener('fetch', (e) => {});`], { type: 'application/javascript' }))).catch(() => {});
+    
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(URL.createObjectURL(new Blob([`self.addEventListener('fetch', (e) => {});`], { type: 'application/javascript' }))).catch(() => {});
+    }
+    
     const handlePrompt = (e) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', handlePrompt);
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
+    
     return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
   }, [iconUrl]);
-  const promptInstall = async () => { if (!installPrompt) return; installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true); } };
+
+  const promptInstall = async () => { 
+    if (!installPrompt) return; 
+    installPrompt.prompt(); 
+    const { outcome } = await installPrompt.userChoice; 
+    if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true); } 
+  };
+  
   return { isInstallable: !!installPrompt, promptInstall, isInstalled };
 };
 
@@ -322,6 +365,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   if (variant === 'black') bg = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
   if (variant === 'light-cyan') bg = darkMode ? 'bg-cyan-900/50 text-cyan-200' : 'bg-cyan-100 text-cyan-900';
   if (variant === 'light-pink') bg = darkMode ? 'bg-pink-900/50 text-pink-200' : 'bg-pink-100 text-pink-900';
+  
   return (
     <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}>
       {icon} {children}
@@ -378,6 +422,7 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
   if (total === 0) return null;
   let currentAngle = 0;
   const grad = data.map(item => { const p = (item.value / total) * 100; const s = currentAngle; const e = currentAngle + p; currentAngle = e; return `${item.colorHex} ${s}% ${e}%`; }).join(', ');
+  
   return (
     <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
       <div className={`text-[10px] font-black uppercase tracking-widest mb-4 w-full border-b-[4px] pb-2 text-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</div>
@@ -386,15 +431,31 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
       </div>
       <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-4 w-full px-1">
         {data.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest"><div className={`w-3 h-3 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div><span className="truncate max-w-[60px]">{item.label}</span> ({item.value})</div>
+          <div key={idx} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
+            <div className={`w-3 h-3 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div>
+            <span className="truncate max-w-[60px]">{item.label}</span> ({item.value})
+          </div>
         ))}
       </div>
     </MContainer>
   );
 };
 
-const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
-  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(itemToSync) }).catch(e => console.error("Erro Google Sheets:", e));
+// CORREÇÃO: Função syncItemToSheets otimizada.
+// Envia {action: 'delete', id: ...} caso seja uma exclusão,
+// Ou o próprio objeto para atualizações.
+const syncItemToSheets = (payload, googleSheetsUrl) => {
+  if (googleSheetsUrl) {
+    // Adiciona o 'action' fallback, caso o Google Script necessite de tracking manual
+    const dataToSend = payload.action ? payload : { action: 'update', ...payload };
+    
+    fetch(googleSheetsUrl, { 
+      method: 'POST', 
+      mode: 'no-cors', 
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+      body: JSON.stringify(dataToSend) 
+    }).catch(e => console.error("Erro Google Sheets:", e));
+  }
 };
 
 // ==========================================
@@ -404,7 +465,7 @@ const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCategories }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
-  const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null); // Agora armazena o ID do item
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [page, setPage] = useState(0);
   
@@ -496,16 +557,36 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
   const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
+  
   const updateRatingList = (id, r) => { 
     const u = { ...items.find(i => i.id === id), rating: r };
-    setItems(items.map(item => item.id === id ? u : item)); playChipBeep('save'); onShowToast('success'); syncItemToSheets(u, settings?.googleSheetsUrl);
+    setItems(items.map(item => item.id === id ? u : item)); 
+    playChipBeep('save'); 
+    onShowToast('success'); 
+    syncItemToSheets(u, settings?.googleSheetsUrl);
   };
+
   const saveModifications = () => {
-    setItems(items.map(i => i.id === editedItem.id ? editedItem : i)); setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success'); syncItemToSheets(editedItem, settings?.googleSheetsUrl);
+    setItems(items.map(i => i.id === editedItem.id ? editedItem : i)); 
+    setSelectedItem(editedItem); 
+    playChipBeep('save'); 
+    onShowToast('success'); 
+    syncItemToSheets(editedItem, settings?.googleSheetsUrl);
   };
+
+  // CORREÇÃO: Deleta no Sheets enviando instrução clara para API
   const confirmDelete = () => {
-    if (itemToDelete) { setItems(items.filter(item => item.id !== itemToDelete)); setItemToDelete(null); setSelectedItem(null); setEditedItem(null); playChipBeep('save'); onShowToast('success'); }
+    if (itemToDelete) {
+      setItems(items.filter(item => item.id !== itemToDelete));
+      syncItemToSheets({ action: 'delete', id: itemToDelete }, settings?.googleSheetsUrl);
+      setItemToDelete(null); 
+      setSelectedItem(null); 
+      setEditedItem(null); 
+      playChipBeep('save'); 
+      onShowToast('success'); 
+    }
   };
+
   const fetchWikiInfo = async () => {
     const apiKey = settings?.geminiApiKey || ""; 
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
@@ -514,7 +595,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] }] }) });
       const data = await res.json(); if (data.error) throw new Error(data.error.message);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
+      if (text) { 
+        const updated = {...editedItem, wiki_info: text};
+        setEditedItem(updated); 
+        playChipBeep('save'); 
+        onShowToast('success'); 
+      }
     } catch (e) {
       let errorMsg = e.message;
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
@@ -533,7 +619,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     
     return (
       <div className="flex flex-col h-full pb-20 relative max-w-4xl mx-auto w-full">
-        <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title}"?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
+        <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title}" definitivamente?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
@@ -602,7 +688,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             )}
           </MContainer>
           <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[4px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-400 border-gray-300 text-black' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 border-black text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><Check className="w-5 h-5" /> Salvar Alterações</button>
-          <div className="mt-8 mb-2 text-center"><button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>Apagar este item</button></div>
+          
+          <div className="mt-8 mb-2 text-center">
+            <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>
+              Apagar este item
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -610,7 +701,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
   return (
     <div className="flex flex-col h-full">
-      <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem?.title}"?`} onConfirm={confirmDelete} onCancel={() => {setItemToDelete(null); setEditedItem(null);}} darkMode={darkMode} confirmText="Apagar" />
+      <MModal isOpen={!!itemToDelete} title="Excluir Item" message="Apagar item definitivamente da coleção?" onConfirm={confirmDelete} onCancel={() => {setItemToDelete(null); setEditedItem(null);}} darkMode={darkMode} confirmText="Apagar" />
       {contextMenuItem && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setContextMenuItem(null)}>
           <MContainer darkMode={darkMode} className="w-full max-w-xs p-0 flex flex-col overflow-hidden animate-in zoom-in duration-200" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} onClick={(e) => e.stopPropagation()}>
@@ -619,7 +710,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 <button onClick={() => { handleSelect(contextMenuItem); setContextMenuItem(null); }} className={`p-4 flex items-center gap-3 text-[11px] font-black uppercase tracking-widest border-b-[4px] ${darkMode ? 'border-gray-700 hover:bg-gray-800 text-white' : 'border-gray-200 hover:bg-gray-50 text-black'} transition-colors text-left`}><Settings className="w-5 h-5" /> Editar Detalhes</button>
                 <button onClick={() => { window.open(`https://open.spotify.com/search/${encodeURIComponent((contextMenuItem.title||'')+' '+(contextMenuItem.author_developer||''))}`, '_blank'); setContextMenuItem(null); }} className={`p-4 flex items-center gap-3 text-[11px] font-black uppercase tracking-widest border-b-[4px] ${darkMode ? 'border-gray-700 hover:bg-cyan-900/30' : 'border-gray-200 hover:bg-cyan-50'} transition-colors text-cyan-600 dark:text-cyan-400 text-left`}><Headphones className="w-5 h-5" /> Ouvir (Spotify)</button>
                 <button onClick={() => { window.open(`https://www.discogs.com/search?q=${contextMenuItem.barcode||encodeURIComponent((contextMenuItem.title||'')+' '+(contextMenuItem.author_developer||''))}&type=all`, '_blank'); setContextMenuItem(null); }} className={`p-4 flex items-center gap-3 text-[11px] font-black uppercase tracking-widest border-b-[4px] ${darkMode ? 'border-gray-700 hover:bg-amber-900/30' : 'border-gray-200 hover:bg-amber-50'} transition-colors text-amber-600 dark:text-amber-500 text-left`}><DiscIcon className="w-5 h-5" /> Buscar Preço (Discogs)</button>
-                <button onClick={() => { setEditedItem(contextMenuItem); setItemToDelete(contextMenuItem.id); setContextMenuItem(null); }} className={`p-4 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-colors text-pink-600 dark:text-pink-400 text-left`}><XIcon className="w-4 h-4" /> Apagar Item</button>
+                <button onClick={() => { setItemToDelete(contextMenuItem.id); setContextMenuItem(null); }} className={`p-4 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-colors text-pink-600 dark:text-pink-400 text-left`}><XIcon className="w-4 h-4" /> Apagar Item</button>
              </div>
           </MContainer>
         </div>
@@ -764,12 +855,22 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   const [scanBox, setScanBox] = useState({ state: 'idle', message: '' });
   const scannerRef = useRef(null); const isProcessingScan = useRef(false);
   const [formData, setFormData] = useState({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
+  
   const updateStatus = (state, message) => setScanBox({ state, message });
   const changeMode = (newMode) => { setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); } };
   
   useEffect(() => {
     if (scannedAIData) {
-       setFormData(prev => ({ ...prev, title: scannedAIData.title||'', author_developer: scannedAIData.author_developer||'', year: scannedAIData.year?.toString()||'', publisher: scannedAIData.publisher||'', description: scannedAIData.description||'', pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro' }));
+       setFormData(prev => ({ 
+         ...prev, 
+         title: scannedAIData.title||'', 
+         author_developer: scannedAIData.author_developer||'', 
+         year: scannedAIData.year?.toString()||'', 
+         publisher: scannedAIData.publisher||'', 
+         description: scannedAIData.description||'', 
+         pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, 
+         type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro' 
+       }));
       setScannedAIData(null); 
     }
   }, [scannedAIData, setScannedAIData, allTypes]);
@@ -787,12 +888,29 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             isProcessingScan.current = true;
             if (scannerRef.current?.getState() === 2) {
                scannerRef.current.stop().then(() => {
-                  if (isMounted) { setAddMode('manual'); setFormData(prev => ({ ...prev, barcode: decodedText })); fetchMultiDatabaseParallel(decodedText); setTimeout(() => { isProcessingScan.current = false; }, 2000); }
+                  if (isMounted) { 
+                    setAddMode('manual'); 
+                    setFormData(prev => ({ ...prev, barcode: decodedText })); 
+                    fetchMultiDatabaseParallel(decodedText); 
+                    setTimeout(() => { isProcessingScan.current = false; }, 2000); 
+                  }
                }).catch(e => console.error("Erro scanner:", e));
             }
           }, () => {}).catch(() => { if (isMounted) { updateStatus('error', 'Erro Câmera.'); setAddMode('manual'); } });
     }
-    return () => { isMounted = false; if (scannerInstance) { try { if (scannerInstance.getState() === 2 || scannerInstance.getState() === 1) { scannerInstance.stop().then(() => scannerInstance.clear()).catch(()=>{}); } else { scannerInstance.clear(); } } catch(e) {} scannerRef.current = null; } };
+    return () => { 
+      isMounted = false; 
+      if (scannerInstance) { 
+        try { 
+          if (scannerInstance.getState() === 2 || scannerInstance.getState() === 1) { 
+            scannerInstance.stop().then(() => scannerInstance.clear()).catch(()=>{}); 
+          } else { 
+            scannerInstance.clear(); 
+          } 
+        } catch(e) {} 
+        scannerRef.current = null; 
+      } 
+    };
   }, [addMode, isHtml5QrcodeLoaded]);
 
   // ENGINE DE SCAN PARALELIZADA (Otimizada para Velocidade)
@@ -870,16 +988,41 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   };
 
   const [showErrorModal, setShowErrorModal] = useState(false);
+  
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
-    const classCode = activeClassCodes[formData.type] || '000'; const prefix = settings?.archivePrefix ? settings.archivePrefix.trim().toUpperCase() : 'MBU';
+    const classCode = activeClassCodes[formData.type] || '000'; 
+    const prefix = settings?.archivePrefix ? settings.archivePrefix.trim().toUpperCase() : 'MBU';
+    
+    // CORREÇÃO: Pega perfeitamente o max sequence da classe correta
     let maxSeq = 0;
-    items.forEach(item => { if(item.archive_code) { const parts = String(item.archive_code).split('-'); if (parts.length >= 3 && parts[1] === classCode) { const seqNum = parseInt(parts[2], 10); if(!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum; } } });
+    items.forEach(item => { 
+      if(item.archive_code) { 
+        const parts = String(item.archive_code).split('-'); 
+        if (parts.length >= 3 && parts[1] === classCode) { 
+          const seqNum = parseInt(parts[2], 10); 
+          if(!isNaN(seqNum) && seqNum > maxSeq) {
+             maxSeq = seqNum;
+          }
+        } 
+      } 
+    });
+    
     const sequence = String(maxSeq + 1).padStart(4, '0');
-    const newItem = { ...formData, id: generateId(items), archive_code: `${prefix}-${classCode}-${sequence}` };
-    setItems([...items, newItem]); syncItemToSheets(newItem, settings?.googleSheetsUrl);
-    playChipBeep('save'); onShowToast('success'); setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
-    updateStatus('idle', ''); resetGlobalAi(); setActiveTab('library');
+    const newItem = { 
+      ...formData, 
+      id: generateId(items), 
+      archive_code: `${prefix}-${classCode}-${sequence}` 
+    };
+    
+    setItems([...items, newItem]); 
+    syncItemToSheets(newItem, settings?.googleSheetsUrl);
+    playChipBeep('save'); 
+    onShowToast('success'); 
+    setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
+    updateStatus('idle', ''); 
+    resetGlobalAi(); 
+    setActiveTab('library');
   };
 
   const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(formData.type);
@@ -1237,8 +1380,12 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
 };
 
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, completedGames, setCompletedGames, activeCategories, activeClassCodes }) => {
-  const [showResetConfirm, setShowResetConfirm] = useState(false); const [importData, setImportData] = useState(null); const [openSection, setOpenSection] = useState(null); const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
-  const coverSyncActiveRef = useRef(false); const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
+  const [showResetConfirm, setShowResetConfirm] = useState(false); 
+  const [importData, setImportData] = useState(null); 
+  const [openSection, setOpenSection] = useState(null); 
+  const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
+  const coverSyncActiveRef = useRef(false); 
+  const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
   
   useEffect(() => { return () => { coverSyncActiveRef.current = false; }; }, []);
 
@@ -1304,7 +1451,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           if (h === 'ID') key = 'id'; else if (h === 'Código Arquivístico') key = 'archive_code'; else if (h === 'Tipo') key = 'title'; else if (h === 'Autor/Desenvolvedor') key = 'author_developer'; else if (h === 'Ano' || h === 'Data' || h === 'Ano Lançamento') key = 'year'; else if (h === 'Editora/Gravadora') key = 'publisher'; else if (h === 'Status') key = 'status'; else if (h === 'Nota') key = 'rating'; else if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time'; else if (h === 'Código de Barras' || h === 'ISBN/Código') key = 'barcode'; else if (h === 'Descrição') key = 'description'; else if (h === 'URL da Capa') key = 'location'; else if (h === 'Localização') key = 'location'; else if (h === 'Anotações') key = 'notes'; else if (h === 'Wiki') key = 'wiki_info';
           item[key] = validRows[i][idx] ? validRows[i][idx].trim() : '';
         });
-        if (item.id || item.title) { item.id = item.id || generateId(newItems); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
+        
+        if (item.id || item.title) { 
+          // CORREÇÃO: Passar todas as listas mescladas para o generateId calcular a sequência absoluta corretamente
+          item.id = item.id || generateId([...items, ...newItems]); 
+          item.rating = parseInt(item.rating) || 0; 
+          newItems.push(item); 
+        }
       }
       if (newItems.length > 0) setImportData(newItems);
     }; 
@@ -1726,50 +1879,50 @@ export default function App() {
                     <div className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 transition-all overflow-hidden opacity-50 ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-200 border-black text-black'}`}><Headphones className="w-3.5 h-3.5 flex-shrink-0" /><span className="text-[7px] font-black uppercase tracking-widest truncate">Last.FM Off</span></div>
                   )}
                   {suggestion ? (
-                    <div role="button" tabIndex={0} title="Sortear outro disco" onContextMenu={e => e.preventDefault()} onTouchStart={handleSuggPressStart} onTouchEnd={handleSuggPressEnd} onMouseDown={handleSuggPressStart} onMouseUp={handleSuggPressEnd} onMouseLeave={handleSuggPressEnd} onClick={handleSuggClick} style={{ WebkitTouchCallout: 'none' }} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}><Sparkles className="w-3.5 h-3.5 flex-shrink-0" /> <div className="flex flex-col truncate leading-none justify-center w-full"><span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">Ouvir Hoje:</span><span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate w-full">{String(suggestion.title || 'S/ Título')}</span></div></div>
+                    <div role="button" tabIndex={0} title="Sortear outro disco" onContextMenu={e => e.preventDefault()} onTouchStart={handleSuggPressStart} onTouchEnd={handleSuggPressEnd} onMouseDown={handleSuggPressStart} onMouseUp={handleSuggPressEnd} onMouseLeave={handleSuggPressEnd} onClick={handleSuggClick} style={{ WebkitTouchCallout: 'none' }} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                       <DiscIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                       <div className="flex flex-col truncate leading-none justify-center w-full">
+                          <span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">Sugestão:</span>
+                          <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate w-full">{suggestion.title}</span>
+                       </div>
+                    </div>
                   ) : (
-                    <div className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 transition-all overflow-hidden opacity-50 ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-200 border-black text-black'}`}><Sparkles className="w-3.5 h-3.5 flex-shrink-0" /><span className="text-[7px] font-black uppercase tracking-widest truncate">Sem Discos</span></div>
+                    <div className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 transition-all overflow-hidden opacity-50 ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-200 border-black text-black'}`}>
+                       <DiscIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                       <span className="text-[7px] font-black uppercase tracking-widest truncate">S/ Sugestão</span>
+                    </div>
                   )}
                 </div>
               </div>
-              <div className="w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2 md:hidden">
-                {toast.visible ? (toast.type === 'error' ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-400 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />) : (<img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200 md:hidden" />)}
-              </div>
-              <div className="hidden md:flex w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 items-center justify-center transition-all duration-300 relative ml-2">
-                 {toast.visible && (toast.type === 'error' ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-400 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />)}
-              </div>
             </div>
-
-            <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
-              <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
-                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
-                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
-                <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
-                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
-              </div>
-              <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                 <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Jogos Zerados</span><span className="animate-pulse text-pink-500 ml-1">REC</span></div>
-                 <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
-                    <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
-                      {renderMarqueeContent()} {renderMarqueeContent()}
-                    </div>
-                  </div>
-              </div>
+            {/* O Marquee */}
+            <div className={`w-full overflow-hidden border-[4px] mt-3 h-[24px] sm:h-[28px] md:h-[32px] flex items-center ${darkMode ? 'border-gray-300 led-board' : 'border-black bg-black'}`}>
+               <div className="whitespace-nowrap inline-flex w-max" style={{ animation: `marqueeLinear ${Math.max(10, speed)}s linear infinite` }}>
+                  {renderMarqueeContent()}
+                  {renderMarqueeContent()}
+               </div>
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden p-3 lg:p-6 relative z-0">
-            <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
-            {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
+          <main className="flex-1 overflow-hidden relative">
+            {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
             {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
             {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
-            {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
+            {activeTab === 'completed' && <CompletedGamesTab completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
             {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
+            
+            {/* Notificação (Toast) */}
+            <div className={`absolute bottom-20 left-1/2 transform -translate-x-1/2 p-3 border-[4px] font-black uppercase text-[10px] tracking-widest shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 z-[100] flex items-center gap-2 ${toast.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'} ${toast.type === 'success' ? (darkMode ? 'bg-cyan-800 text-white border-gray-300' : 'bg-cyan-400 text-black border-black') : (darkMode ? 'bg-pink-800 text-white border-gray-300' : 'bg-pink-500 text-black border-black')}`}>
+              {toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+              {toast.type === 'success' ? 'Sucesso!' : 'Erro!'}
+            </div>
+            
+            <input type="file" accept="image/*" capture="environment" className="hidden" ref={globalFileInputRef} onChange={handleGlobalFileChange} />
           </main>
 
-          <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
-            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
+          {/* Mobile Navigation */}
+          <nav className={`md:hidden flex-none border-t-[4px] flex z-20 h-16 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Acervo</span></button>
             <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
             <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
             <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
