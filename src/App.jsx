@@ -164,29 +164,41 @@ const isImageBroken = (url) => {
 const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const qTitle = encodeURIComponent(item.title || '');
   const qAuthor = encodeURIComponent(item.author_developer || '');
+  const qPublisher = encodeURIComponent(item.publisher || '');
   const isBook = (activeCategories['Livros'] || []).includes(item.type);
   const isDisc = (activeCategories['Discos'] || []).includes(item.type);
 
   try {
     if (isBook) {
-      const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${qTitle}+inauthor:${qAuthor}`);
+      let gbQuery = `intitle:${qTitle}`;
+      if (item.author_developer) gbQuery += `+inauthor:${qAuthor}`;
+      if (item.publisher) gbQuery += `+inpublisher:${qPublisher}`;
+      
+      const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${gbQuery}`);
       const gbData = await gbRes.json();
       if (gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) return gbData.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://");
       
-      const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}`);
+      const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}&publisher=${qPublisher}`);
       const olData = await olRes.json();
       if (olData.docs?.[0]?.cover_i) return `https://covers.openlibrary.org/b/id/${olData.docs[0].cover_i}-L.jpg`;
     } else if (isDisc && settings?.discogsToken) {
-      const dcRes = await fetch(`https://api.discogs.com/database/search?q=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&token=${settings.discogsToken}`);
+      let dcQuery = `${item.title||''} ${item.author_developer||''}`;
+      if (item.publisher) dcQuery += ` ${item.publisher}`;
+      if (item.year) dcQuery += ` ${item.year}`;
+      const dcRes = await fetch(`https://api.discogs.com/database/search?q=${encodeURIComponent(dcQuery)}&token=${settings.discogsToken}`);
       const dcData = await dcRes.json();
       if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) return dcData.results[0].cover_image;
     } else {
       let mediaType = "all";
+      let term = `${item.title||''} ${item.author_developer||''}`;
       if (isDisc) mediaType = "music";
       else if ((activeCategories['Vídeo'] || []).includes(item.type)) mediaType = "movie";
-      else if ((activeCategories['Games'] || []).includes(item.type)) mediaType = "software";
+      else if ((activeCategories['Games'] || []).includes(item.type)) {
+        mediaType = "software";
+        term += ` ${item.type}`;
+      }
       
-      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&media=${mediaType}&limit=1`);
+      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=${mediaType}&limit=1`);
       const itData = await itRes.json();
       if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
     }
@@ -493,6 +505,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [itemToDelete, setItemToDelete] = useState(null);
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [page, setPage] = useState(0);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
   
   // Estados Compactados para Filtros
   const [search, setSearch] = useState('');
@@ -597,7 +610,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
     setLoadingWiki(true); setWikiError('');
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] }] }) });
+      const prompt = `Aja como um arquivista técnico e objetivo. Escreva 1 parágrafo (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}, Ano: ${editedItem.year || ''}, Editora/Gravadora: ${editedItem.publisher || ''}). Foco em dados concretos: ano exato, produtores/músicos/autores principais, gravadora/editora, local de lançamento/origem da obra ou banda e fatos históricos relevantes da produção. Seja puramente descritivo, enciclopédico e imparcial, sem adjetivos elogiosos, promocionais ou avaliativos. Apenas o texto sem formatação.`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] }) });
       const data = await res.json(); if (data.error) throw new Error(data.error.message);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
@@ -615,11 +629,19 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
     const linkInfo = getExternalLinkInfo(editedItem.type, editedItem.title);
     const metricLabel = getMetricInfo(editedItem.type, activeCategories).label;
-    const imageContainerClass = isDiscItem ? "w-40 h-40 md:w-56 md:h-56 aspect-square" : "w-32 h-44 md:w-48 md:h-64 aspect-[3/4]";
+    const imageContainerClass = isDiscItem ? "w-48 h-48 md:w-64 md:h-64 aspect-square" : "w-40 h-56 md:w-56 md:h-72 aspect-[3/4]";
     
     return (
       <div className="flex flex-col h-full pb-20 relative max-w-4xl mx-auto w-full">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title}"?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
+        
+        {fullscreenImage && (
+          <div className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out" onClick={() => setFullscreenImage(null)}>
+            <img src={fullscreenImage} alt="Capa Ampliada" className="max-w-full max-h-full object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] border-[6px] border-black" />
+            <button onClick={() => setFullscreenImage(null)} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black/80 transition-colors"><XIcon className="w-6 h-6" /></button>
+          </div>
+        )}
+
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
@@ -629,8 +651,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </MContainer>
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4 flex-col md:flex-row md:items-start">
-            <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0`} colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
-              {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
+            <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0 relative group`} colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
+              {editedItem.cover_url ? (
+                <>
+                  <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover cursor-zoom-in opacity-90 hover:opacity-100 transition-opacity" onClick={() => setFullscreenImage(editedItem.cover_url)} />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center pointer-events-none transition-opacity"><Search className="w-8 h-8 text-white drop-shadow-lg" /></div>
+                </>
+              ) : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
               {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-300 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
