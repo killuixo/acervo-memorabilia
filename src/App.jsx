@@ -164,41 +164,29 @@ const isImageBroken = (url) => {
 const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const qTitle = encodeURIComponent(item.title || '');
   const qAuthor = encodeURIComponent(item.author_developer || '');
-  const qPublisher = encodeURIComponent(item.publisher || '');
   const isBook = (activeCategories['Livros'] || []).includes(item.type);
   const isDisc = (activeCategories['Discos'] || []).includes(item.type);
 
   try {
     if (isBook) {
-      let gbQuery = `intitle:${qTitle}`;
-      if (item.author_developer) gbQuery += `+inauthor:${qAuthor}`;
-      if (item.publisher) gbQuery += `+inpublisher:${qPublisher}`;
-      
-      const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${gbQuery}`);
+      const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${qTitle}+inauthor:${qAuthor}`);
       const gbData = await gbRes.json();
       if (gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) return gbData.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://");
       
-      const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}&publisher=${qPublisher}`);
+      const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}`);
       const olData = await olRes.json();
       if (olData.docs?.[0]?.cover_i) return `https://covers.openlibrary.org/b/id/${olData.docs[0].cover_i}-L.jpg`;
     } else if (isDisc && settings?.discogsToken) {
-      let dcQuery = `${item.title||''} ${item.author_developer||''}`;
-      if (item.publisher) dcQuery += ` ${item.publisher}`;
-      if (item.year) dcQuery += ` ${item.year}`;
-      const dcRes = await fetch(`https://api.discogs.com/database/search?q=${encodeURIComponent(dcQuery)}&token=${settings.discogsToken}`);
+      const dcRes = await fetch(`https://api.discogs.com/database/search?q=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&token=${settings.discogsToken}`);
       const dcData = await dcRes.json();
       if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) return dcData.results[0].cover_image;
     } else {
       let mediaType = "all";
-      let term = `${item.title||''} ${item.author_developer||''}`;
       if (isDisc) mediaType = "music";
       else if ((activeCategories['Vídeo'] || []).includes(item.type)) mediaType = "movie";
-      else if ((activeCategories['Games'] || []).includes(item.type)) {
-        mediaType = "software";
-        term += ` ${item.type}`;
-      }
+      else if ((activeCategories['Games'] || []).includes(item.type)) mediaType = "software";
       
-      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=${mediaType}&limit=1`);
+      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&media=${mediaType}&limit=1`);
       const itData = await itRes.json();
       if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
     }
@@ -293,7 +281,6 @@ const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
-const PrinterIcon = p => <Icon {...p} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></>} />;
 
 // ==========================================
 // PWA ENGINE
@@ -411,91 +398,6 @@ const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
 };
 
 // ==========================================
-// MODO IMPRESSÃO / CATÁLOGO PDF
-// ==========================================
-const PrintCatalog = ({ items, activeCategories, onClose }) => {
-  const categoriesList = Object.keys(activeCategories || {});
-  
-  return (
-    <div className="fixed inset-0 z-[9999] bg-gray-100 text-black overflow-y-auto print:bg-white print:absolute print:inset-0 print:overflow-visible flex flex-col font-sans">
-      <div className="fixed bottom-4 right-4 md:top-4 md:bottom-auto flex gap-2 print:hidden z-50 p-3 bg-white border-4 border-black shadow-[4px_4px_0px_#000]">
-        <button onClick={() => window.print()} className="px-4 py-2 bg-pink-500 text-black border-2 border-black font-black uppercase tracking-widest text-xs shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">🖨️ Salvar como PDF</button>
-        <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-black border-2 border-black font-black uppercase tracking-widest text-xs shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">❌ Voltar</button>
-      </div>
-      
-      <div className="print:hidden bg-amber-200 text-black border-b-4 border-black p-2 text-center text-[10px] font-black uppercase tracking-widest">
-        Aguarde as capas carregarem antes de clicar em "Salvar como PDF". No menu de impressão, ative "Gráficos de Fundo" (Background graphics).
-      </div>
-
-      <div className="w-full max-w-5xl mx-auto bg-white p-4 md:p-8 print:p-0">
-        <div className="text-center mb-10 border-b-8 border-black pb-6">
-          <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none mb-2">Catálogo de Acervo</h1>
-          <p className="text-xs font-black uppercase tracking-widest opacity-60">Memorabilia - {new Date().toLocaleDateString('pt-BR')}</p>
-        </div>
-
-        {categoriesList.map(cat => {
-          const subTypes = activeCategories[cat] || [];
-          const catItems = items.filter(i => subTypes.includes(i.type));
-          
-          if (catItems.length === 0) return null;
-
-          return (
-            <div key={cat} className="mb-12">
-              <h2 className="text-2xl font-black uppercase tracking-widest bg-black text-white inline-block px-4 py-2 mb-6 shadow-[4px_4px_0px_#ccc] break-after-avoid">{cat}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2">
-                {catItems.map(item => (
-                  <div key={item.id} className="flex gap-4 border-4 border-black p-3 break-inside-avoid shadow-[4px_4px_0px_#000]">
-                    <div className="w-28 md:w-36 flex-shrink-0 border-r-4 border-black pr-3 flex flex-col justify-start">
-                       <div className={`w-full aspect-[3/4] border-4 border-black bg-gray-100 flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_#000]`}>
-                         {item.cover_url ? <img src={item.cover_url} alt="Capa" className="w-full h-full object-cover" crossOrigin="anonymous" /> : <span className="text-[8px] font-black uppercase opacity-30">Sem Capa</span>}
-                       </div>
-                       <div className="text-center text-amber-500 font-black text-xs">
-                          {item.rating > 0 ? '★'.repeat(item.rating) + '☆'.repeat(5-item.rating) : 'Sem Nota'}
-                       </div>
-                    </div>
-                    <div className="flex flex-col flex-1 text-[10px] space-y-1.5 justify-start">
-                       <div className="border-b-2 border-black pb-1 mb-1">
-                         <h3 className="text-sm font-black leading-tight uppercase">{item.title}</h3>
-                         <div className="font-bold uppercase tracking-widest opacity-70 mt-0.5">{item.author_developer || 'Autor Desconhecido'}</div>
-                       </div>
-                       
-                       <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                         <p><span className="font-black uppercase tracking-widest opacity-60">Tipo:</span> {item.type}</p>
-                         <p><span className="font-black uppercase tracking-widest opacity-60">Ano:</span> {item.year || '--'}</p>
-                         <p><span className="font-black uppercase tracking-widest opacity-60">Editora:</span> <span className="truncate block">{item.publisher || '--'}</span></p>
-                         <p><span className="font-black uppercase tracking-widest opacity-60">Cód:</span> {item.archive_code || '--'}</p>
-                         <p><span className="font-black uppercase tracking-widest opacity-60">Tamanho:</span> {item.pages_or_time || '--'}</p>
-                         <p><span className="font-black uppercase tracking-widest opacity-60">Status:</span> {item.status || '--'}</p>
-                       </div>
-                       
-                       <div className="pt-1 mt-1 border-t border-dashed border-gray-400">
-                         <p><span className="font-black uppercase tracking-widest opacity-60">Localização:</span> {item.location || 'Não definida'}</p>
-                         {item.barcode && <p><span className="font-black uppercase tracking-widest opacity-60">Barcode:</span> {item.barcode}</p>}
-                       </div>
-
-                       {item.description && (
-                         <div className="mt-2 text-justify line-clamp-4 leading-tight italic opacity-90">
-                           "{item.description}"
-                         </div>
-                       )}
-                       {item.notes && (
-                         <div className="mt-1 bg-amber-50 border-2 border-amber-200 p-1 text-[9px] font-bold">
-                           <span className="font-black uppercase">Nota:</span> {item.notes}
-                         </div>
-                       )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
 
@@ -505,7 +407,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [itemToDelete, setItemToDelete] = useState(null);
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [page, setPage] = useState(0);
-  const [fullscreenImage, setFullscreenImage] = useState(null);
   
   // Estados Compactados para Filtros
   const [search, setSearch] = useState('');
@@ -610,8 +511,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
     setLoadingWiki(true); setWikiError('');
     try {
-      const prompt = `Aja como um arquivista técnico e objetivo. Escreva 1 parágrafo (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}, Ano: ${editedItem.year || ''}, Editora/Gravadora: ${editedItem.publisher || ''}). Foco em dados concretos: ano exato, produtores/músicos/autores principais, gravadora/editora, local de lançamento/origem da obra ou banda e fatos históricos relevantes da produção. Seja puramente descritivo, enciclopédico e imparcial, sem adjetivos elogiosos, promocionais ou avaliativos. Apenas o texto sem formatação.`;
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] }) });
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] }] }) });
       const data = await res.json(); if (data.error) throw new Error(data.error.message);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
@@ -629,19 +529,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
     const linkInfo = getExternalLinkInfo(editedItem.type, editedItem.title);
     const metricLabel = getMetricInfo(editedItem.type, activeCategories).label;
-    const imageContainerClass = isDiscItem ? "w-48 h-48 md:w-64 md:h-64 aspect-square" : "w-40 h-56 md:w-56 md:h-72 aspect-[3/4]";
+    const imageContainerClass = isDiscItem ? "w-40 h-40 md:w-56 md:h-56 aspect-square" : "w-32 h-44 md:w-48 md:h-64 aspect-[3/4]";
     
     return (
       <div className="flex flex-col h-full pb-20 relative max-w-4xl mx-auto w-full">
         <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem.title}"?`} onConfirm={confirmDelete} onCancel={() => setItemToDelete(null)} darkMode={darkMode} confirmText="Apagar" />
-        
-        {fullscreenImage && (
-          <div className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out" onClick={() => setFullscreenImage(null)}>
-            <img src={fullscreenImage} alt="Capa Ampliada" className="max-w-full max-h-full object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] border-[6px] border-black" />
-            <button onClick={() => setFullscreenImage(null)} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black/80 transition-colors"><XIcon className="w-6 h-6" /></button>
-          </div>
-        )}
-
         <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
           <div className="flex items-center gap-2">
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
@@ -651,13 +543,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </MContainer>
         <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4 flex-col md:flex-row md:items-start">
-            <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0 relative group`} colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
-              {editedItem.cover_url ? (
-                <>
-                  <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover cursor-zoom-in opacity-90 hover:opacity-100 transition-opacity" onClick={() => setFullscreenImage(editedItem.cover_url)} />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center pointer-events-none transition-opacity"><Search className="w-8 h-8 text-white drop-shadow-lg" /></div>
-                </>
-              ) : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
+            <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0`} colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
+              {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
             </MContainer>
             <div className="flex flex-col flex-1 justify-between py-1">
               {editedItem.archive_code && <div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-300 text-gray-300 bg-gray-800' : 'border-black text-black bg-gray-100'}`}>{editedItem.archive_code}</div>}
@@ -1349,7 +1236,7 @@ const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMo
   );
 };
 
-const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, completedGames, setCompletedGames, activeCategories, activeClassCodes, onPrintCatalog }) => {
+const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, completedGames, setCompletedGames, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false); const [importData, setImportData] = useState(null); const [openSection, setOpenSection] = useState(null); const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
   const coverSyncActiveRef = useRef(false); const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
   
@@ -1467,17 +1354,63 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
-        <button onClick={() => toggleSection('blogger')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'blogger' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Share className="w-4 h-4" /> Exportar Web & PDF</span><span className="text-lg font-mono">{openSection === 'blogger' ? '−' : '+'}</span></button>
-        {openSection === 'blogger' && (
+        <button onClick={() => toggleSection('arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ListIcon className="w-4 h-4" /> Gestão de Classes</span><span className="text-lg font-mono">{openSection === 'arquivologia' ? '−' : '+'}</span></button>
+        {openSection === 'arquivologia' && (
           <div className="p-4 flex flex-col gap-4">
-             <div className="flex gap-2 flex-col sm:flex-row">
-               <MButton darkMode={darkMode} onClick={onPrintCatalog} variant="pink" className="flex-1 py-3"><PrinterIcon className="w-4 h-4" /> Catálogo em PDF</MButton>
-             </div>
-             <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-cyan-900' : 'border-cyan-200'} flex gap-2 flex-col sm:flex-row`}>
-               <MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="light-cyan" className="flex-1 py-3"><Download className="w-4 h-4" /> Baixar HTML Web</MButton>
-               <MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 border-black"><CopyIcon className="w-4 h-4" /> Copiar Código Web</MButton>
-             </div>
+            <MInput darkMode={darkMode} label="Prefixo do Acervo" value={settings?.archivePrefix || ''} onChange={e => setSettings({...settings, archivePrefix: e.target.value.toUpperCase()})} onBlur={() => { playChipBeep('save'); onShowToast('success'); }} placeholder="Ex: MBU" />
+            <div className={`p-3 border-[4px] ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
+             <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Nova Subclasse</h4>
+              <div className="flex flex-col gap-2">
+                <select value={newSubclass.parent} onChange={e => setNewSubclass({...newSubclass, parent: e.target.value})} className={`w-full p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`}>{Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
+                <div className="flex gap-2"><input type="text" placeholder="Nome" value={newSubclass.name} onChange={e => setNewSubclass({...newSubclass, name: e.target.value})} className={`flex-1 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} /><input type="text" placeholder="Código" value={newSubclass.code} onChange={e => setNewSubclass({...newSubclass, code: e.target.value})} className={`w-24 p-2 border-[3px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} /></div>
+                <MButton darkMode={darkMode} onClick={handleAddSubclass} variant="light-cyan" className="py-2 text-[10px]">Adicionar Subclasse</MButton>
+              </div>
+            </div>
+            <div className="mt-2">
+              <h4 className="text-[10px] font-black uppercase tracking-widest mb-3">Tabela de Códigos</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.entries(activeCategories || {}).map(([cat, subs]) => (
+                <div key={cat} className="mb-3">
+                  <div className={`text-[9px] font-black uppercase tracking-widest bg-black text-white px-2 py-1 inline-block mb-1`}>{cat}</div>
+                  <div className="flex flex-col gap-1 pl-2">
+                    {(Array.isArray(subs) ? subs : []).map(sub => (
+                      <div key={sub} className="flex items-center justify-between text-xs font-bold">
+                        <span className="opacity-80">{sub}</span>
+                        <input type="text" value={activeClassCodes?.[sub] || ''} onChange={e => setSettings({...settings, userClassCodes: { ...activeClassCodes, [sub]: e.target.value }})} onBlur={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-16 p-1 border-[2px] text-center font-mono text-[10px] outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
+                      </div>
+                    ))}
+                  </div>
+               </div>
+              ))}
+              </div>
+            </div>
           </div>
+        )}
+      </MContainer>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
+        <button onClick={() => toggleSection('integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações & APIs</span><span className="text-lg font-mono">{openSection === 'integracoes' ? '−' : '+'}</span></button>
+        {openSection === 'integracoes' && (
+          <div className="p-4 flex flex-col gap-6">
+            <div className="flex flex-col gap-2"><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Camera className="w-4 h-4"/> Gemini API (Scan IA)</div><MInput darkMode={darkMode} label="API Key" type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} /></div>
+            <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><DiscIcon className="w-4 h-4"/> Discogs API</div><MInput darkMode={darkMode} label="Discogs Token" type="password" value={settings?.discogsToken || ''} onChange={e => setSettings({...settings, discogsToken: e.target.value})} /></div>
+            <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Share className="w-4 h-4"/> Google Sheets</div><MInput darkMode={darkMode} label="Webhook URL" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} /></div>
+            <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Headphones className="w-4 h-4"/> Last.FM</div><MInput darkMode={darkMode} label="Username" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} /><MInput darkMode={darkMode} label="API Key" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} /></div>
+            <MButton darkMode={darkMode} onClick={() => { playChipBeep('save'); onShowToast('success'); }} variant="light-pink" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
+          </div>
+        )}
+      </MContainer>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
+        <button onClick={() => toggleSection('sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Jogos Zerados</span><span className="text-lg font-mono">{openSection === 'sincronizar' ? '−' : '+'}</span></button>
+        {openSection === 'sincronizar' && (
+          <div className="p-4 flex flex-col gap-3">
+            <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-amber-900/50 text-amber-200' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-amber-100 text-amber-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar CSV<input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} /></label>
+          </div>
+        )}
+      </MContainer>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
+        <button onClick={() => toggleSection('blogger')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'blogger' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Share className="w-4 h-4" /> Exportar Web</span><span className="text-lg font-mono">{openSection === 'blogger' ? '−' : '+'}</span></button>
+        {openSection === 'blogger' && (
+          <div className="p-4 flex gap-2 flex-col sm:flex-row"><MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="light-cyan" className="flex-1 py-3"><Download className="w-4 h-4" /> Baixar HTML</MButton><MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 border-black"><CopyIcon className="w-4 h-4" /> Copiar Código</MButton></div>
         )}
       </MContainer>
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-indigo-900/20 text-white' : 'bg-indigo-50 text-black'}>
@@ -1525,7 +1458,6 @@ export default function App() {
   const [isFetchingCloud, setIsFetchingCloud] = useState(false); const [showSuccessSplash, setShowSuccessSplash] = useState(false); const [initialLoadDone, setInitialLoadDone] = useState(false); const [isLoaded, setIsLoaded] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success' }); const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
   const [libraryResetKey, setLibraryResetKey] = useState(0); const [completedResetKey, setCompletedResetKey] = useState(0);
-  const [isPrintingCatalog, setIsPrintingCatalog] = useState(false);
   const pwa = usePWA(LINK_DO_ICONE_NO_GITHUB); const globalFileInputRef = useRef(null);
   const [aiBoxState, setAiBoxState] = useState('idle'); const [aiBoxMessage, setAiBoxMessage] = useState(''); const [scannedAIData, setScannedAIData] = useState(null);
   
@@ -1768,12 +1700,9 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none ${isPrintingCatalog ? 'print:bg-white' : ''}`}>
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; } .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } @keyframes titleColorCycle { 0%, 100% { color: #f472b6; } 33% { color: #22d3ee; } 66% { color: #fbbf24; } } `}</style>
-      
-      {isPrintingCatalog && <PrintCatalog items={items} activeCategories={activeCategories} onClose={() => setIsPrintingCatalog(false)} />}
-
-      <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'} ${isPrintingCatalog ? 'hidden print:hidden' : ''}`}>
+      <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
         <nav className={`hidden md:flex flex-col w-20 lg:w-48 flex-none border-r-[4px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="p-4 border-b-[4px] border-current flex items-center justify-center lg:justify-start gap-2 h-20"><img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-8 h-8 object-contain" /><span className="hidden lg:block text-xs font-black uppercase tracking-widest mt-1">Memorabilia</span></div>
           <div className="flex-1 flex flex-col pt-4">
@@ -1836,7 +1765,7 @@ export default function App() {
             {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
             {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
             {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
-            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} onPrintCatalog={() => setIsPrintingCatalog(true)} />}
+            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
           </main>
 
           <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
