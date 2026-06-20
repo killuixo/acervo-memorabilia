@@ -78,8 +78,6 @@ const playChipBeep = (type) => {
 // ==========================================
 let globalSequenceCache = null;
 
-const resetSequenceCache = () => { globalSequenceCache = null; };
-
 const generateId = (itemsArray = []) => {
   const now = new Date();
   const timeBase = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}${String(now.getMilliseconds()).padStart(3, '0')}`;
@@ -93,58 +91,6 @@ const generateId = (itemsArray = []) => {
   }
   globalSequenceCache++;
   return `${timeBase}-${String(globalSequenceCache).padStart(4, '0')}`;
-};
-
-const resequenceCollection = (currentItems, prefix, classCodesMap) => {
-  const sorted = [...currentItems].sort((a, b) => {
-      const timeA = a.id ? String(a.id).split('-').slice(0, 2).join('-') : '';
-      const timeB = b.id ? String(b.id).split('-').slice(0, 2).join('-') : '';
-      const comp = timeA.localeCompare(timeB);
-      if (comp === 0) {
-          const seqA = a.id ? parseInt(String(a.id).split('-')[2] || '0', 10) : 0;
-          const seqB = b.id ? parseInt(String(b.id).split('-')[2] || '0', 10) : 0;
-          return seqA - seqB;
-      }
-      return comp;
-  });
-
-  let globalSeq = 1;
-  const classCounts = {};
-
-  return sorted.map(item => {
-      const parts = item.id ? String(item.id).split('-') : [];
-      const timeBase = parts.length >= 2 ? parts.slice(0, 2).join('-') : '00000000-000000000';
-      const newId = `${timeBase}-${String(globalSeq).padStart(4, '0')}`;
-      globalSeq++;
-
-      let newArchiveCode = item.archive_code;
-      if (item.type && classCodesMap[item.type]) {
-          const cCode = classCodesMap[item.type];
-          classCounts[cCode] = (classCounts[cCode] || 0) + 1;
-          newArchiveCode = `${prefix}-${cCode}-${String(classCounts[cCode]).padStart(4, '0')}`;
-      } else if (item.archive_code) {
-          const codeParts = String(item.archive_code).split('-');
-          if (codeParts.length >= 3) {
-              const cCode = codeParts[1];
-              classCounts[cCode] = (classCounts[cCode] || 0) + 1;
-              newArchiveCode = `${prefix}-${cCode}-${String(classCounts[cCode]).padStart(4, '0')}`;
-          }
-      }
-
-      return { ...item, id: newId, archive_code: newArchiveCode };
-  });
-};
-
-const syncItemToSheets = (payload, googleSheetsUrl, action = 'update') => {
-  if (googleSheetsUrl) {
-    const dataToSend = Array.isArray(payload) ? { action, items: payload } : { ...payload, action };
-    fetch(googleSheetsUrl, { 
-        method: 'POST', 
-        mode: 'no-cors', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
-        body: JSON.stringify(dataToSend) 
-    }).catch(e => console.error("Erro Google Sheets:", e));
-  }
 };
 
 const resizeImageForAPI = (file, maxWidth = 800) => {
@@ -447,11 +393,15 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
   );
 };
 
+const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
+  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(itemToSync) }).catch(e => console.error("Erro Google Sheets:", e));
+};
+
 // ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
 
-const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCategories, activeClassCodes }) => {
+const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCategories }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -553,33 +503,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i)); setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success'); syncItemToSheets(editedItem, settings?.googleSheetsUrl);
   };
-  
   const confirmDelete = () => {
-    if (itemToDelete) {
-      const itemObj = items.find(item => item.id === itemToDelete);
-      if (itemObj) {
-         // Avisa a planilha para excluir este item
-         syncItemToSheets(itemObj, settings?.googleSheetsUrl, 'delete');
-      }
-      
-      const remainingItems = items.filter(item => item.id !== itemToDelete);
-      const prefix = settings?.archivePrefix ? settings.archivePrefix.trim().toUpperCase() : 'MBU';
-      const newItems = resequenceCollection(remainingItems, prefix, activeClassCodes);
-      
-      setItems(newItems);
-      resetSequenceCache();
-      
-      // Avisa a planilha para reescrever/atualizar todos os itens com os novos IDs e códigos
-      syncItemToSheets(newItems, settings?.googleSheetsUrl, 'sync_all');
-      
-      setItemToDelete(null); 
-      setSelectedItem(null); 
-      setEditedItem(null); 
-      playChipBeep('save'); 
-      onShowToast('success'); 
-    }
+    if (itemToDelete) { setItems(items.filter(item => item.id !== itemToDelete)); setItemToDelete(null); setSelectedItem(null); setEditedItem(null); playChipBeep('save'); onShowToast('success'); }
   };
-
   const fetchWikiInfo = async () => {
     const apiKey = settings?.geminiApiKey || ""; 
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
@@ -1410,8 +1336,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative max-w-3xl mx-auto w-full">
-      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens?" onConfirm={() => { setItems([]); resetSequenceCache(); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
-      <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); resetSequenceCache(); setImportData(null); playChipBeep('save'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
+      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
+      <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-400 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-400"><Smartphone className="w-8 h-8 mb-2 text-cyan-600 dark:text-cyan-400" /><h3 className="font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-300 text-lg mb-1">Instalar App</h3><MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="cyan" className="w-full py-4 text-sm font-black text-black">📲 Instalar Agora</MButton></MContainer>
       )}
@@ -1419,7 +1345,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         <button onClick={() => toggleSection('aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Sun className="w-4 h-4" /> Aparência & Interface</span><span className="text-lg font-mono">{openSection === 'aparencia' ? '−' : '+'}</span></button>
         {openSection === 'aparencia' && (
           <div className="p-4 flex flex-col gap-4">
-            <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-widest">Tema Visual</span><button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'border-black bg-gray-200 text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{darkMode ? 'Modo Claro' : 'Modo Escuro'}</button></div>
+            <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-widest">Tema Visual</span><button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-gray-200 text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{darkMode ? 'Modo Claro' : 'Modo Escuro'}</button></div>
             <div className={`border-t-[4px] ${darkMode ? 'border-amber-900' : 'border-amber-200'} pt-3 flex flex-col gap-5`}>
                <div><div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><MonitorPlay className="w-4 h-4"/> Velocidade LED</div><input type="range" min="10" max="150" step="1" value={160 - (Number(settings?.marqueeSpeed) || 35)} onChange={e => setSettings({...settings, marqueeSpeed: 160 - parseInt(e.target.value)})} onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }} onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-full h-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} style={{ accentColor: '#22d3ee' }} /></div>
                <div><div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Sun className="w-4 h-4"/> Brilho LED</div><input type="range" min="0" max="100" step="5" value={Number(settings?.marqueeBrightness) ?? 50} onChange={e => setSettings({...settings, marqueeBrightness: parseInt(e.target.value)})} onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }} onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-full h-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} style={{ accentColor: '#fbbf24' }} /></div>
@@ -1608,82 +1534,249 @@ export default function App() {
     fetchRec(); const int = setInterval(fetchRec, 60000); return () => clearInterval(int);
   }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded]);
 
-  const handleCompClick = () => { setActiveTab('completed'); };
+  useEffect(() => {
+    if (!settings?.lastfmUser || !settings?.lastfmApiKey || !isLoaded || lfmStatIdx === 0) return;
+    const p = LFM_PERIODS[lfmPeriodIdx]; const k = `${lfmStatIdx}-${p}`;
+    if (!lfmCache[k]) {
+      const f = async () => {
+        setIsLfmLoading(true);
+        try {
+          let v = 'N/A';
+          if (lfmStatIdx === 1 || lfmStatIdx === 4) { const d = await (await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettopartists&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${p}&format=json&limit=1`)).json(); if(lfmStatIdx===1) v = d?.topartists?.artist?.[0]?.name||'N/A'; else v = d?.topartists?.['@attr']?.total||'0'; }
+          else if (lfmStatIdx === 2) { const d = await (await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettopalbums&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${p}&format=json&limit=1`)).json(); const a = d?.topalbums?.album?.[0]; v = a ? `${a.name} (${a.artist?.name})` : 'N/A'; }
+          else if (lfmStatIdx === 3 || lfmStatIdx === 5) { const d = await (await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&period=${p}&format=json&limit=1`)).json(); if (lfmStatIdx===3) { const t = d?.toptracks?.track?.[0]; v = t ? `${t.name} (${t.artist?.name})` : 'N/A'; } else v = d?.toptracks?.['@attr']?.total||'0'; }
+          setLfmCache(pr => ({ ...pr, [k]: String(v) }));
+        } catch(e) { setLfmCache(pr => ({ ...pr, [k]: 'Erro' })); } finally { setIsLfmLoading(false); }
+      }; f();
+    }
+  }, [settings?.lastfmUser, settings?.lastfmApiKey, isLoaded, lfmStatIdx, lfmPeriodIdx, lfmCache]);
 
-  if (!isLoaded) {
+  const lfmPressTimer = useRef(null); const isLfmLongPress = useRef(false);
+  const handleLfmPressStart = () => { isLfmLongPress.current = false; lfmPressTimer.current = setTimeout(() => { isLfmLongPress.current = true; setLfmPeriodIdx(p => (p + 1) % LFM_PERIODS.length); if (lfmStatIdx === 0) setLfmStatIdx(1); }, 500); };
+  const handleLfmPressEnd = () => { if (lfmPressTimer.current) clearTimeout(lfmPressTimer.current); };
+  const handleLfmClick = () => { if (!isLfmLongPress.current) { setLfmStatIdx(p => (p + 1) % LFM_STATS.length); } };
+
+  let lfmLabelStr = 'Last.FM:'; let lfmDisplayStr = 'Sem dados'; let isPulsingLfm = false;
+  if (!settings?.lastfmUser) lfmDisplayStr = 'Configure em Ajustes';
+  else if (lfmStatIdx === 0) { if (lastFmTrack) { lfmLabelStr = lastFmTrack.nowPlaying ? 'Ouvindo:' : 'Última:'; lfmDisplayStr = `${lastFmTrack.artist} - ${lastFmTrack.name}`; isPulsingLfm = lastFmTrack.nowPlaying; } else lfmDisplayStr = 'Carregando...'; }
+  else {
+    const pl = LFM_PERIOD_LABELS[lfmPeriodIdx]; const ck = `${lfmStatIdx}-${LFM_PERIODS[lfmPeriodIdx]}`;
+    if (lfmStatIdx === 1) lfmLabelStr = `(${pl}) Top Artista:`; else if (lfmStatIdx === 2) lfmLabelStr = `(${pl}) Top Álbum:`; else if (lfmStatIdx === 3) lfmLabelStr = `(${pl}) Top Faixa:`; else if (lfmStatIdx === 4) lfmLabelStr = `(${pl}) Artistas Únicos:`; else if (lfmStatIdx === 5) lfmLabelStr = `(${pl}) Total Faixas:`;
+    lfmDisplayStr = (isLfmLoading && !lfmCache[ck]) ? 'Carregando...' : (lfmCache[ck] || 'N/A');
+  }
+  
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, initialLoadDone]);
+  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, initialLoadDone]);
+  
+  const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
+  const rotatingStats = useMemo(() => {
+    if (items.length === 0) return ["Acervo em Formação"]; const stats = [];
+    const tc = items.reduce((acc, i) => { acc[i.type || 'Outro'] = (acc[i.type || 'Outro'] || 0) + 1; return acc; }, {});
+    if (tc['Livro']) stats.push(`${tc['Livro']} Livros na Estante`); if (tc['CD']) stats.push(`${tc['CD']} CDs Catalogados`); if (tc['Vinil']) stats.push(`${tc['Vinil']} Vinis (LPs)`); if (tc['Quadrinho']) stats.push(`${tc['Quadrinho']} HQs & Mangás`); if (tc['DVD']) stats.push(`${tc['DVD']} Filmes (DVD)`);
+    const vy = items.filter(i => !isNaN(getValidYear(i.year)));
+    if (vy.length > 0) {
+      const o = vy.reduce((a, b) => getValidYear(a.year) < getValidYear(b.year) ? a : b); const n = vy.reduce((a, b) => getValidYear(a.year) > getValidYear(b.year) ? a : b);
+      stats.push(`Relíquia: ${getValidYear(o.year)} (${String(o.title || '').substring(0,12)}...)`); stats.push(`Recente: ${getValidYear(n.year)} (${String(n.title || '').substring(0,12)}...)`);
+    }
+    const vl = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)) && ((activeCategories['Livros']||[]).includes(i.type)));
+    if (vl.length > 0) {
+        const tp = {}; vl.forEach(i => { const nm = normalizeWorkTitle(i.title); if (!tp[nm]) tp[nm] = { t: 0, r: i.title }; tp[nm].t += parseInt(i.pages_or_time); });
+        let mx = 0; let mObj = null; for (const [n, d] of Object.entries(tp)) { if (d.t > mx) { mx = d.t; mObj = d; } }
+        if (mObj) stats.push(`Mais Longo: ${mx} Págs (${normalizeWorkTitle(mObj.r).toUpperCase().substring(0,10)}...)`);
+    }
+    const ac = items.reduce((acc, i) => { 
+       if(i.author_developer) {
+          let ra = i.author_developer.trim(); if (isVariousArtists(ra)) ra = 'Vários Artistas';
+          const na = getSortableName(ra).toLowerCase(); const nt = normalizeWorkTitle(i.title);
+          if (!acc[na]) acc[na] = { d: ra, t: new Set() }; acc[na].t.add(nt);
+       } return acc; 
+    }, {});
+    const ta = Object.entries(ac).map(([na, d]) => [d.d, d.t.size]).sort((a,b)=>b[1]-a[1])[0];
+    if (ta && ta[1] > 1 && ta[0] !== 'Vários Artistas') stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
+    return stats.length > 0 ? stats : ["Sua Coleção Física"];
+  }, [items, activeCategories]);
+
+  const hasSuggested = useRef(false); const [suggestion, setSuggestion] = useState(null);
+  useEffect(() => {
+    if (isLoaded && items.length > 0 && !hasSuggested.current) {
+      const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type));
+      if (ms.length > 0) setSuggestion(ms[Math.floor(Math.random() * ms.length)]);
+      hasSuggested.current = true;
+    }
+  }, [isLoaded, items, activeCategories]);
+  
+  const shuffleSuggestion = () => {
+    const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type));
+    if (ms.length > 0) {
+      let ns = ms[Math.floor(Math.random() * ms.length)];
+      if (ms.length > 1 && suggestion) { while (ns.id === suggestion?.id) ns = ms[Math.floor(Math.random() * ms.length)]; }
+      setSuggestion(ns);
+    }
+  };
+
+  const totalItens = items.length; const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
+  const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const readPercentage = totalPagesCount > 0 ? ((readPages / totalPagesCount) * 100).toFixed(1) : 0;
+  
+  const totalJogos = completedGames.length; const tempos = completedGames.map(g => Number(g.tempoHoras) || 0).filter(t => t > 0);
+  const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
+  const maxTime = tempos.length > 0 ? Math.max(...tempos).toFixed(1) : 0;
+  const notasJ = completedGames.filter(g => (Number(g.nota) || 0) > 0); const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + (Number(b.nota) || 0), 0) / notasJ.length).toFixed(1) : 0;
+  
+  let totalGasto = 0;
+  const gamesWithPrices = completedGames.map(g => { const pPago = parseFloat(String(g.precoPago || '0').replace(/\./g, '').replace(',', '.')) || 0; const pCheio = parseFloat(String(g.precoSemDesc || '0').replace(/\./g, '').replace(',', '.')) || 0; totalGasto += pPago; return { ...g, numPago: pPago, numCheio: pCheio, desconto: pCheio - pPago }; });
+  const gamesBought = gamesWithPrices.filter(g => g.numPago > 0); const cheapest = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago < b.numPago ? a : b) : null; const mostExp = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago > b.numPago ? a : b) : null;
+  const gamesWithDisc = gamesWithPrices.filter(g => g.desconto > 0); const biggestDisc = gamesWithDisc.length > 0 ? gamesWithDisc.reduce((a, b) => a.desconto > b.desconto ? a : b) : null;
+
+  const byConsole = completedGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {}); const consoleStatsStr = Object.entries(byConsole).sort((a,b)=>b[1]-a[1]).map(([c, count]) => `${c}: ${count}`).join(' | ');
+  
+  const speed = settings?.marqueeSpeed || 35; const glow = (settings?.marqueeBrightness ?? 50) / 10;
+  const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
+  const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
+
+  const renderKatamariSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} /></div>);
+  const renderPacmanEnd = () => (<div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5"><Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-500'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} /><div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" /><svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #fbbf24)` : 'none' }}><path fill="#fbbf24" transform="scale(-1, 1) translate(-100, 0)"><animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" /></path></svg></div>);
+  
+  const renderMarqueeContent = () => {
+    const statsArr = [];
+    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span>);
+    if (consoleStatsStr) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>CONSOLES: {consoleStatsStr}</span>);
+    statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span>);
+    if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-pink-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
+    statsArr.push(<span key="5" className={`text-amber-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
+    statsArr.push(<span key="6" className={`text-cyan-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
+    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
+    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
+    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
+
     return (
-      <div className="fixed inset-0 bg-black text-white flex flex-col items-center justify-center font-sans">
-        <KatamariIcon className="w-24 h-24 mb-4 text-cyan-400 animate-spin" glow={10} />
-        <h1 className="text-2xl font-black uppercase tracking-widest mb-2 text-pink-500">Memorabilia</h1>
-        <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-8">Inicializando Sistema...</p>
-        {isFetchingCloud && <div className="text-[8px] font-mono text-cyan-400 animate-pulse">Sincronizando com Nuvem...</div>}
+      <div className="flex items-center py-1" style={textShadowStyle}>
+        {statsArr.map((stat, index) => ( <React.Fragment key={index}>{stat}{index < statsArr.length - 1 ? renderKatamariSeparator() : renderPacmanEnd()}</React.Fragment> ))}
+      </div>
+    );
+  };
+  
+  const suggPressTimer = useRef(null); const isSuggLongPress = useRef(false);
+  const handleSuggPressStart = () => { isSuggLongPress.current = false; suggPressTimer.current = setTimeout(() => { isSuggLongPress.current = true; shuffleSuggestion(); }, 500); };
+  const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
+  const handleSuggClick = () => { if (!isSuggLongPress.current && suggestion) window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank'); };
+
+  const pressTimer = useRef(null); const isLongPress = useRef(false);
+  const handleAddPressStart = () => { isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
+  const handleAddPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
+  const handleAddClick = () => { if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
+
+  const libPressTimer = useRef(null); const isLibLongPress = useRef(false);
+  const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
+  const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
+  const handleLibClick = () => { if (!isLibLongPress.current) { setActiveTab('library'); } };
+
+  const handleCompClick = () => { setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
+
+  if (isFetchingCloud && !showSuccessSplash) {
+    return (
+       <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
+          <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+          <KatamariIcon className="w-24 h-24 mb-6 z-10 text-cyan-400" glow={10} /><p className="text-cyan-400 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
+       </div>
+    );
+  }
+
+  if (showSuccessSplash) {
+    return (
+      <div className={`min-h-screen flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden bg-black text-white`} style={{ backgroundImage: 'radial-gradient(circle, #222 1.5px, transparent 1.5px)', backgroundSize: '4px 4px' }}>
+         <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+         <div className="z-10 flex flex-col items-center justify-center gap-6 animate-in zoom-in duration-300">
+           <img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(236,72,153,0.8)]" />
+           <h1 className="text-4xl text-pink-500 drop-shadow-[0_0_10px_currentColor] text-center leading-none uppercase tracking-tighter">Memorabilia</h1>
+         </div>
       </div>
     );
   }
 
   return (
-    <div className={`fixed inset-0 flex flex-col font-sans transition-colors duration-300 ${darkMode ? 'bg-black text-white' : 'bg-[#f8f9fa] text-black'} overflow-hidden`}>
-      {showSuccessSplash && (
-        <div className="absolute inset-0 z-50 bg-black flex items-center justify-center animate-out fade-out duration-1000 delay-500 pointer-events-none">
-          <KatamariIcon className="w-32 h-32 text-amber-400 animate-bounce" glow={20} />
-        </div>
-      )}
-
-      {toast.visible && (
-        <div className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[999] px-4 py-2 border-[4px] font-black uppercase tracking-widest text-[10px] shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-2 animate-in slide-in-from-top-4 fade-in duration-300 ${toast.type === 'success' ? (darkMode ? 'border-gray-300 bg-cyan-800 text-white shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black bg-cyan-400 text-black') : (darkMode ? 'border-gray-300 bg-pink-800 text-white shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black bg-pink-500 text-white')}`}>
-          {toast.type === 'success' ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-          {toast.type === 'success' ? 'Operação Concluída' : 'Erro na Operação'}
-        </div>
-      )}
-
-      <input type="file" ref={globalFileInputRef} className="hidden" accept="image/*" onChange={handleGlobalFileChange} />
-
-      <header className={`flex-shrink-0 flex items-center justify-between p-3 border-b-[4px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900 shadow-[0_4px_0px_rgba(209,213,219,1)]' : 'border-black bg-white shadow-[0_4px_0px_rgba(0,0,0,1)]'}`}>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <KatamariIcon className="w-6 h-6" glow={darkMode ? 5 : 0} />
-            <h1 className="text-xl font-black uppercase tracking-tighter leading-none" style={{ letterSpacing: '-1px' }}>Memorabilia</h1>
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; } .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } @keyframes titleColorCycle { 0%, 100% { color: #f472b6; } 33% { color: #22d3ee; } 66% { color: #fbbf24; } } `}</style>
+      <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        <nav className={`hidden md:flex flex-col w-20 lg:w-48 flex-none border-r-[4px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+          <div className="p-4 border-b-[4px] border-current flex items-center justify-center lg:justify-start gap-2 h-20"><img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-8 h-8 object-contain" /><span className="hidden lg:block text-xs font-black uppercase tracking-widest mt-1">Memorabilia</span></div>
+          <div className="flex-1 flex flex-col pt-4">
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-400 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><Library className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Coleção</span></button>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white border-l-[4px] border-amber-400' : 'bg-amber-400 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><PlusSquare className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Adicionar</span></button>
+            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white border-l-[4px] border-pink-400' : 'bg-pink-500 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Dashboard</span></button>
+            <button onClick={handleCompClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-400 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><MonitorPlay className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Zerados</span></button>
+            <div className="mt-auto mb-4"><button onClick={() => setActiveTab('settings')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white border-l-[4px] border-gray-400' : 'bg-gray-200 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><Settings className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Ajustes</span></button></div>
           </div>
-          <span className={`text-[8px] font-black uppercase tracking-[0.2em] ml-8 mt-1 ${darkMode ? 'text-pink-400' : 'text-pink-500'}`}>Acervo Pessoal</span>
-        </div>
-        {lastFmTrack && settings?.lastfmUser && (
-          <div className="flex flex-col items-end max-w-[120px] ml-2 cursor-pointer" onClick={() => window.open(`https://www.last.fm/user/${settings.lastfmUser}`, '_blank')} title="Ouvindo agora no Last.FM">
-            <div className={`flex items-center gap-1 text-[8px] font-black uppercase tracking-widest ${lastFmTrack.nowPlaying ? 'text-cyan-500 animate-pulse' : 'opacity-50'}`}>
-              <Music className="w-3 h-3" /> {lastFmTrack.nowPlaying ? 'Ouvindo Agora' : 'Última Faixa'}
+        </nav>
+
+        <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+          <header className={`flex-none p-3 lg:p-4 border-b-[4px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
+                <h1 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none" style={{ ...textShadowStyle, animation: `titleColorCycle ${Math.max(3, speed / 4)}s linear infinite` }}>Memorabilia</h1>
+                <div className="flex flex-row gap-2 mt-2 w-full h-[38px] md:h-[42px]">
+                  {settings?.lastfmUser ? (
+                    <div onMouseDown={handleLfmPressStart} onMouseUp={handleLfmPressEnd} onMouseLeave={handleLfmPressEnd} onTouchStart={handleLfmPressStart} onTouchEnd={handleLfmPressEnd} onClick={handleLfmClick} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-pink-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}><Headphones className={`w-3.5 h-3.5 flex-shrink-0 ${isPulsingLfm ? 'animate-pulse' : ''}`} /> <div className="flex flex-col truncate leading-none justify-center w-full"><span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">{lfmLabelStr}</span><span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate w-full">{lfmDisplayStr}</span></div></div>
+                  ) : (
+                    <div className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 transition-all overflow-hidden opacity-50 ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-200 border-black text-black'}`}><Headphones className="w-3.5 h-3.5 flex-shrink-0" /><span className="text-[7px] font-black uppercase tracking-widest truncate">Last.FM Off</span></div>
+                  )}
+                  {suggestion ? (
+                    <div role="button" tabIndex={0} title="Sortear outro disco" onContextMenu={e => e.preventDefault()} onTouchStart={handleSuggPressStart} onTouchEnd={handleSuggPressEnd} onMouseDown={handleSuggPressStart} onMouseUp={handleSuggPressEnd} onMouseLeave={handleSuggPressEnd} onClick={handleSuggClick} style={{ WebkitTouchCallout: 'none' }} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}><Sparkles className="w-3.5 h-3.5 flex-shrink-0" /> <div className="flex flex-col truncate leading-none justify-center w-full"><span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">Ouvir Hoje:</span><span className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest truncate w-full">{String(suggestion.title || 'S/ Título')}</span></div></div>
+                  ) : (
+                    <div className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[3px] flex items-center gap-1.5 transition-all overflow-hidden opacity-50 ${darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-200 border-black text-black'}`}><Sparkles className="w-3.5 h-3.5 flex-shrink-0" /><span className="text-[7px] font-black uppercase tracking-widest truncate">Sem Discos</span></div>
+                  )}
+                </div>
+              </div>
+              <div className="w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2 md:hidden">
+                {toast.visible ? (toast.type === 'error' ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-400 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />) : (<img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200 md:hidden" />)}
+              </div>
+              <div className="hidden md:flex w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 items-center justify-center transition-all duration-300 relative ml-2">
+                 {toast.visible && (toast.type === 'error' ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-400 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />)}
+              </div>
             </div>
-            <div className="text-[10px] font-bold truncate w-full text-right leading-tight">{lastFmTrack.name}</div>
-            <div className="text-[8px] uppercase opacity-70 truncate w-full text-right">{lastFmTrack.artist}</div>
-          </div>
-        )}
-      </header>
 
-      <main className="flex-1 overflow-hidden bg-transparent relative z-10 pt-4">
-        <div className="h-full px-2 md:px-4">
-          {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} activeClassCodes={activeClassCodes} key={libraryResetKey} />}
-          {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
-          {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
-          {activeTab === 'completed' && <CompletedGamesTab completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} key={completedResetKey} />}
-          {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
+            <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
+              <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
+                <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
+                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
+              </div>
+              <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                 <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Jogos Zerados</span><span className="animate-pulse text-pink-500 ml-1">REC</span></div>
+                 <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
+                    <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
+                      {renderMarqueeContent()} {renderMarqueeContent()}
+                    </div>
+                  </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-hidden p-3 lg:p-6 relative z-0">
+            <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
+            {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
+            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
+            {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
+            {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
+            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
+          </main>
+
+          <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
+            <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
+            <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
+            <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
+          </nav>
         </div>
-      </main>
-
-      <nav className={`flex-shrink-0 flex h-16 border-t-[4px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900 shadow-[0_-4px_0px_rgba(209,213,219,1)]' : 'border-black bg-white shadow-[0_-4px_0px_rgba(0,0,0,1)]'}`}>
-        <button onClick={() => setActiveTab('library')} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}>
-          <Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Acervo</span>
-        </button>
-        <button onClick={() => { setActiveTab('add'); setAddMode('manual'); }} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}>
-          <PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span>
-        </button>
-        <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}>
-          <BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span>
-        </button>
-        <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}>
-          <MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span>
-        </button>
-        <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}>
-          <Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span>
-        </button>
-      </nav>
+      </div>
     </div>
   );
 }
