@@ -165,23 +165,10 @@ const parseCSVText = (rawText) => {
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
 };
 
-const normalizeStr = s => s ? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
 const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim() : '';
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
 const isVariousArtists = name => ['various', 'vários', 'varios', 'various artists', 'variados'].includes(String(name || '').toLowerCase().trim());
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
-const parseTimeStr = str => str ? (String(str).includes(':') ? parseInt(String(str).split(':')[0] || 0) + (parseInt(String(str).split(':')[1] || 0) / 60) : parseFloat(String(str).replace(/[hH]/g, '').replace(',', '.')) || 0) : 0;
-
-const getMetricBucket = (val, max) => {
-    if (!val || isNaN(parseInt(val))) return -1;
-    const v = parseInt(val);
-    if (max === 0) return 0;
-    if (v <= max * 0.2) return 0;
-    if (v <= max * 0.4) return 1;
-    if (v <= max * 0.6) return 2;
-    if (v <= max * 0.8) return 3;
-    return 4;
-};
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
   if (specificLink?.trim().startsWith('http')) return { url: specificLink.trim(), isExact: true };
@@ -282,19 +269,10 @@ const XIcon = p => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><li
 const Zap = p => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = p => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
 const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
-const CopyIcon = p => <Icon {...p} path={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />;
 const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
-const ArrowUpDown = p => <Icon {...p} path={<><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></>} />;
-const SlidersHorizontal = p => <Icon {...p} path={<><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></>} />;
-const ChevronDown = p => <Icon {...p} path={<path d="m6 9 6 6 6-6"/>} />;
-const ChevronUp = p => <Icon {...p} path={<path d="m18 15-6-6-6 6"/>} />;
-const Square = p => <Icon {...p} path={<rect width="18" height="18" x="3" y="3" rx="2"/>} />;
-const CheckSquare = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></>} />;
-const Circle = p => <Icon {...p} path={<circle cx="12" cy="12" r="10"/>} />;
-const CheckCircle2 = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>} />;
 
 // ==========================================
 // PWA ENGINE
@@ -416,55 +394,6 @@ const syncDeleteToSheets = (deletedId, googleSheetsUrl) => {
 };
 
 // ==========================================
-// COMPONENTES AUXILIARES PARA FILTRO/ORDENAR
-// ==========================================
-const METRIC_LABELS = { '-1': 'Sem Valor', 0: 'Mínimo', 1: 'Mínimo Médio', 2: 'Médio', 3: 'Máximo Médio', 4: 'Máximo' };
-const RATING_LABELS = { 0: 'Sem Nota', 1: '1 Estrela', 2: '2 Estrelas', 3: '3 Estrelas', 4: '4 Estrelas', 5: '5 Estrelas' };
-
-const FilterAccordion = ({ title, category, optionsObj, labelsObj, tempFilters, toggleTempFilter, darkMode, expanded, toggleExpanded }) => {
-   const keys = Object.keys(optionsObj).sort((a,b) => {
-      if (category === 'format') return a.localeCompare(b);
-      if (category === 'metrics') return parseInt(a) - parseInt(b);
-      return b.localeCompare(a); 
-   });
-   if (keys.length === 0) return null;
-   
-   return (
-       <div className={`border-b-[3px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-          <button onClick={toggleExpanded} className="w-full flex justify-between items-center py-4 px-4 active:bg-gray-800/10 transition-colors">
-              <span className="font-black text-xs uppercase tracking-widest">{title}</span>
-              {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </button>
-          {expanded && (
-              <div className="flex flex-col px-4 pb-4 gap-1 animate-in slide-in-from-top-2 duration-200">
-                 {keys.map(key => {
-                     const isChecked = (tempFilters[category] || []).includes(key);
-                     const label = labelsObj ? (labelsObj[key] || key) : key;
-                     const count = optionsObj[key];
-                     return (
-                         <div key={key} onClick={() => toggleTempFilter(category, key)} className="flex justify-between items-center py-2.5 cursor-pointer group">
-                             <span className="font-bold text-xs opacity-90 group-hover:opacity-100 uppercase tracking-wide">{label}</span>
-                             <div className="flex items-center gap-3">
-                                 <span className="text-[10px] opacity-60 font-black">{count}</span>
-                                 {isChecked ? <CheckSquare className={`w-5 h-5 ${darkMode ? 'text-white' : 'text-black'}`} /> : <Square className="w-5 h-5 opacity-30 group-hover:opacity-60 transition-opacity" />}
-                             </div>
-                         </div>
-                     );
-                 })}
-              </div>
-          )}
-       </div>
-   );
-};
-
-const RadioRow = ({ label, checked, onClick, darkMode }) => (
-   <div className={`flex justify-between items-center py-3.5 border-b-[2px] cursor-pointer group transition-colors ${darkMode ? 'border-gray-800' : 'border-gray-200'}`} onClick={onClick}>
-      <span className="font-bold text-xs opacity-90 group-hover:opacity-100 uppercase tracking-wide">{label}</span>
-      {checked ? <CheckCircle2 className={`w-5 h-5 ${darkMode ? 'text-white' : 'text-black'}`} /> : <Circle className="w-5 h-5 opacity-30 group-hover:opacity-60 transition-opacity" />}
-   </div>
-);
-
-// ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
 
@@ -475,104 +404,26 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [page, setPage] = useState(0);
   
-  // States para Filtragem e Busca
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeLetter, setActiveLetter] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ by: 'date_added', order: 'desc' });
-  const [activeFilters, setActiveFilters] = useState({ added: [], format: [], year: [], rating: [], metrics: [] });
-  
-  // Modais de Filtro e Sort
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isSortOpen, setIsSortOpen] = useState(false);
-  const [tempFilters, setTempFilters] = useState({ added: [], format: [], year: [], rating: [], metrics: [] });
-  const [tempSort, setTempSort] = useState({ by: 'date_added', order: 'desc' });
-  const [expandedAcc, setExpandedAcc] = useState('format');
-  
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 12; 
   const pressTimer = useRef(null); 
   const isLongPress = useRef(false);
 
-  // Computação de Contagens para os Filtros
-  const maxMetric = useMemo(() => Math.max(0, ...items.map(i => parseInt(i.pages_or_time) || 0)), [items]);
-  const filterOptions = useMemo(() => {
-      const counts = { added: {}, format: {}, year: {}, rating: {}, metrics: {} };
-      items.forEach(i => {
-         const addedYear = i.id?.substring(0,4) || 'Desconhecido';
-         counts.added[addedYear] = (counts.added[addedYear] || 0) + 1;
-         counts.format[i.type || 'Desconhecido'] = (counts.format[i.type || 'Desconhecido'] || 0) + 1;
-         const validYr = getValidYear(i.year);
-         const yearStr = isNaN(validYr) ? 'Desconhecido' : String(validYr);
-         counts.year[yearStr] = (counts.year[yearStr] || 0) + 1;
-         counts.rating[i.rating || 0] = (counts.rating[i.rating || 0] || 0) + 1;
-         const b = getMetricBucket(i.pages_or_time, maxMetric);
-         counts.metrics[b] = (counts.metrics[b] || 0) + 1;
-      });
-      return counts;
-  }, [items, maxMetric]);
-
-  // Aplicando toda a lógica de Pipeline de Busca/Filtro/Sort
-  const filteredAndSortedItems = useMemo(() => {
-      let result = [...items];
-      
-      if (searchQuery) {
-          const q = searchQuery.toLowerCase();
-          result = result.filter(i => (i.title||'').toLowerCase().includes(q) || (i.author_developer||'').toLowerCase().includes(q) || (i.archive_code||'').toLowerCase().includes(q));
-      }
-      
-      if (activeLetter) {
-          result = result.filter(i => {
-              let firstChar = getSortableName(i.title).charAt(0).toUpperCase();
-              if (!/[A-Z]/.test(firstChar)) firstChar = '#';
-              return firstChar === activeLetter;
-          });
-      }
-      
-      if (activeFilters.added.length > 0) result = result.filter(i => activeFilters.added.includes(i.id?.substring(0,4) || 'Desconhecido'));
-      if (activeFilters.format.length > 0) result = result.filter(i => activeFilters.format.includes(i.type || 'Desconhecido'));
-      if (activeFilters.year.length > 0) result = result.filter(i => {
-         const validYr = getValidYear(i.year);
-         return activeFilters.year.includes(isNaN(validYr) ? 'Desconhecido' : String(validYr));
-      });
-      if (activeFilters.rating.length > 0) result = result.filter(i => activeFilters.rating.includes(String(i.rating || 0)));
-      if (activeFilters.metrics.length > 0) result = result.filter(i => activeFilters.metrics.includes(String(getMetricBucket(i.pages_or_time, maxMetric))));
-      
-      result.sort((a, b) => {
-          let valA, valB;
-          if (sortConfig.by === 'title') { valA = getSortableName(a.title); valB = getSortableName(b.title); }
-          else if (sortConfig.by === 'artist') { valA = getSortableName(a.author_developer); valB = getSortableName(b.author_developer); }
-          else if (sortConfig.by === 'year') { valA = getValidYear(a.year) || 0; valB = getValidYear(b.year) || 0; }
-          else { valA = a.id || ''; valB = b.id || ''; }
-          
-          if (valA < valB) return sortConfig.order === 'asc' ? -1 : 1;
-          if (valA > valB) return sortConfig.order === 'asc' ? 1 : -1;
-          return 0;
-      });
-      
-      return result;
-  }, [items, searchQuery, activeLetter, activeFilters, sortConfig, maxMetric]);
-
-  const paginatedItems = filteredAndSortedItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
-  const totalPages = Math.ceil(filteredAndSortedItems.length / itemsPerPage) || 1;
-
-  // Actions
   const handleItemPressStart = (item) => {
     isLongPress.current = false;
     pressTimer.current = setTimeout(() => { isLongPress.current = true; setContextMenuItem(item); }, 500);
   };
   const handleItemPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
   const handleItemClick = (item) => { if (!isLongPress.current) handleSelect(item); };
-  const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   
-  const toggleTempFilter = (category, value) => {
-     setTempFilters(prev => {
-         const catList = prev[category] || [];
-         if (catList.includes(value)) return { ...prev, [category]: catList.filter(v => v !== value) };
-         return { ...prev, [category]: [...catList, value] };
-     });
-  };
+  const paginatedItems = useMemo(() => {
+    return [...items].reverse().slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  }, [items, page, itemsPerPage]);
 
+  const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
+
+  const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, r) => { 
     const u = { ...items.find(i => i.id === id), rating: r };
     setItems(items.map(item => item.id === id ? u : item)); playChipBeep('save'); onShowToast('success'); syncItemToSheets(u, settings?.googleSheetsUrl);
@@ -594,9 +445,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
        
        if (settings?.googleSheetsUrl) {
           syncDeleteToSheets(itemToDelete, settings.googleSheetsUrl);
+          
           for (let i = 0; i < reindexedList.length; i++) {
              const newItem = reindexedList[i];
              const oldItem = updatedList[i]; 
+             
              if (newItem.id !== oldItem.id) {
                 syncDeleteToSheets(oldItem.id, settings.googleSheetsUrl);
                 await new Promise(r => setTimeout(r, 400));
@@ -628,8 +481,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     } finally { setLoadingWiki(false); }
   };
 
-  const activeFiltersCount = Object.values(activeFilters).reduce((a, b) => a + b.length, 0);
-
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
     const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
@@ -647,7 +498,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </div>
           <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>Salvar</button>
         </MContainer>
-        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
           <div className="flex gap-4 flex-col md:flex-row md:items-start">
             <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0`} colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
               {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
@@ -715,10 +566,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   }
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col h-full">
       <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem?.title}"?`} onConfirm={confirmDelete} onCancel={() => {setItemToDelete(null); setEditedItem(null);}} darkMode={darkMode} confirmText="Apagar" />
-      
-      {/* Menu de Contexto */}
       {contextMenuItem && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setContextMenuItem(null)}>
           <MContainer darkMode={darkMode} className="w-full max-w-xs p-0 flex flex-col overflow-hidden animate-in zoom-in duration-200" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} onClick={(e) => e.stopPropagation()}>
@@ -733,87 +582,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </div>
       )}
 
-      {/* Modais de Filtro e Sort */}
-      {isFilterOpen && (
-          <div className="fixed inset-0 z-[400] flex flex-col bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className={`flex-1 w-full max-w-lg mx-auto flex flex-col shadow-2xl ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'}`}>
-                 <div className={`flex justify-between items-center p-5 border-b-[4px] ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-black bg-white'}`}>
-                    <button onClick={() => setIsFilterOpen(false)} className="p-1 active:scale-90"><XIcon className="w-6 h-6" /></button>
-                    <span className="font-black uppercase tracking-widest text-sm">Filtros</span>
-                    <div className="w-8" />
-                 </div>
-                 <div className="flex-1 overflow-y-auto scrollbar-hide">
-                    <FilterAccordion title="Adicionado" category="added" optionsObj={filterOptions.added} tempFilters={tempFilters} toggleTempFilter={toggleTempFilter} darkMode={darkMode} expanded={expandedAcc === 'added'} toggleExpanded={()=>setExpandedAcc(expandedAcc==='added'?null:'added')} />
-                    <FilterAccordion title="Suporte (Formato)" category="format" optionsObj={filterOptions.format} tempFilters={tempFilters} toggleTempFilter={toggleTempFilter} darkMode={darkMode} expanded={expandedAcc === 'format'} toggleExpanded={()=>setExpandedAcc(expandedAcc==='format'?null:'format')} />
-                    <FilterAccordion title="Ano" category="year" optionsObj={filterOptions.year} tempFilters={tempFilters} toggleTempFilter={toggleTempFilter} darkMode={darkMode} expanded={expandedAcc === 'year'} toggleExpanded={()=>setExpandedAcc(expandedAcc==='year'?null:'year')} />
-                    <FilterAccordion title="Nota" category="rating" optionsObj={filterOptions.rating} labelsObj={RATING_LABELS} tempFilters={tempFilters} toggleTempFilter={toggleTempFilter} darkMode={darkMode} expanded={expandedAcc === 'rating'} toggleExpanded={()=>setExpandedAcc(expandedAcc==='rating'?null:'rating')} />
-                    <FilterAccordion title="Páginas / Faixas" category="metrics" optionsObj={filterOptions.metrics} labelsObj={METRIC_LABELS} tempFilters={tempFilters} toggleTempFilter={toggleTempFilter} darkMode={darkMode} expanded={expandedAcc === 'metrics'} toggleExpanded={()=>setExpandedAcc(expandedAcc==='metrics'?null:'metrics')} />
-                 </div>
-                 <div className={`p-4 border-t-[4px] flex gap-4 ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-black bg-white'}`}>
-                    <MButton darkMode={darkMode} variant="white" onClick={() => setTempFilters({ added: [], format: [], year: [], rating: [], metrics: [] })} className="flex-1 text-[10px]">Limpar Tudo</MButton>
-                    <MButton darkMode={darkMode} variant="cyan" onClick={() => { setActiveFilters(tempFilters); setIsFilterOpen(false); setPage(0); }} className="flex-[2] text-[10px]">Aplicar Filtros</MButton>
-                 </div>
-              </div>
-          </div>
-      )}
-
-      {isSortOpen && (
-          <div className="fixed inset-0 z-[400] flex flex-col bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-              <div className={`flex-1 w-full max-w-lg mx-auto flex flex-col shadow-2xl ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'}`}>
-                 <div className={`flex justify-between items-center p-5 border-b-[4px] ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-black bg-white'}`}>
-                    <button onClick={() => setIsSortOpen(false)} className="p-1 active:scale-90"><XIcon className="w-6 h-6" /></button>
-                    <span className="font-black uppercase tracking-widest text-sm">Ordenar Por</span>
-                    <div className="w-8" />
-                 </div>
-                 <div className="flex-1 overflow-y-auto scrollbar-hide p-5 flex flex-col gap-6">
-                    <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-pink-500 mb-2 border-b-[2px] border-pink-500/30 pb-1">Ordem</div>
-                        <RadioRow label="↑ Ascendente" checked={tempSort.order === 'asc'} onClick={() => setTempSort({...tempSort, order:'asc'})} darkMode={darkMode} />
-                        <RadioRow label="↓ Descendente" checked={tempSort.order === 'desc'} onClick={() => setTempSort({...tempSort, order:'desc'})} darkMode={darkMode} />
-                    </div>
-                    <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-pink-500 mb-2 border-b-[2px] border-pink-500/30 pb-1">Critério</div>
-                        <RadioRow label="Autor / Artista" checked={tempSort.by === 'artist'} onClick={() => setTempSort({...tempSort, by:'artist'})} darkMode={darkMode} />
-                        <RadioRow label="Ano de Lançamento" checked={tempSort.by === 'year'} onClick={() => setTempSort({...tempSort, by:'year'})} darkMode={darkMode} />
-                        <RadioRow label="Título da Obra" checked={tempSort.by === 'title'} onClick={() => setTempSort({...tempSort, by:'title'})} darkMode={darkMode} />
-                        <RadioRow label="Data Adicionada" checked={tempSort.by === 'date_added'} onClick={() => setTempSort({...tempSort, by:'date_added'})} darkMode={darkMode} />
-                    </div>
-                 </div>
-                 <div className={`p-4 border-t-[4px] ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-black bg-white'}`}>
-                    <MButton darkMode={darkMode} variant="cyan" onClick={() => { setSortConfig(tempSort); setIsSortOpen(false); setPage(0); }} className="w-full text-[10px]">Aplicar Ordenação</MButton>
-                 </div>
-              </div>
-          </div>
-      )}
-
-      {/* Toolbar / Search Header */}
-      <MContainer darkMode={darkMode} className="mb-2 sticky top-0 z-10 flex flex-col gap-3 p-3" colorClass={darkMode ? 'bg-gray-900/95 backdrop-blur-md' : 'bg-white/95 backdrop-blur-md'}>
-         <div className="flex gap-2 h-11">
-            <div className={`flex-1 flex items-center border-[4px] px-3 ${darkMode ? 'border-gray-300 bg-gray-800 text-white focus-within:bg-gray-700' : 'border-black bg-gray-100 text-black focus-within:bg-white'} transition-colors`}>
-               <Search className="w-4 h-4 opacity-50 mr-2 flex-shrink-0" />
-               <input type="text" placeholder="Buscar no acervo..." value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(0); }} className="w-full bg-transparent outline-none py-2 text-xs font-black uppercase tracking-wide placeholder:opacity-50" />
-               {searchQuery && <XIcon className="w-4 h-4 opacity-50 cursor-pointer hover:opacity-100" onClick={()=>setSearchQuery('')} />}
-            </div>
-            <button onClick={() => { setTempSort(sortConfig); setIsSortOpen(true); }} className={`px-3 border-[4px] flex items-center justify-center active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-800' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-400'}`}>
-               <ArrowUpDown className="w-5 h-5" />
-            </button>
-            <button onClick={() => { setTempFilters(activeFilters); setIsFilterOpen(true); }} className={`px-3 border-[4px] flex items-center justify-center active:translate-y-1 active:translate-x-1 active:shadow-none transition-all relative ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-pink-800' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-pink-500'}`}>
-               <SlidersHorizontal className="w-5 h-5" />
-               {activeFiltersCount > 0 && <span className="absolute -top-2 -right-2 bg-amber-400 text-black border-[3px] border-black text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full z-10">{activeFiltersCount}</span>}
-            </button>
-         </div>
-         <div className="flex overflow-x-auto gap-1.5 pb-1 scrollbar-hide w-full items-center pl-1">
-            {['#', ...Array.from({length:26}, (_,i)=>String.fromCharCode(65+i))].map(letter => (
-               <button key={letter} onClick={() => { setActiveLetter(activeLetter === letter ? null : letter); setPage(0); }} className={`flex-shrink-0 w-8 h-8 flex items-center justify-center text-[10px] font-black uppercase tracking-widest border-[3px] active:scale-95 transition-all ${activeLetter === letter ? (darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[1px_1px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[1px_1px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-500')}`}>{letter}</button>
-            ))}
-         </div>
-      </MContainer>
-
-      {/* Grid de Itens */}
-      <div className="flex-1 overflow-y-auto pb-20 px-1 pt-1 scrollbar-hide">
-        {paginatedItems.length === 0 ? (
-          <div className="text-center p-10 opacity-50 text-sm font-sans font-black uppercase tracking-widest mt-10">Nenhum item com este filtro.</div>
-        ) : (
+      <div className="flex-1 overflow-y-auto pb-20 px-1 pt-2">
+        {paginatedItems.length === 0 ? <div className="text-center p-10 opacity-50 text-sm font-sans font-black uppercase tracking-widest">Nenhum item.</div> : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {paginatedItems.map((item, idx) => (
               <div key={item.id} className="flex flex-row min-h-[140px] cursor-pointer active:scale-[0.98] transition-transform hover:-translate-y-1 hover:shadow-lg" onContextMenu={e => e.preventDefault()} onTouchStart={() => handleItemPressStart(item)} onTouchEnd={handleItemPressEnd} onTouchMove={handleItemPressEnd} onMouseDown={() => handleItemPressStart(item)} onMouseUp={handleItemPressEnd} onMouseLeave={handleItemPressEnd} onClick={() => handleItemClick(item)}>
@@ -825,7 +595,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                   <div className="flex-1 flex flex-col justify-between pr-3 pointer-events-none">
                     <div className="flex flex-col">
                       <div className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1.5 break-words">
-                        {item.type||'--'} • {getValidYear(item.year)||'--'} {item.pages_or_time ? `• ${item.pages_or_time} ${getMetricInfo(item.type, activeCategories).label}` : ''}
+                        {item.type||'--'} • {item.year||'--'} {item.pages_or_time ? `• ${item.pages_or_time} ${getMetricInfo(item.type, activeCategories).label}` : ''}
                       </div>
                       <div className="text-sm font-black leading-tight break-words whitespace-normal mb-1">{item.title || 'S/ Título'}</div>
                       <div className="text-[10px] font-bold opacity-80 uppercase tracking-wide break-words whitespace-normal">{item.author_developer || '--'}</div>
@@ -1760,7 +1530,7 @@ export default function App() {
           <main className="flex-1 overflow-hidden p-3 lg:p-6 relative z-0">
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
-            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={globalAiState} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
+            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
             {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
             {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
           </main>
