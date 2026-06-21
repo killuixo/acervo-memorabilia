@@ -93,6 +93,47 @@ const generateId = (itemsArray = []) => {
   return `${timeBase}-${String(globalSequenceCache).padStart(4, '0')}`;
 };
 
+const reindexCollection = (currentItems) => {
+  // Ordena cronologicamente preservando os 18 primeiros caracteres do ID (Data e Hora exata)
+  const sorted = [...currentItems].sort((a, b) => {
+     const timeA = String(a.id || '').substring(0, 18);
+     const timeB = String(b.id || '').substring(0, 18);
+     return timeA.localeCompare(timeB);
+  });
+
+  const classCodeCounters = {};
+  let globalCounter = 1;
+
+  const reindexed = sorted.map(item => {
+     // 1. Corrige o ID Global (mantém Data/Hora, altera os últimos 4 dígitos)
+     const idParts = String(item.id || '').split('-');
+     let newId = item.id;
+     if (idParts.length >= 2) {
+         const timePrefix = idParts.slice(0, 2).join('-');
+         newId = `${timePrefix}-${String(globalCounter).padStart(4, '0')}`;
+     }
+
+     // 2. Corrige o Código Arquivístico
+     let newArchiveCode = item.archive_code;
+     if (item.archive_code) {
+         const archParts = String(item.archive_code).split('-');
+         if (archParts.length >= 3) {
+             const prefix = archParts[0];
+             const classCode = archParts[1];
+             classCodeCounters[classCode] = (classCodeCounters[classCode] || 0) + 1;
+             newArchiveCode = `${prefix}-${classCode}-${String(classCodeCounters[classCode]).padStart(4, '0')}`;
+         }
+     }
+     
+     globalCounter++;
+     return { ...item, id: newId, archive_code: newArchiveCode };
+  });
+
+  // Atualiza o cache global para não conflitar as futuras adições manuais
+  globalSequenceCache = globalCounter - 1;
+  return reindexed;
+};
+
 const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -388,7 +429,11 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
 };
 
 const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
-  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(itemToSync) }).catch(e => console.error("Erro Google Sheets:", e));
+  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({...itemToSync, _action: 'upsert'}) }).catch(e => console.error("Erro Google Sheets:", e));
+};
+
+const syncDeleteToSheets = (deletedId, newCollection, googleSheetsUrl) => {
+  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ _action: 'delete', id: deletedId, collection: newCollection }) }).catch(e => console.error("Erro Google Sheets:", e));
 };
 
 // ==========================================
@@ -431,7 +476,17 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i)); setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success'); syncItemToSheets(editedItem, settings?.googleSheetsUrl);
   };
   const confirmDelete = () => {
-    if (itemToDelete) { setItems(items.filter(item => item.id !== itemToDelete)); setItemToDelete(null); setSelectedItem(null); setEditedItem(null); playChipBeep('save'); onShowToast('success'); }
+    if (itemToDelete) { 
+       const updatedList = items.filter(item => item.id !== itemToDelete);
+       const reindexedList = reindexCollection(updatedList);
+       setItems(reindexedList); 
+       setItemToDelete(null); 
+       setSelectedItem(null); 
+       setEditedItem(null); 
+       playChipBeep('save'); 
+       onShowToast('success'); 
+       syncDeleteToSheets(itemToDelete, reindexedList, settings?.googleSheetsUrl);
+    }
   };
   const fetchWikiInfo = async () => {
     const apiKey = settings?.geminiApiKey || ""; 
@@ -1184,8 +1239,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative max-w-3xl mx-auto w-full">
-      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
-      <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
+      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); syncDeleteToSheets('all', [], settings?.googleSheetsUrl); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
+      <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); syncDeleteToSheets('import', importData, settings?.googleSheetsUrl); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-400 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-400"><Smartphone className="w-8 h-8 mb-2 text-cyan-600 dark:text-cyan-400" /><h3 className="font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-300 text-lg mb-1">Instalar App</h3><MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="cyan" className="w-full py-4 text-sm font-black text-black">📲 Instalar Agora</MButton></MContainer>
       )}
