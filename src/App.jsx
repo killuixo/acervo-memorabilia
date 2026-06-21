@@ -211,33 +211,184 @@ const isImageBroken = (url) => {
 const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const qTitle = encodeURIComponent(item.title || '');
   const qAuthor = encodeURIComponent(item.author_developer || '');
-  const isBook = (activeCategories['Livros'] || []).includes(item.type);
-  const isDisc = (activeCategories['Discos'] || []).includes(item.type);
+  const titleRaw = item.title || '';
+  const authorRaw = item.author_developer || '';
+  const typeRaw = item.type || '';
+  const yearRaw = item.year ? String(item.year).trim() : '';
+  const pubRaw = item.publisher || '';
+  const barcodeRaw = item.barcode || '';
 
+  const isBook = (activeCategories['Livros'] || []).includes(typeRaw);
+  const isDisc = (activeCategories['Discos'] || []).includes(typeRaw);
+  const isGame = (activeCategories['Games'] || []).includes(typeRaw);
+  const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
+
+  // 0. Se tiver código de barras, tentar UPCItemDB primeiro (é quase 100% exato)
+  if (barcodeRaw) {
+     try {
+        const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw.replace(/[-\s]/g, "")}`);
+        const upcData = await upcRes.json();
+        if (upcData.items?.[0]?.images?.[0]) return upcData.items[0].images[0];
+     } catch(e) {}
+  }
+
+  // 1. DISCOS (Foco no Discogs e MusicBrainz filtrando formato e ano)
+  if (isDisc) {
+    if (settings?.discogsToken) {
+      try {
+        let formatQuery = '';
+        const tLower = typeRaw.toLowerCase();
+        if (tLower.includes('vinil') || tLower.includes('lp')) formatQuery = '&format=vinyl';
+        else if (tLower.includes('cd')) formatQuery = '&format=cd';
+        else if (tLower.includes('cassete') || tLower.includes('fita')) formatQuery = '&format=cassette';
+
+        // Busca Super Específica (Título + Autor + Ano + Formato)
+        const dcRes = await fetch(`https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${yearRaw ? `&year=${yearRaw}` : ''}${formatQuery}&token=${settings.discogsToken}`);
+        const dcData = await dcRes.json();
+        if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) return dcData.results[0].cover_image;
+
+        // Fallback amplo no Discogs se a busca exata falhar
+        const dcResBroad = await fetch(`https://api.discogs.com/database/search?q=${qTitle}+${qAuthor}&token=${settings.discogsToken}`);
+        const dcDataBroad = await dcResBroad.json();
+        if (dcDataBroad.results?.[0]?.cover_image && !dcDataBroad.results[0].cover_image.includes('spacer.gif')) return dcDataBroad.results[0].cover_image;
+      } catch(e) { console.warn("Discogs API err", e); }
+    }
+
+    try {
+        // MusicBrainz / Cover Art Archive
+        const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=release:${qTitle}%20AND%20artist:${qAuthor}&fmt=json`);
+        const mbData = await mbRes.json();
+        if (mbData.releases?.length > 0) {
+            for (const release of mbData.releases) {
+                try {
+                    const caaRes = await fetch(`https://coverartarchive.org/release/${release.id}/front`);
+                    if (caaRes.ok) return caaRes.url; 
+                } catch(e) {}
+            }
+        }
+    } catch(e) { console.warn("MusicBrainz err", e); }
+    
+    // Fallback Apple Music (apenas para CDs digitais)
+    try {
+        const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}+${qAuthor}&media=music&entity=album&limit=1`);
+        const itData = await itRes.json();
+        if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
+    } catch(e) {}
+  }
+
+  // 2. LIVROS/HQ (Foco em Editora e Ano de Publicação)
+  else if (isBook) {
+    try {
+        // Constrói Query Específica do Google Books
+        let gbQuery = `intitle:"${titleRaw}"`;
+        if (authorRaw) gbQuery += `+inauthor:"${authorRaw}"`;
+        if (pubRaw) gbQuery += `+inpublisher:"${pubRaw}"`; // Cruzar com nome da editora
+        
+        const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=5`);
+        const gbData = await gbRes.json();
+        
+        if (gbData.items) {
+            let bestMatch = gbData.items[0];
+            // Se informou ano, garimpar a edição com o ano idêntico no JSON
+            if (yearRaw) {
+                const exact = gbData.items.find(i => i.volumeInfo?.publishedDate?.startsWith(yearRaw));
+                if (exact && exact.volumeInfo?.imageLinks?.thumbnail) bestMatch = exact;
+            }
+            if (bestMatch?.volumeInfo?.imageLinks?.thumbnail) {
+                return bestMatch.volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
+            }
+        }
+        
+        // OpenLibrary Especificando ano/editora
+        const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}`);
+        const olData = await olRes.json();
+        if (olData.docs?.length > 0) {
+            let bestDoc = olData.docs[0];
+            if (yearRaw || pubRaw) {
+                const exact = olData.docs.find(d => 
+                    (yearRaw && (d.first_publish_year == yearRaw || (d.publish_year && d.publish_year.includes(parseInt(yearRaw))))) ||
+                    (pubRaw && d.publisher && d.publisher.some(p => p.toLowerCase().includes(pubRaw.toLowerCase())))
+                );
+                if (exact && exact.cover_i) bestDoc = exact;
+            }
+            if (bestDoc.cover_i) return `https://covers.openlibrary.org/b/id/${bestDoc.cover_i}-L.jpg`;
+        }
+    } catch(e) { console.warn("Books API err", e); }
+  }
+
+  // 3. GAMES (Foco na Plataforma cruzada com a Wikipedia)
+  else if (isGame) {
+      try {
+          // Utilizar API Pública e robusta da Wikipedia. 
+          // Ex: "Megaman PS4 cover"
+          const gameQuery = `${titleRaw} ${typeRaw} cover`;
+          const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(gameQuery)}&utf8=&format=json&origin=*`);
+          const wikiData = await wikiRes.json();
+          
+          if (wikiData.query?.search?.length > 0) {
+              const title = wikiData.query.search[0].title;
+              const imgRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
+              const imgData = await imgRes.json();
+              const pages = imgData.query?.pages;
+              if (pages) {
+                  const pageId = Object.keys(pages)[0];
+                  if (pages[pageId]?.thumbnail?.source) {
+                      return pages[pageId].thumbnail.source;
+                  }
+              }
+          }
+      } catch(e) { console.warn("Wikipedia Game err", e); }
+
+      // Fallback Apple App Store
+      try {
+          const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=software&limit=1`);
+          const itData = await itRes.json();
+          if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
+      } catch(e) {}
+  }
+
+  // 4. VÍDEO (Cruzar ano de lançamento no iTunes e Poster na Wikipedia)
+  else if (isVideo) {
+      try {
+          const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=5`);
+          const itData = await itRes.json();
+          if (itData.results?.length > 0) {
+              let bestMovie = itData.results[0];
+              if (yearRaw) {
+                  const exact = itData.results.find(m => m.releaseDate?.startsWith(yearRaw));
+                  if (exact) bestMovie = exact;
+              }
+              if (bestMovie?.artworkUrl100) return bestMovie.artworkUrl100.replace('100x100bb', '600x600bb');
+          }
+      } catch (e) {}
+
+      try {
+          const movieQuery = `${titleRaw} film poster`;
+          const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(movieQuery)}&utf8=&format=json&origin=*`);
+          const wikiData = await wikiRes.json();
+          if (wikiData.query?.search?.length > 0) {
+              const title = wikiData.query.search[0].title;
+              const imgRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
+              const imgData = await imgRes.json();
+              const pages = imgData.query?.pages;
+              if (pages) {
+                  const pageId = Object.keys(pages)[0];
+                  if (pages[pageId]?.thumbnail?.source) {
+                      return pages[pageId].thumbnail.source;
+                  }
+              }
+          }
+      } catch(e) {}
+  }
+
+  // Fallback Esmagador Final para qualquer coisa se tudo anterior falhar
   try {
-    if (isBook) {
-      const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${qTitle}+inauthor:${qAuthor}`);
-      const gbData = await gbRes.json();
-      if (gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) return gbData.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://");
-      
-      const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}`);
-      const olData = await olRes.json();
-      if (olData.docs?.[0]?.cover_i) return `https://covers.openlibrary.org/b/id/${olData.docs[0].cover_i}-L.jpg`;
-    } else if (isDisc && settings?.discogsToken) {
-      const dcRes = await fetch(`https://api.discogs.com/database/search?q=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&token=${settings.discogsToken}`);
-      const dcData = await dcRes.json();
-      if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) return dcData.results[0].cover_image;
-    } else {
-      let mediaType = "all";
-      if (isDisc) mediaType = "music";
-      else if ((activeCategories['Vídeo'] || []).includes(item.type)) mediaType = "movie";
-      else if ((activeCategories['Games'] || []).includes(item.type)) mediaType = "software";
-      
-      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent((item.title||'') + ' ' + (item.author_developer||''))}&media=${mediaType}&limit=1`);
+      const fallbackQuery = qAuthor ? `${qTitle}+${qAuthor}` : qTitle;
+      const itRes = await fetch(`https://itunes.apple.com/search?term=${fallbackQuery}&media=all&limit=1`);
       const itData = await itRes.json();
       if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
-    }
-  } catch (e) { console.warn("Erro ao buscar capa", e); }
+  } catch(e) {}
+
   return null;
 };
 
@@ -603,9 +754,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               case 'type': valA = (a.type||'').toLowerCase(); valB = (b.type||'').toLowerCase(); break;
               case 'added': default: valA = a.id || ''; valB = b.id || ''; break;
           }
-          if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-          if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-          return 0;
+          if (sortBy === 'year') {
+              return sortOrder === 'asc' ? valA - valB : valB - valA;
+          } else {
+              // localeCompare com 'pt-BR' entende que 'é' é como 'e', resolvendo o problema dos acentos
+              return sortOrder === 'asc' 
+                  ? String(valA).localeCompare(String(valB), 'pt-BR')
+                  : String(valB).localeCompare(String(valA), 'pt-BR');
+          }
       });
 
       return result;
@@ -892,44 +1048,38 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </div>
       )}
 
-      {/* --- NOVA ÁREA DE CABEÇALHO DA LISTA (MENOS DESTAQUE, 4 BLOCOS) --- */}
+      {/* --- NOVA ÁREA DE CABEÇALHO DA LISTA (COMPACTA, 4 BLOCOS NA MESMA LINHA) --- */}
       <div className={`sticky top-0 z-20 flex flex-col gap-2 pb-2 pt-1 border-b-[4px] ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'} mb-3 px-1`}>
           
-          {/* Fileira 1: Busca e Alfabeto */}
-          <div className="flex gap-2 w-full">
-              <div className="flex-1 relative">
+          <div className="flex gap-1 sm:gap-2 w-full">
+              <div className="flex-1 relative min-w-0">
                   <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                   <input 
                       type="text" 
                       placeholder="Buscar no acervo..." 
                       value={searchTerm}
                       onChange={e => { setSearchTerm(e.target.value); setPage(0); }}
-                      className={`w-full h-10 pl-8 pr-8 border-[3px] font-black text-[11px] uppercase tracking-wider outline-none transition-all focus:border-cyan-400 ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
+                      className={`w-full h-10 pl-8 pr-8 border-[3px] font-black text-[10px] sm:text-[11px] uppercase tracking-wider outline-none transition-all focus:border-cyan-400 ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
                   />
                   {searchTerm && (
                       <button onClick={() => {setSearchTerm(''); setPage(0);}} className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>
                   )}
               </div>
-              <select 
-                  value={alphaFilter} 
-                  onChange={e => { setAlphaFilter(e.target.value); setPage(0); }}
-                  className={`w-16 h-10 p-1 text-center text-[10px] font-black uppercase tracking-widest border-[3px] outline-none cursor-pointer ${darkMode ? 'border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
-              >
-                  {alphabetOptions.map(l => <option key={l} value={l}>{l === 'Todos' ? 'A-Z' : l}</option>)}
-              </select>
-          </div>
 
-          {/* Fileira 2: Filtros Avançados e Ordenação */}
-          <div className="flex gap-2 w-full">
               <button 
                   onClick={() => {
                       setPendingFilters(activeFilters); 
                       setIsFilterMenuOpen(true);
                   }}
-                  className={`flex-[2] h-10 px-2 flex items-center justify-center gap-2 border-[3px] font-black uppercase text-[9px] sm:text-[10px] tracking-widest transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none ${countActiveFilters > 0 ? (darkMode ? 'bg-pink-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-500 text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]')}`}
+                  className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[3px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
+                  title="Filtros Avançados"
               >
                   <FilterIcon className="w-4 h-4" /> 
-                  <span>Filtros {countActiveFilters > 0 ? `(${countActiveFilters})` : ''}</span>
+                  {countActiveFilters > 0 && (
+                      <div className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full border-[2px] flex items-center justify-center text-[8px] font-black ${darkMode ? 'bg-pink-600 border-gray-900 text-white' : 'bg-pink-500 border-white text-white'}`}>
+                          {countActiveFilters}
+                      </div>
+                  )}
               </button>
               
               <button 
@@ -938,11 +1088,22 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                       setPendingSortOrder(sortOrder);
                       setIsSortMenuOpen(true);
                   }}
-                  className={`flex-[3] h-10 px-2 flex items-center justify-center gap-2 border-[3px] font-black uppercase text-[9px] sm:text-[10px] tracking-widest transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
+                  className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[3px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
+                  title={`Ordenar: ${sortLabels[sortBy]}`}
               >
                   <ArrowUpDownIcon className="w-4 h-4" /> 
-                  <span className="truncate">{sortLabels[sortBy] || 'Ordenar'} ({sortOrder === 'asc' ? '↑' : '↓'})</span>
+                  <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-[2px] flex items-center justify-center text-[7px] font-black ${darkMode ? 'bg-cyan-700 border-gray-900 text-white' : 'bg-cyan-400 border-white text-black'}`}>
+                      {sortOrder === 'asc' ? '↑' : '↓'}
+                  </div>
               </button>
+
+              <select 
+                  value={alphaFilter} 
+                  onChange={e => { setAlphaFilter(e.target.value); setPage(0); }}
+                  className={`w-14 sm:w-16 h-10 p-0 text-center text-[10px] font-black uppercase tracking-widest border-[3px] outline-none cursor-pointer flex-shrink-0 ${darkMode ? 'border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
+              >
+                  {alphabetOptions.map(l => <option key={l} value={l}>{l === 'Todos' ? 'A-Z' : l}</option>)}
+              </select>
           </div>
           
           {/* Mostrador Rápido de Contagem */}
