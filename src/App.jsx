@@ -93,6 +93,18 @@ const generateId = (itemsArray = []) => {
   return `${timeBase}-${String(globalSequenceCache).padStart(4, '0')}`;
 };
 
+const parseItemIdToDate = (idStr) => {
+    if (!idStr) return new Date(0);
+    const parts = String(idStr).split('-');
+    if (parts.length < 2) return new Date(0);
+    const datePart = parts[0]; 
+    if (datePart.length !== 8) return new Date(0);
+    const y = parseInt(datePart.substring(0, 4), 10);
+    const m = parseInt(datePart.substring(4, 6), 10) - 1; 
+    const d = parseInt(datePart.substring(6, 8), 10);
+    return new Date(y, m, d);
+};
+
 const reindexCollection = (currentItems) => {
   const sorted = [...currentItems].sort((a, b) => {
      const timeA = String(a.id || '').substring(0, 18);
@@ -251,6 +263,8 @@ const ExternalLink = p => <Icon {...p} path={<><path d="M15 3h6v6"/><path d="M10
 const Star = ({ className = '', onClick, style }) => <Icon onClick={onClick} className={className} style={style} fill={className.includes('fill') ? 'currentColor' : 'none'} path={<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>} />;
 const ChevronLeft = p => <Icon {...p} path={<path d="m15 18-6-6 6-6"/>} />;
 const ChevronRight = p => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
+const ChevronDown = p => <Icon {...p} path={<path d="m6 9 6 6 6-6"/>} />;
+const ChevronUp = p => <Icon {...p} path={<path d="m18 15-6-6-6 6"/>} />;
 const Check = p => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
 const ScanLine = p => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
 const Clock = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
@@ -273,6 +287,9 @@ const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
+const ArrowDownAZ = p => <Icon {...p} path={<><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M20 8h-5"/><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"/><path d="M15 14h5l-5 6h5"/></>} />;
+const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
+
 
 // ==========================================
 // PWA ENGINE
@@ -321,16 +338,9 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   );
 };
 
-const MReadOnlyBox = ({ label, value, multiline, darkMode, emphasize=false }) => (
-  <div className="flex flex-col mb-3 w-full overflow-hidden">
-    <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
-    <div className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans ${emphasize ? 'text-lg text-pink-500 font-black tracking-widest text-center' : 'text-sm font-bold'} ${multiline ? 'min-h-[80px] whitespace-pre-wrap' : 'truncate'}`}>{value || '--'}</div>
-  </div>
-);
-
 const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly=false }) => (
   <div className="flex flex-col mb-3 w-full">
-    <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>
+    {label && <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>}
     {multiline ? (
       <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-amber-100 dark:focus:bg-amber-900'} transition-colors min-h-[80px] resize-none`} />
     ) : (
@@ -394,6 +404,41 @@ const syncDeleteToSheets = (deletedId, googleSheetsUrl) => {
 };
 
 // ==========================================
+// FUNÇÕES DE CLASSIFICAÇÃO PARA FILTROS
+// ==========================================
+const getAddedBucket = (itemDate) => {
+    const now = new Date();
+    const diffTime = Math.abs(now - itemDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 1) return 'Hoje';
+    if (diffDays <= 7) return 'Últimos 7 Dias';
+    if (diffDays <= 30) return 'Últimos 30 Dias';
+    if (itemDate.getFullYear() === now.getFullYear()) return 'Este Ano';
+    return 'Mais Antigos';
+};
+
+const getYearBucket = (yearVal) => {
+    const y = parseInt(yearVal, 10);
+    if (isNaN(y)) return 'Sem Ano';
+    if (y >= 2020) return 'Anos 2020';
+    if (y >= 2010) return 'Anos 2010';
+    if (y >= 2000) return 'Anos 2000';
+    if (y >= 1990) return 'Anos 1990';
+    return 'Antes de 1990';
+};
+
+const getPagesBucket = (pagesVal) => {
+    const p = parseInt(pagesVal, 10);
+    if (isNaN(p) || p === 0) return 'Nenhum/Não Informado';
+    if (p <= 50) return 'Mínimo (1-50)';
+    if (p <= 150) return 'Mínimo Médio (51-150)';
+    if (p <= 300) return 'Médio (151-300)';
+    if (p <= 600) return 'Máximo Médio (301-600)';
+    return 'Máximo (601+)';
+};
+
+// ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
 
@@ -407,8 +452,145 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 12; 
+
+  // --- NOVOS ESTADOS DE FILTRO ---
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('added'); // added, title, author, year
+  const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
+  const [alphaFilter, setAlphaFilter] = useState('Todos');
+  
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({ 'Adicionado': false, 'Suporte': true, 'Ano': false, 'Nota': false, 'Paginas': false });
+  
+  const [pendingFilters, setPendingFilters] = useState({ Adicionado: [], Suporte: [], Ano: [], Nota: [], Paginas: [] });
+  const [activeFilters, setActiveFilters] = useState({ Adicionado: [], Suporte: [], Ano: [], Nota: [], Paginas: [] });
+
   const pressTimer = useRef(null); 
   const isLongPress = useRef(false);
+
+  const toggleSection = (section) => {
+      setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const handleCheckboxChange = (category, value) => {
+      setPendingFilters(prev => {
+          const currentList = prev[category];
+          if (currentList.includes(value)) {
+              return { ...prev, [category]: currentList.filter(item => item !== value) };
+          } else {
+              return { ...prev, [category]: [...currentList, value] };
+          }
+      });
+  };
+
+  const applyFilters = () => {
+      setActiveFilters(pendingFilters);
+      setIsFilterMenuOpen(false);
+      setPage(0);
+  };
+
+  const clearFilters = () => {
+      const empty = { Adicionado: [], Suporte: [], Ano: [], Nota: [], Paginas: [] };
+      setPendingFilters(empty);
+      setActiveFilters(empty);
+      setPage(0);
+  };
+
+  // 1. Filtragem Base (Busca Textual e Alfabética)
+  const baseFilteredItems = useMemo(() => {
+      let result = items;
+      if (searchTerm.trim()) {
+          const lower = searchTerm.toLowerCase();
+          result = result.filter(i => 
+              (i.title || '').toLowerCase().includes(lower) || 
+              (i.author_developer || '').toLowerCase().includes(lower) ||
+              (i.publisher || '').toLowerCase().includes(lower) ||
+              (i.archive_code || '').toLowerCase().includes(lower)
+          );
+      }
+      if (alphaFilter !== 'Todos') {
+          if (alphaFilter === '#') {
+              result = result.filter(i => /^[^a-zA-Z]/.test((i.title || '').trim()));
+          } else {
+              result = result.filter(i => (i.title || '').trim().toUpperCase().startsWith(alphaFilter));
+          }
+      }
+      return result;
+  }, [items, searchTerm, alphaFilter]);
+
+  // 2. Cálculo de Contadores (baseados na busca base para mostrar o que está disponível)
+  const filterCounts = useMemo(() => {
+      const counts = {
+          Adicionado: {}, Suporte: {}, Ano: {}, Nota: {}, Paginas: {}
+      };
+      
+      baseFilteredItems.forEach(item => {
+          // Suporte
+          const type = item.type || 'Sem Tipo';
+          counts.Suporte[type] = (counts.Suporte[type] || 0) + 1;
+          
+          // Adicionado
+          const addedBucket = getAddedBucket(parseItemIdToDate(item.id));
+          counts.Adicionado[addedBucket] = (counts.Adicionado[addedBucket] || 0) + 1;
+          
+          // Ano
+          const yearBucket = getYearBucket(item.year);
+          counts.Ano[yearBucket] = (counts.Ano[yearBucket] || 0) + 1;
+          
+          // Nota
+          const nota = item.rating ? `${item.rating} Estrelas` : 'Sem Nota';
+          counts.Nota[nota] = (counts.Nota[nota] || 0) + 1;
+          
+          // Páginas/Faixas
+          const pageBucket = getPagesBucket(item.pages_or_time);
+          counts.Paginas[pageBucket] = (counts.Paginas[pageBucket] || 0) + 1;
+      });
+      return counts;
+  }, [baseFilteredItems]);
+
+  // Opções disponíveis baseadas na lista completa de itens para manter o menu consistente
+  const allAvailableTypes = useMemo(() => {
+      const types = new Set();
+      items.forEach(i => { if (i.type) types.add(i.type); });
+      return Array.from(types).sort();
+  }, [items]);
+
+  const FILTER_OPTIONS = {
+      Adicionado: ['Hoje', 'Últimos 7 Dias', 'Últimos 30 Dias', 'Este Ano', 'Mais Antigos'],
+      Suporte: allAvailableTypes,
+      Ano: ['Anos 2020', 'Anos 2010', 'Anos 2000', 'Anos 1990', 'Antes de 1990', 'Sem Ano'],
+      Nota: ['5 Estrelas', '4 Estrelas', '3 Estrelas', '2 Estrelas', '1 Estrelas', 'Sem Nota'],
+      Paginas: ['Mínimo (1-50)', 'Mínimo Médio (51-150)', 'Médio (151-300)', 'Máximo Médio (301-600)', 'Máximo (601+)', 'Nenhum/Não Informado']
+  };
+
+  // 3. Aplicação dos Filtros Ativos e Ordenação Final
+  const finalProcessedItems = useMemo(() => {
+      let result = baseFilteredItems;
+
+      // Filtros de Categoria Ativos
+      if (activeFilters.Suporte.length > 0) result = result.filter(i => activeFilters.Suporte.includes(i.type));
+      if (activeFilters.Adicionado.length > 0) result = result.filter(i => activeFilters.Adicionado.includes(getAddedBucket(parseItemIdToDate(i.id))));
+      if (activeFilters.Ano.length > 0) result = result.filter(i => activeFilters.Ano.includes(getYearBucket(i.year)));
+      if (activeFilters.Nota.length > 0) result = result.filter(i => activeFilters.Nota.includes(i.rating ? `${i.rating} Estrelas` : 'Sem Nota'));
+      if (activeFilters.Paginas.length > 0) result = result.filter(i => activeFilters.Paginas.includes(getPagesBucket(i.pages_or_time)));
+
+      // Ordenação
+      result = [...result].sort((a, b) => {
+          let valA, valB;
+          switch (sortBy) {
+              case 'title': valA = (a.title||'').toLowerCase(); valB = (b.title||'').toLowerCase(); break;
+              case 'author': valA = (a.author_developer||'').toLowerCase(); valB = (b.author_developer||'').toLowerCase(); break;
+              case 'year': valA = parseInt(a.year) || 0; valB = parseInt(b.year) || 0; break;
+              case 'added': default: valA = a.id || ''; valB = b.id || ''; break;
+          }
+          if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+          if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+          return 0;
+      });
+
+      return result;
+  }, [baseFilteredItems, activeFilters, sortBy, sortOrder]);
+
 
   const handleItemPressStart = (item) => {
     isLongPress.current = false;
@@ -418,10 +600,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const handleItemClick = (item) => { if (!isLongPress.current) handleSelect(item); };
   
   const paginatedItems = useMemo(() => {
-    return [...items].reverse().slice(page * itemsPerPage, (page + 1) * itemsPerPage);
-  }, [items, page, itemsPerPage]);
+    return finalProcessedItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  }, [finalProcessedItems, page, itemsPerPage]);
 
-  const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
+  const totalPages = Math.ceil(finalProcessedItems.length / itemsPerPage) || 1;
+  const alphabetOptions = ['Todos', '#', ...Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i))];
 
   const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, r) => { 
@@ -431,6 +614,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i)); setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success'); syncItemToSheets(editedItem, settings?.googleSheetsUrl);
   };
+  
   const confirmDelete = async () => {
     if (itemToDelete) { 
        const updatedList = items.filter(item => item.id !== itemToDelete);
@@ -463,6 +647,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
        }
     }
   };
+
   const fetchWikiInfo = async () => {
     const apiKey = settings?.geminiApiKey || ""; 
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
@@ -481,6 +666,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     } finally { setLoadingWiki(false); }
   };
 
+  const countActiveFilters = Object.values(activeFilters).reduce((acc, curr) => acc + curr.length, 0);
+
+  // RENDERIZAÇÃO DE DETALHES DO ITEM (EDICAO)
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
     const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
@@ -498,7 +686,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </div>
           <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>Salvar</button>
         </MContainer>
-        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
+        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10 scrollbar-hide">
           <div className="flex gap-4 flex-col md:flex-row md:items-start">
             <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0`} colorClass={`border-[4px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
               {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 md:w-16 md:h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
@@ -565,8 +753,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     );
   }
 
+  // RENDERIZAÇÃO DA LISTA PRINCIPAL
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem?.title}"?`} onConfirm={confirmDelete} onCancel={() => {setItemToDelete(null); setEditedItem(null);}} darkMode={darkMode} confirmText="Apagar" />
       {contextMenuItem && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setContextMenuItem(null)}>
@@ -582,8 +771,136 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto pb-20 px-1 pt-2">
-        {paginatedItems.length === 0 ? <div className="text-center p-10 opacity-50 text-sm font-sans font-black uppercase tracking-widest">Nenhum item.</div> : (
+      {/* --- NOVA ÁREA DE FILTROS (HEADER) --- */}
+      <div className={`sticky top-0 z-20 flex flex-col gap-2 pb-2 pt-1 border-b-[4px] ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'} mb-3`}>
+          {/* Busca e Botão de Filtros */}
+          <div className="flex gap-2 w-full px-1">
+              <div className="flex-1 relative">
+                  <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <input 
+                      type="text" 
+                      placeholder="Buscar em todo acervo..." 
+                      value={searchTerm}
+                      onChange={e => { setSearchTerm(e.target.value); setPage(0); }}
+                      className={`w-full h-12 pl-10 pr-3 border-[4px] font-black text-sm uppercase tracking-wider outline-none transition-all focus:border-cyan-400 ${darkMode ? 'bg-gray-800 text-white border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'}`}
+                  />
+                  {searchTerm && (
+                      <button onClick={() => {setSearchTerm(''); setPage(0);}} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>
+                  )}
+              </div>
+              <button 
+                  onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+                  className={`flex-shrink-0 h-12 px-3 flex items-center justify-center gap-2 border-[4px] font-black uppercase text-[10px] tracking-widest transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${countActiveFilters > 0 ? (darkMode ? 'bg-pink-800 text-white border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-pink-500 text-black border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 text-white border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]')}`}
+              >
+                  <FilterIcon className="w-5 h-5" /> 
+                  <span className="hidden sm:inline">Filtros {countActiveFilters > 0 ? `(${countActiveFilters})` : ''}</span>
+              </button>
+          </div>
+
+          {/* Ordenação e Alfabeto */}
+          <div className="flex gap-2 w-full px-1">
+              <div className={`flex flex-1 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white'}`}>
+                  <select 
+                      value={sortBy} 
+                      onChange={e => { setSortBy(e.target.value); setPage(0); }}
+                      className={`flex-1 p-2 h-10 text-[9px] sm:text-[10px] font-black uppercase tracking-widest outline-none bg-transparent cursor-pointer ${darkMode ? 'text-white' : 'text-black'}`}
+                  >
+                      <option value="added">Adição (Recentes)</option>
+                      <option value="title">Título</option>
+                      <option value="author">Artista / Autor</option>
+                      <option value="year">Ano de Lançamento</option>
+                  </select>
+                  <button 
+                      onClick={() => { setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); setPage(0); }}
+                      className={`w-10 h-10 border-l-[4px] flex items-center justify-center active:bg-cyan-100 dark:active:bg-cyan-900 transition-colors ${darkMode ? 'border-gray-300' : 'border-black'}`}
+                      title={`Ordem ${sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}`}
+                  >
+                      {sortOrder === 'asc' ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  </button>
+              </div>
+              
+              <select 
+                  value={alphaFilter} 
+                  onChange={e => { setAlphaFilter(e.target.value); setPage(0); }}
+                  className={`w-16 sm:w-20 h-10 p-2 text-center text-[10px] font-black uppercase tracking-widest border-[4px] outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
+              >
+                  {alphabetOptions.map(l => <option key={l} value={l}>{l === 'Todos' ? 'A-Z' : l}</option>)}
+              </select>
+          </div>
+          
+          {/* Mostrador Rápido de Contagem */}
+          <div className="px-2 text-[9px] font-black uppercase tracking-widest opacity-60">
+              Mostrando {finalProcessedItems.length} de {items.length} itens {countActiveFilters > 0 ? '(Filtros Ativos)' : ''}
+          </div>
+      </div>
+
+      {/* PAINEL DE FILTROS AVANÇADOS (ACCORDION) */}
+      {isFilterMenuOpen && (
+          <div className={`absolute top-28 left-1 right-1 z-30 border-[4px] max-h-[60vh] flex flex-col shadow-2xl animate-in slide-in-from-top-2 ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
+              <div className={`p-3 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
+                  <span className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros Avançados</span>
+                  <button onClick={() => setIsFilterMenuOpen(false)} className="active:scale-90 p-1"><XIcon className="w-5 h-5" /></button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto scrollbar-hide">
+                  {Object.entries(FILTER_OPTIONS).map(([category, options]) => {
+                      const isOpen = expandedSections[category];
+                      const activeCount = pendingFilters[category].length;
+                      return (
+                          <div key={category} className={`border-b-[4px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                              <button 
+                                  onClick={() => toggleSection(category)}
+                                  className={`w-full p-3 flex justify-between items-center transition-colors ${isOpen ? (darkMode ? 'bg-cyan-900/30' : 'bg-cyan-50') : ''}`}
+                              >
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-[10px] font-black uppercase tracking-widest">{category}</span>
+                                      {activeCount > 0 && <span className={`px-1.5 py-0.5 text-[8px] font-black rounded-sm ${darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-white'}`}>{activeCount}</span>}
+                                  </div>
+                                  {isOpen ? <ChevronUp className="w-4 h-4 opacity-50" /> : <ChevronDown className="w-4 h-4 opacity-50" />}
+                              </button>
+                              
+                              {isOpen && (
+                                  <div className={`p-3 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2`}>
+                                      {options.map(option => {
+                                          const isChecked = pendingFilters[category].includes(option);
+                                          const count = filterCounts[category]?.[option] || 0;
+                                          return (
+                                              <label key={option} className={`flex items-center gap-3 p-2 cursor-pointer transition-colors active:scale-95 border-[3px] ${isChecked ? (darkMode ? 'border-cyan-400 bg-cyan-900/40' : 'border-cyan-500 bg-cyan-50') : (darkMode ? 'border-gray-700 hover:border-gray-500' : 'border-gray-200 hover:border-gray-400')}`}>
+                                                  <div className={`w-4 h-4 border-[3px] flex items-center justify-center flex-shrink-0 ${isChecked ? (darkMode ? 'bg-cyan-400 border-cyan-400' : 'bg-cyan-500 border-cyan-500') : (darkMode ? 'border-gray-500' : 'border-gray-400')}`}>
+                                                      {isChecked && <Check className="w-3 h-3 text-black dark:text-white" />}
+                                                  </div>
+                                                  <div className="flex-1 flex justify-between items-center min-w-0">
+                                                      <span className={`text-[9px] font-black uppercase tracking-wider truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{option}</span>
+                                                      <span className={`text-[8px] font-bold px-1.5 py-0.5 ml-2 rounded-sm ${count > 0 ? (darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600') : (darkMode ? 'bg-transparent text-gray-600' : 'bg-transparent text-gray-400')}`}>
+                                                          {count}
+                                                      </span>
+                                                  </div>
+                                              </label>
+                                          );
+                                      })}
+                                  </div>
+                              )}
+                          </div>
+                      );
+                  })}
+              </div>
+              
+              <div className={`p-3 border-t-[4px] flex gap-2 ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
+                  <MButton onClick={clearFilters} variant="white" darkMode={darkMode} className="flex-1 py-3"><Trash2 className="w-4 h-4" /> Limpar</MButton>
+                  <MButton onClick={applyFilters} variant="pink" darkMode={darkMode} className="flex-[2] py-3"><Check className="w-4 h-4" /> Aplicar Filtros</MButton>
+              </div>
+          </div>
+      )}
+
+      {/* ÁREA DA LISTA DE ITENS */}
+      <div className="flex-1 overflow-y-auto pb-20 px-1 pt-1 scrollbar-hide">
+        {paginatedItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-10 opacity-50 text-center">
+                <Ghost className="w-12 h-12 mb-4" />
+                <span className="text-sm font-sans font-black uppercase tracking-widest">Nenhum item encontrado.</span>
+                <span className="text-[10px] font-bold mt-2">Tente ajustar seus filtros ou busca.</span>
+            </div>
+        ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {paginatedItems.map((item, idx) => (
               <div key={item.id} className="flex flex-row min-h-[140px] cursor-pointer active:scale-[0.98] transition-transform hover:-translate-y-1 hover:shadow-lg" onContextMenu={e => e.preventDefault()} onTouchStart={() => handleItemPressStart(item)} onTouchEnd={handleItemPressEnd} onTouchMove={handleItemPressEnd} onMouseDown={() => handleItemPressStart(item)} onMouseUp={handleItemPressEnd} onMouseLeave={handleItemPressEnd} onClick={() => handleItemClick(item)}>
@@ -631,9 +948,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         )}
         {totalPages > 1 && (
           <div className="flex justify-between items-center mt-6 mb-4 max-w-lg mx-auto">
-            <MButton darkMode={darkMode} onClick={() => setPage(Math.max(0, page - 1))} className="w-12 h-10" disabled={page === 0}><ChevronLeft className="w-5 h-5" /></MButton>
+            <MButton darkMode={darkMode} onClick={() => { setPage(Math.max(0, page - 1)); document.querySelector('.overflow-y-auto').scrollTo(0,0); }} className="w-12 h-10" disabled={page === 0}><ChevronLeft className="w-5 h-5" /></MButton>
             <div className="font-sans text-[10px] font-black uppercase tracking-widest">Pág {page + 1} / {totalPages}</div>
-            <MButton darkMode={darkMode} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} className="w-12 h-10" disabled={page === totalPages - 1}><ChevronRight className="w-5 h-5" /></MButton>
+            <MButton darkMode={darkMode} onClick={() => { setPage(Math.min(totalPages - 1, page + 1)); document.querySelector('.overflow-y-auto').scrollTo(0,0); }} className="w-12 h-10" disabled={page === totalPages - 1}><ChevronRight className="w-5 h-5" /></MButton>
           </div>
         )}
       </div>
@@ -1527,12 +1844,13 @@ export default function App() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden p-3 lg:p-6 relative z-0">
+          <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative z-0 flex flex-col">
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
+            
             {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
-            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
-            {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
-            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
+            {activeTab === 'add' && <div className="p-3 overflow-y-auto w-full"><AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} /></div>}
+            {activeTab === 'dashboard' && <div className="p-3 overflow-y-auto w-full"><DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} /></div>}
+            {activeTab === 'settings' && <div className="p-3 overflow-y-auto w-full"><SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} /></div>}
           </main>
 
           <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
