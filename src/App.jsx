@@ -230,12 +230,6 @@ const processCompletedGamesCSV = (csvText) => {
   return parsed;
 };
 
-// Export Html Widget
-const getBloggerHTMLString = (items, completedGames, activeCategories, sheetUrl) => {
-  const safeItems = JSON.stringify(items).replace(/</g, '\\u003c'); const safeCompleted = JSON.stringify(completedGames).replace(/</g, '\\u003c'); const safeCategories = JSON.stringify(activeCategories).replace(/</g, '\\u003c');
-  return `<!-- INÍCIO DO WIDGET MEMORABILIA --><div id="m-widget"><style>#m-widget{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:1024px;margin:0 auto;color:#000;background:transparent;padding:10px;line-height:1.5}#m-widget *{box-sizing:border-box}#m-widget .m-box{border:4px solid #000;box-shadow:4px 4px 0px #000;background-color:#fff}#m-widget .m-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;padding:15px 20px;margin-bottom:20px}#m-widget .m-title{font-size:24px;font-weight:900;text-transform:uppercase;margin:0;line-height:1;letter-spacing:-1px}#m-widget .m-subtitle{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#ec4899;margin-top:5px;display:block}#m-widget .m-btn{padding:8px 16px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;border:4px solid #000;box-shadow:4px 4px 0px #000;cursor:pointer;transition:all 0.1s}#m-widget .m-btn:active,#m-widget .m-btn.active{transform:translate(4px,4px);box-shadow:none}#m-widget .m-btn-cyan{background-color:#22d3ee;color:#000}#m-widget .m-btn-amber{background-color:#fbbf24;color:#000}#m-widget .m-btn-inactive{opacity:0.5;background-color:#f3f4f6}#m-widget .m-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:15px}#m-widget .m-item{display:flex;height:130px;cursor:default}#m-widget .m-color-bar{width:20px;border:4px solid #000;border-right:none}#m-widget .m-item-content{flex:1;padding:10px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}#m-widget .m-meta{font-size:9px;font-weight:900;text-transform:uppercase;opacity:0.6;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#m-widget .m-item-title{font-size:14px;font-weight:900;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0}#m-widget .m-author{font-size:10px;font-weight:bold;opacity:0.8;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}#m-widget .m-stars{color:#f59e0b;font-size:12px;font-weight:900;letter-spacing:2px}#m-widget .m-status{font-size:8px;font-weight:900;text-transform:uppercase;background:#f3f4f6;padding:2px 4px;border:2px solid #000}#m-widget .m-filters{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap}#m-widget .m-input{flex:1;min-width:200px;padding:12px;font-size:12px;font-weight:bold;outline:none}#m-widget .m-select{padding:12px;font-size:10px;font-weight:900;text-transform:uppercase;outline:none;background:#fff;cursor:pointer}#m-widget .m-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:15px}#m-widget .m-stat-box{padding:15px;text-align:center}#m-widget .m-stat-val{font-size:32px;font-weight:900;margin-bottom:5px;line-height:1}#m-widget .m-stat-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px}#m-widget .m-z-item{padding:10px;display:flex;justify-content:space-between;transition:transform 0.2s}#m-widget .m-z-item:hover{transform:translateY(-4px);box-shadow:4px 8px 0px #000}#m-widget .m-hidden{display:none !important}</style><div class="m-header m-box"><div><h1 class="m-title">Memorabilia</h1><span class="m-subtitle">Coleção Pública</span></div><div style="display:flex;gap:10px"><button id="btn-acervo" class="m-btn m-btn-cyan active">Acervo (<span id="count-acervo">0</span>)</button><button id="btn-zerados" class="m-btn m-btn-amber m-btn-inactive">Zerados (<span id="count-zerados">0</span>)</button></div></div><div id="m-loader" style="text-align:center;padding:40px;font-size:10px;font-weight:900;text-transform:uppercase;opacity:0.5">Carregando dados...</div><div id="view-acervo" class="m-hidden"><div class="m-filters"><input type="text" id="search-acervo" class="m-input m-box" placeholder="Buscar título ou autor..."><select id="filter-type" class="m-select m-box"><option value="Todos">Todas Categorias</option></select></div><div id="grid-acervo" class="m-grid"></div></div><div id="view-zerados" class="m-hidden"><div class="m-stats-grid"><div class="m-stat-box m-box" style="background-color:#22d3ee"><div class="m-stat-val" id="stat-jogos">0</div><div class="m-stat-label">Jogos Zerados</div></div><div class="m-stat-box m-box" style="background-color:#ec4899;color:#fff"><div class="m-stat-val" id="stat-horas">0h</div><div class="m-stat-label">Tempo Total</div></div><div class="m-stat-box m-box" style="background-color:#fbbf24"><div class="m-stat-val" id="stat-nota">0</div><div class="m-stat-label">Média Geral</div></div></div><div id="grid-zerados" class="m-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))"></div></div><script>(function(){const STATIC_ITEMS=${safeItems};const STATIC_COMPLETED=${safeCompleted};const CATEGORIES=${safeCategories};const SHEET_URL="${sheetUrl||''}";let items=STATIC_ITEMS;let completed=STATIC_COMPLETED;const el=id=>document.getElementById(id);const getColors=idx=>{const c=['#ec4899','#22d3ee','#fbbf24','#fff'];return c[idx%c.length]};const initUI=()=>{el('m-loader').classList.add('m-hidden');el('count-acervo').innerText=items.length;el('count-zerados').innerText=completed.length;el('stat-jogos').innerText=completed.length;const horas=completed.reduce((acc,g)=>acc+(Number(g.tempoHoras)||0),0).toFixed(1);el('stat-horas').innerText=horas+'h';const notas=completed.filter(g=>(Number(g.nota)||0)>0);const media=notas.length>0?(notas.reduce((a,b)=>a+(Number(b.nota)||0),0)/notas.length).toFixed(1):0;el('stat-nota').innerText='★ '+media;const filterType=el('filter-type');Object.keys(CATEGORIES).forEach(cat=>{const grp=document.createElement('optgroup');grp.label="--- "+cat.toUpperCase()+" ---";CATEGORIES[cat].forEach(sub=>{const opt=document.createElement('option');opt.value=sub;opt.textContent=sub;grp.appendChild(opt)});filterType.appendChild(grp)});renderAcervo();renderZerados();switchView('acervo');el('search-acervo').addEventListener('input',renderAcervo);filterType.addEventListener('change',renderAcervo);el('btn-acervo').addEventListener('click',()=>switchView('acervo'));el('btn-zerados').addEventListener('click',()=>switchView('zerados'))};const switchView=v=>{if(v==='acervo'){el('view-acervo').classList.remove('m-hidden');el('view-zerados').classList.add('m-hidden');el('btn-acervo').classList.add('active');el('btn-acervo').classList.remove('m-btn-inactive');el('btn-zerados').classList.remove('active');el('btn-zerados').classList.add('m-btn-inactive')}else{el('view-zerados').classList.remove('m-hidden');el('view-acervo').classList.add('m-hidden');el('btn-zerados').classList.add('active');el('btn-zerados').classList.remove('m-btn-inactive');el('btn-acervo').classList.remove('active');el('btn-acervo').classList.add('m-btn-inactive')}};const renderAcervo=()=>{const q=el('search-acervo').value.toLowerCase();const t=el('filter-type').value;const filtered=items.filter(i=>{const mQ=(i.title||'').toLowerCase().includes(q)||(i.author_developer||'').toLowerCase().includes(q);const mT=t==='Todos'||i.type===t;return mQ&&mT});const grid=el('grid-acervo');grid.innerHTML='';if(filtered.length===0){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;font-size:10px;font-weight:bold;opacity:0.5;">Nenhum item.</div>';return}filtered.forEach((item,idx)=>{const div=document.createElement('div');div.className='m-item';const r=item.rating||0;const stars='★'.repeat(r)+'☆'.repeat(5-r);const statHTML=item.status?\`<div class="m-status">\${item.status}</div>\`:'';div.innerHTML=\`<div class="m-color-bar" style="background-color:\${getColors(idx)}"></div><div class="m-item-content m-box" style="border-left:none;"><div><div class="m-meta">\${item.type||'--'} • \${item.year||'--'}</div><h3 class="m-item-title">\${item.title||'S/ Título'}</h3><div class="m-author">\${item.author_developer||'--'}</div></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px;"><div class="m-stars">\${stars}</div>\${statHTML}</div></div>\`;grid.appendChild(div)})};const renderZerados=()=>{const grid=el('grid-zerados');grid.innerHTML='';if(completed.length===0)return;completed.forEach(g=>{const div=document.createElement('div');div.className='m-z-item m-box';div.innerHTML=\`<div style="flex:1;overflow:hidden;padding-right:10px;"><div style="font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">\${g.nome}</div><div style="font-size:9px;font-weight:bold;text-transform:uppercase;opacity:0.7;margin:4px 0;">\${g.console} • \${g.genero}</div><div style="font-size:8px;font-weight:900;text-transform:uppercase;color:#0891b2;">\${g.suporte}</div></div><div style="border-left:3px solid #000;padding-left:10px;text-align:right;min-width:60px;"><div style="font-size:12px;font-weight:900;color:#f59e0b;">★ \${g.nota}/10</div><div style="font-size:8px;font-weight:bold;opacity:0.7;margin-top:5px;">\${Number(g.tempoHoras||0).toFixed(1)}h</div></div>\`;grid.appendChild(div)})};if(SHEET_URL&&SHEET_URL.startsWith('http')){fetch(SHEET_URL).then(r=>r.json()).then(data=>{if(Array.isArray(data))items=data;initUI()}).catch(e=>{console.warn('Erro API',e);initUI()})}else{initUI()}})();</script></div><!-- FIM DO WIDGET MEMORABILIA -->`;
-};
-
 // ==========================================
 // ÍCONES NATIVOS
 // ==========================================
@@ -408,35 +402,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [page, setPage] = useState(0);
   
-  // Estados Compactados para Filtros
-  const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('Todos');
-  const [activeSubtype, setActiveSubtype] = useState('Todos');
-  const [activeLetter, setActiveLetter] = useState('Todos');
-  const [sortBy, setSortBy] = useState('id');
-  const [sortOrder, setSortOrder] = useState('desc');
-  
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 12; 
-  const pressTimer = useRef(null); const isLongPress = useRef(false);
-
-  const handleFilterUpdate = (newSearch, newCat, newSub, newLetter, explicitSort = false, b = sortBy, o = sortOrder) => {
-      setSearch(newSearch); setActiveCategory(newCat); setActiveSubtype(newSub); setActiveLetter(newLetter);
-      setPage(0);
-      
-      if (!explicitSort) {
-          const isFiltering = newSearch !== '' || newCat !== 'Todos' || newSub !== 'Todos' || newLetter !== 'Todos';
-          if (isFiltering && sortBy === 'id') {
-              setSortBy('author_developer');
-              setSortOrder('asc');
-          } else if (!isFiltering && sortBy === 'author_developer' && search === '' && activeLetter === 'Todos') {
-              // Mantém as preferências
-          }
-      } else {
-          setSortBy(b); setSortOrder(o);
-      }
-  };
+  const pressTimer = useRef(null); 
+  const isLongPress = useRef(false);
 
   const handleItemPressStart = (item) => {
     isLongPress.current = false;
@@ -445,55 +415,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const handleItemPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
   const handleItemClick = (item) => { if (!isLongPress.current) handleSelect(item); };
   
-  const filteredItems = useMemo(() => {
-    let result = items.map((item, index) => ({ ...item, _originalIndex: index }));
-    result = result.filter(item => {
-      const q = search.toLowerCase();
-      const matchQ = String(item.title || '').toLowerCase().includes(q) || String(item.author_developer || '').toLowerCase().includes(q);
-      let matchC = true;
-      if (activeCategory !== 'Todos') matchC = activeSubtype === 'Todos' ? (activeCategories[activeCategory] || []).includes(item.type || '') : (item.type || '') === activeSubtype;
-      if (activeLetter !== 'Todos' && (sortBy === 'author_developer' || sortBy === 'title')) {
-          let str = sortBy === 'author_developer' ? String(item.author_developer || '') : String(item.title || '');
-          if (sortBy === 'author_developer' && isVariousArtists(str)) str = String(item.title || '');
-          const firstChar = getSortableName(str).charAt(0).toUpperCase();
-          matchC = matchC && (activeLetter === '#' ? /^[0-9]/.test(firstChar) : firstChar.normalize("NFD").replace(/[\u0300-\u036f]/g, "") === activeLetter);
-      }
-      return matchQ && matchC;
-    });
+  // Lista padrão: mais recentes (últimos adicionados) aparecem primeiro
+  const paginatedItems = useMemo(() => {
+    return [...items].reverse().slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  }, [items, page, itemsPerPage]);
 
-    result.sort((a, b) => {
-      if (sortBy === 'id') return sortOrder === 'asc' ? a._originalIndex - b._originalIndex : b._originalIndex - a._originalIndex;
-      let valA = a[sortBy] || ''; let valB = b[sortBy] || '';
-      
-      if (['year', 'rating', 'pages_or_time'].includes(sortBy)) {
-        return sortOrder === 'asc' ? (parseFloat(valA)||0) - (parseFloat(valB)||0) : (parseFloat(valB)||0) - (parseFloat(valA)||0);
-      }
-      
-      if (sortBy === 'author_developer') {
-         valA = getSortableName(isVariousArtists(valA) ? a.title : valA);
-         valB = getSortableName(isVariousArtists(valB) ? b.title : valB);
-      } else if (sortBy === 'title') {
-         valA = getSortableName(valA); valB = getSortableName(valB);
-      } else {
-         valA = String(valA); valB = String(valB);
-      }
-      
-      const comp = valA.localeCompare(valB, 'pt-BR', { sensitivity: 'base', numeric: true });
-      if (comp !== 0) return sortOrder === 'asc' ? comp : -comp;
-      
-      if (sortBy === 'author_developer') {
-         const yA = getValidYear(a.year) || 0; const yB = getValidYear(b.year) || 0;
-         if (yA !== yB) return sortOrder === 'asc' ? yA - yB : yB - yA; 
-         const comp2 = String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR', { sensitivity: 'base', numeric: true });
-         return sortOrder === 'asc' ? comp2 : -comp2;
-      }
-      return 0;
-    });
-    return result;
-  }, [items, search, activeCategory, activeSubtype, activeLetter, sortBy, sortOrder, activeCategories]);
-
-  const paginatedItems = filteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
+  const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
 
   const handleSelect = (item) => { setSelectedItem(item); setEditedItem({ ...item }); };
   const updateRatingList = (id, r) => { 
@@ -624,80 +551,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </MContainer>
         </div>
       )}
-      
-      {/* HEADER DE FILTROS COMPACTADOS */}
-      <MContainer darkMode={darkMode} className="p-2 mb-2 flex flex-col gap-2 sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-        <div className="flex flex-wrap gap-2 w-full items-center">
-          
-          {/* Caixa de Pesquisa Reduzida */}
-          <div className="relative w-32 md:w-48 flex-shrink-0">
-            <Search className={`absolute left-2 top-[6px] h-3.5 w-3.5 ${darkMode ? 'text-gray-400' : 'text-black'}`} />
-            <input type="text" placeholder="Buscar..." value={search} onChange={(e) => handleFilterUpdate(e.target.value, activeCategory, activeSubtype, activeLetter)} className={`w-full py-1.5 px-2 pl-7 border-[3px] outline-none font-sans text-[10px] font-black uppercase tracking-widest ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`} />
-          </div>
 
-          {/* Seletor Compacto de Categorias */}
-          <select 
-             value={activeSubtype !== 'Todos' ? activeSubtype : (activeCategory !== 'Todos' ? `cat:${activeCategory}` : 'Todos')}
-             onChange={(e) => {
-                 const val = e.target.value;
-                 let nCat = 'Todos', nSub = 'Todos';
-                 if (val === 'Todos') { /* Mantém Todos */ }
-                 else if (val.startsWith('cat:')) { nCat = val.split(':')[1]; }
-                 else {
-                     for (const [c, subs] of Object.entries(activeCategories)) {
-                         if (subs.includes(val)) { nCat = c; nSub = val; break; }
-                     }
-                 }
-                 handleFilterUpdate(search, nCat, nSub, activeLetter);
-             }}
-             className={`flex-1 min-w-[120px] py-1.5 px-2 border-[3px] outline-none font-sans text-[9px] font-black uppercase tracking-widest cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
-          >
-             <option value="Todos">Filtro: Acervo Completo</option>
-             {Object.entries(activeCategories || {}).map(([cat, subs]) => (
-                 <optgroup key={cat} label={`--- ${cat.toUpperCase()} ---`}>
-                     <option value={`cat:${cat}`}>▸ Todos de {cat}</option>
-                     {(subs || []).map(sub => <option key={sub} value={sub}>• {sub}</option>)}
-                 </optgroup>
-             ))}
-          </select>
-
-          {/* Seletor Combinado de Ordenação */}
-          <select 
-            value={`${sortBy}-${sortOrder}`} 
-            onChange={e => {
-              const [b, o] = e.target.value.split('-');
-              handleFilterUpdate(search, activeCategory, activeSubtype, activeLetter, true, b, o);
-            }} 
-            className={`flex-1 min-w-[120px] py-1.5 px-2 border-[3px] outline-none font-sans text-[9px] font-black uppercase tracking-widest cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
-          >
-              <option value="id-desc">Ordem: Adição (Novos)</option>
-              <option value="id-asc">Ordem: Adição (Antigos)</option>
-              <option value="author_developer-asc">Ordem: Autor (A-Z)</option>
-              <option value="author_developer-desc">Ordem: Autor (Z-A)</option>
-              <option value="title-asc">Ordem: Título (A-Z)</option>
-              <option value="year-desc">Ordem: Lançamento (Novos)</option>
-              <option value="year-asc">Ordem: Lançamento (Antigos)</option>
-              <option value="rating-desc">Ordem: Nota (Maior)</option>
-              <option value="pages_or_time-desc">Ordem: Tamanho (Maior)</option>
-          </select>
-
-          {/* Seletor do ABCdário */}
-          {(sortBy === 'title' || sortBy === 'author_developer') && (
-            <select 
-              value={activeLetter} 
-              onChange={e => handleFilterUpdate(search, activeCategory, activeSubtype, e.target.value)} 
-              className={`w-full md:w-auto flex-shrink-0 py-1.5 px-2 border-[3px] outline-none font-sans text-[9px] font-black uppercase tracking-widest cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-amber-700 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-amber-400 text-black'}`}
-            >
-               <option value="Todos">Letra: Todas</option>
-               <option value="#">Letra: # (Números)</option>
-               {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => <option key={l} value={l}>Letra: {l}</option>)}
-            </select>
-          )}
-
-        </div>
-      </MContainer>
-
-      <div className="flex-1 overflow-y-auto pb-20 px-1">
+      <div className="flex-1 overflow-y-auto pb-20 px-1 pt-2">
         {paginatedItems.length === 0 ? <div className="text-center p-10 opacity-50 text-sm font-sans font-black uppercase tracking-widest">Nenhum item.</div> : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {paginatedItems.map((item, idx) => (
@@ -1325,13 +1180,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     setNewSubclass({ parent: 'Livros', name: '', code: '' }); playChipBeep('save'); onShowToast('success');
   };
 
-  const handleDownloadBlogger = () => {
-    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([getBloggerHTMLString(items, completedGames, activeCategories, settings?.googleSheetsUrl)], { type: 'text/html;charset=utf-8;' })); link.download = `Acervo_Web.html`; link.click(); playChipBeep('save'); onShowToast('success');
-  };
-  const handleCopyBlogger = () => {
-    const textArea = document.createElement("textarea"); textArea.value = getBloggerHTMLString(items, completedGames, activeCategories, settings?.googleSheetsUrl); textArea.style.position = "fixed"; document.body.appendChild(textArea); textArea.focus(); textArea.select();
-    try { document.execCommand('copy'); playChipBeep('save'); onShowToast('success'); } catch (e) { playChipBeep('error'); onShowToast('error'); } document.body.removeChild(textArea);
-  };
   const toggleSection = (s) => setOpenSection(openSection === s ? null : s);
 
   return (
@@ -1405,12 +1253,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           <div className="p-4 flex flex-col gap-3">
             <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-amber-900/50 text-amber-200' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-amber-100 text-amber-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar CSV<input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} /></label>
           </div>
-        )}
-      </MContainer>
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
-        <button onClick={() => toggleSection('blogger')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'blogger' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Share className="w-4 h-4" /> Exportar Web</span><span className="text-lg font-mono">{openSection === 'blogger' ? '−' : '+'}</span></button>
-        {openSection === 'blogger' && (
-          <div className="p-4 flex gap-2 flex-col sm:flex-row"><MButton darkMode={darkMode} onClick={handleDownloadBlogger} variant="light-cyan" className="flex-1 py-3"><Download className="w-4 h-4" /> Baixar HTML</MButton><MButton darkMode={darkMode} onClick={handleCopyBlogger} variant="white" className="flex-1 py-3 border-black"><CopyIcon className="w-4 h-4" /> Copiar Código</MButton></div>
         )}
       </MContainer>
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-indigo-900/20 text-white' : 'bg-indigo-50 text-black'}>
@@ -1648,9 +1490,9 @@ export default function App() {
     if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-pink-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
     statsArr.push(<span key="5" className={`text-amber-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
     statsArr.push(<span key="6" className={`text-cyan-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
-    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')} ({mostExp.nome})</span>);
-    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')} ({cheapest.nome})</span>);
-    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESCONTO: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF ({biggestDisc.nome})</span>);
+    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')}</span>);
+    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')}</span>);
+    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESC.: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
