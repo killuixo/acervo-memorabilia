@@ -287,8 +287,8 @@ const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
-const ArrowDownAZ = p => <Icon {...p} path={<><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M20 8h-5"/><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"/><path d="M15 14h5l-5 6h5"/></>} />;
 const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
+const ArrowUpDownIcon = p => <Icon {...p} path={<><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></>} />;
 
 
 // ==========================================
@@ -347,6 +347,15 @@ const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "
       <input readOnly={readOnly} type={type} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-cyan-100 dark:focus:bg-cyan-900'} transition-colors`} />
     )}
   </div>
+);
+
+const MRadio = ({ label, checked, onChange, darkMode }) => (
+    <label className={`flex items-center justify-between p-3 cursor-pointer border-b-[2px] transition-colors active:bg-black/5 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`} onClick={onChange}>
+       <span className="text-[11px] font-black uppercase tracking-widest opacity-90">{label}</span>
+       <div className={`w-5 h-5 rounded-full border-[3px] flex items-center justify-center ${checked ? (darkMode ? 'border-cyan-400' : 'border-cyan-500') : (darkMode ? 'border-gray-500' : 'border-gray-400')}`}>
+          {checked && <div className={`w-2.5 h-2.5 rounded-full ${darkMode ? 'bg-cyan-400' : 'bg-cyan-500'}`} />}
+       </div>
+    </label>
 );
 
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText="Sim", cancelText="Cancelar", darkMode }) => {
@@ -413,7 +422,7 @@ const getAddedBucket = (itemDate) => {
     
     if (diffDays <= 1) return 'Hoje';
     if (diffDays <= 7) return 'Últimos 7 Dias';
-    if (diffDays <= 30) return 'Últimos 30 Dias';
+    if (diffDays <= 30) return 'Este Mês';
     if (itemDate.getFullYear() === now.getFullYear()) return 'Este Ano';
     return 'Mais Antigos';
 };
@@ -430,7 +439,7 @@ const getYearBucket = (yearVal) => {
 
 const getPagesBucket = (pagesVal) => {
     const p = parseInt(pagesVal, 10);
-    if (isNaN(p) || p === 0) return 'Nenhum/Não Informado';
+    if (isNaN(p) || p === 0) return 'Nenhum / Não Informado';
     if (p <= 50) return 'Mínimo (1-50)';
     if (p <= 150) return 'Mínimo Médio (51-150)';
     if (p <= 300) return 'Médio (151-300)';
@@ -453,17 +462,23 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 12; 
 
-  // --- NOVOS ESTADOS DE FILTRO ---
+  // --- NOVOS ESTADOS DE FILTRO (DISCOGS-LIKE) ---
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('added'); // added, title, author, year
-  const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
   const [alphaFilter, setAlphaFilter] = useState('Todos');
   
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({ 'Adicionado': false, 'Suporte': true, 'Ano': false, 'Nota': false, 'Paginas': false });
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+
+  const [sortBy, setSortBy] = useState('added'); // added, title, author, year, type
+  const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
+
+  const [pendingSortBy, setPendingSortBy] = useState('added');
+  const [pendingSortOrder, setPendingSortOrder] = useState('desc');
+
+  const [expandedSections, setExpandedSections] = useState({ 'Adicionado': false, 'Suporte': true, 'Ano': false, 'Nota': false, 'Páginas/Faixa': false });
   
-  const [pendingFilters, setPendingFilters] = useState({ Adicionado: [], Suporte: [], Ano: [], Nota: [], Paginas: [] });
-  const [activeFilters, setActiveFilters] = useState({ Adicionado: [], Suporte: [], Ano: [], Nota: [], Paginas: [] });
+  const [pendingFilters, setPendingFilters] = useState({ Adicionado: [], Suporte: [], Ano: [], Nota: [], 'Páginas/Faixa': [] });
+  const [activeFilters, setActiveFilters] = useState({ Adicionado: [], Suporte: [], Ano: [], Nota: [], 'Páginas/Faixa': [] });
 
   const pressTimer = useRef(null); 
   const isLongPress = useRef(false);
@@ -490,9 +505,16 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   };
 
   const clearFilters = () => {
-      const empty = { Adicionado: [], Suporte: [], Ano: [], Nota: [], Paginas: [] };
+      const empty = { Adicionado: [], Suporte: [], Ano: [], Nota: [], 'Páginas/Faixa': [] };
       setPendingFilters(empty);
       setActiveFilters(empty);
+      setPage(0);
+  };
+
+  const applySort = () => {
+      setSortBy(pendingSortBy);
+      setSortOrder(pendingSortOrder);
+      setIsSortMenuOpen(false);
       setPage(0);
   };
 
@@ -518,37 +540,28 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       return result;
   }, [items, searchTerm, alphaFilter]);
 
-  // 2. Cálculo de Contadores (baseados na busca base para mostrar o que está disponível)
+  // 2. Cálculo de Contadores Dinâmicos para as caixas
   const filterCounts = useMemo(() => {
-      const counts = {
-          Adicionado: {}, Suporte: {}, Ano: {}, Nota: {}, Paginas: {}
-      };
+      const counts = { Adicionado: {}, Suporte: {}, Ano: {}, Nota: {}, 'Páginas/Faixa': {} };
       
       baseFilteredItems.forEach(item => {
-          // Suporte
-          const type = item.type || 'Sem Tipo';
-          counts.Suporte[type] = (counts.Suporte[type] || 0) + 1;
+          counts.Suporte[item.type || 'Sem Tipo'] = (counts.Suporte[item.type || 'Sem Tipo'] || 0) + 1;
           
-          // Adicionado
           const addedBucket = getAddedBucket(parseItemIdToDate(item.id));
           counts.Adicionado[addedBucket] = (counts.Adicionado[addedBucket] || 0) + 1;
           
-          // Ano
           const yearBucket = getYearBucket(item.year);
           counts.Ano[yearBucket] = (counts.Ano[yearBucket] || 0) + 1;
           
-          // Nota
           const nota = item.rating ? `${item.rating} Estrelas` : 'Sem Nota';
           counts.Nota[nota] = (counts.Nota[nota] || 0) + 1;
           
-          // Páginas/Faixas
           const pageBucket = getPagesBucket(item.pages_or_time);
-          counts.Paginas[pageBucket] = (counts.Paginas[pageBucket] || 0) + 1;
+          counts['Páginas/Faixa'][pageBucket] = (counts['Páginas/Faixa'][pageBucket] || 0) + 1;
       });
       return counts;
   }, [baseFilteredItems]);
 
-  // Opções disponíveis baseadas na lista completa de itens para manter o menu consistente
   const allAvailableTypes = useMemo(() => {
       const types = new Set();
       items.forEach(i => { if (i.type) types.add(i.type); });
@@ -556,31 +569,38 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   }, [items]);
 
   const FILTER_OPTIONS = {
-      Adicionado: ['Hoje', 'Últimos 7 Dias', 'Últimos 30 Dias', 'Este Ano', 'Mais Antigos'],
+      Adicionado: ['Hoje', 'Últimos 7 Dias', 'Este Mês', 'Este Ano', 'Mais Antigos'],
       Suporte: allAvailableTypes,
       Ano: ['Anos 2020', 'Anos 2010', 'Anos 2000', 'Anos 1990', 'Antes de 1990', 'Sem Ano'],
       Nota: ['5 Estrelas', '4 Estrelas', '3 Estrelas', '2 Estrelas', '1 Estrelas', 'Sem Nota'],
-      Paginas: ['Mínimo (1-50)', 'Mínimo Médio (51-150)', 'Médio (151-300)', 'Máximo Médio (301-600)', 'Máximo (601+)', 'Nenhum/Não Informado']
+      'Páginas/Faixa': ['Mínimo (1-50)', 'Mínimo Médio (51-150)', 'Médio (151-300)', 'Máximo Médio (301-600)', 'Máximo (601+)', 'Nenhum / Não Informado']
+  };
+
+  const sortLabels = {
+      'added': 'Data Adicionada',
+      'title': 'Título',
+      'author': 'Artista / Autor',
+      'year': 'Ano',
+      'type': 'Formato'
   };
 
   // 3. Aplicação dos Filtros Ativos e Ordenação Final
   const finalProcessedItems = useMemo(() => {
       let result = baseFilteredItems;
 
-      // Filtros de Categoria Ativos
       if (activeFilters.Suporte.length > 0) result = result.filter(i => activeFilters.Suporte.includes(i.type));
       if (activeFilters.Adicionado.length > 0) result = result.filter(i => activeFilters.Adicionado.includes(getAddedBucket(parseItemIdToDate(i.id))));
       if (activeFilters.Ano.length > 0) result = result.filter(i => activeFilters.Ano.includes(getYearBucket(i.year)));
       if (activeFilters.Nota.length > 0) result = result.filter(i => activeFilters.Nota.includes(i.rating ? `${i.rating} Estrelas` : 'Sem Nota'));
-      if (activeFilters.Paginas.length > 0) result = result.filter(i => activeFilters.Paginas.includes(getPagesBucket(i.pages_or_time)));
+      if (activeFilters['Páginas/Faixa'].length > 0) result = result.filter(i => activeFilters['Páginas/Faixa'].includes(getPagesBucket(i.pages_or_time)));
 
-      // Ordenação
       result = [...result].sort((a, b) => {
           let valA, valB;
           switch (sortBy) {
               case 'title': valA = (a.title||'').toLowerCase(); valB = (b.title||'').toLowerCase(); break;
               case 'author': valA = (a.author_developer||'').toLowerCase(); valB = (b.author_developer||'').toLowerCase(); break;
               case 'year': valA = parseInt(a.year) || 0; valB = parseInt(b.year) || 0; break;
+              case 'type': valA = (a.type||'').toLowerCase(); valB = (b.type||'').toLowerCase(); break;
               case 'added': default: valA = a.id || ''; valB = b.id || ''; break;
           }
           if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -753,10 +773,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     );
   }
 
-  // RENDERIZAÇÃO DA LISTA PRINCIPAL
+  // RENDERIZAÇÃO DA LISTA PRINCIPAL E DE SEUS MODAIS
   return (
     <div className="flex flex-col h-full relative">
       <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem?.title}"?`} onConfirm={confirmDelete} onCancel={() => {setItemToDelete(null); setEditedItem(null);}} darkMode={darkMode} confirmText="Apagar" />
+      
       {contextMenuItem && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setContextMenuItem(null)}>
           <MContainer darkMode={darkMode} className="w-full max-w-xs p-0 flex flex-col overflow-hidden animate-in zoom-in duration-200" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} onClick={(e) => e.stopPropagation()}>
@@ -771,134 +792,172 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </div>
       )}
 
-      {/* --- NOVA ÁREA DE FILTROS (HEADER) --- */}
-      <div className={`sticky top-0 z-20 flex flex-col gap-2 pb-2 pt-1 border-b-[4px] ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'} mb-3`}>
-          {/* Busca e Botão de Filtros */}
-          <div className="flex gap-2 w-full px-1">
-              <div className="flex-1 relative">
-                  <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                  <input 
-                      type="text" 
-                      placeholder="Buscar em todo acervo..." 
-                      value={searchTerm}
-                      onChange={e => { setSearchTerm(e.target.value); setPage(0); }}
-                      className={`w-full h-12 pl-10 pr-3 border-[4px] font-black text-sm uppercase tracking-wider outline-none transition-all focus:border-cyan-400 ${darkMode ? 'bg-gray-800 text-white border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'}`}
-                  />
-                  {searchTerm && (
-                      <button onClick={() => {setSearchTerm(''); setPage(0);}} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>
-                  )}
-              </div>
-              <button 
-                  onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-                  className={`flex-shrink-0 h-12 px-3 flex items-center justify-center gap-2 border-[4px] font-black uppercase text-[10px] tracking-widest transition-all active:translate-y-1 active:translate-x-1 active:shadow-none ${countActiveFilters > 0 ? (darkMode ? 'bg-pink-800 text-white border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-pink-500 text-black border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 text-white border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]')}`}
-              >
-                  <FilterIcon className="w-5 h-5" /> 
-                  <span className="hidden sm:inline">Filtros {countActiveFilters > 0 ? `(${countActiveFilters})` : ''}</span>
-              </button>
-          </div>
-
-          {/* Ordenação e Alfabeto */}
-          <div className="flex gap-2 w-full px-1">
-              <div className={`flex flex-1 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white'}`}>
-                  <select 
-                      value={sortBy} 
-                      onChange={e => { setSortBy(e.target.value); setPage(0); }}
-                      className={`flex-1 p-2 h-10 text-[9px] sm:text-[10px] font-black uppercase tracking-widest outline-none bg-transparent cursor-pointer ${darkMode ? 'text-white' : 'text-black'}`}
-                  >
-                      <option value="added">Adição (Recentes)</option>
-                      <option value="title">Título</option>
-                      <option value="author">Artista / Autor</option>
-                      <option value="year">Ano de Lançamento</option>
-                  </select>
-                  <button 
-                      onClick={() => { setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); setPage(0); }}
-                      className={`w-10 h-10 border-l-[4px] flex items-center justify-center active:bg-cyan-100 dark:active:bg-cyan-900 transition-colors ${darkMode ? 'border-gray-300' : 'border-black'}`}
-                      title={`Ordem ${sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}`}
-                  >
-                      {sortOrder === 'asc' ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  </button>
-              </div>
-              
-              <select 
-                  value={alphaFilter} 
-                  onChange={e => { setAlphaFilter(e.target.value); setPage(0); }}
-                  className={`w-16 sm:w-20 h-10 p-2 text-center text-[10px] font-black uppercase tracking-widest border-[4px] outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
-              >
-                  {alphabetOptions.map(l => <option key={l} value={l}>{l === 'Todos' ? 'A-Z' : l}</option>)}
-              </select>
-          </div>
-          
-          {/* Mostrador Rápido de Contagem */}
-          <div className="px-2 text-[9px] font-black uppercase tracking-widest opacity-60">
-              Mostrando {finalProcessedItems.length} de {items.length} itens {countActiveFilters > 0 ? '(Filtros Ativos)' : ''}
-          </div>
-      </div>
-
-      {/* PAINEL DE FILTROS AVANÇADOS (ACCORDION) */}
+      {/* MODAL: FILTROS AVANÇADOS */}
       {isFilterMenuOpen && (
-          <div className={`absolute top-28 left-1 right-1 z-30 border-[4px] max-h-[60vh] flex flex-col shadow-2xl animate-in slide-in-from-top-2 ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
-              <div className={`p-3 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
-                  <span className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros Avançados</span>
-                  <button onClick={() => setIsFilterMenuOpen(false)} className="active:scale-90 p-1"><XIcon className="w-5 h-5" /></button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto scrollbar-hide">
-                  {Object.entries(FILTER_OPTIONS).map(([category, options]) => {
-                      const isOpen = expandedSections[category];
-                      const activeCount = pendingFilters[category].length;
-                      return (
-                          <div key={category} className={`border-b-[4px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-                              <button 
-                                  onClick={() => toggleSection(category)}
-                                  className={`w-full p-3 flex justify-between items-center transition-colors ${isOpen ? (darkMode ? 'bg-cyan-900/30' : 'bg-cyan-50') : ''}`}
-                              >
-                                  <div className="flex items-center gap-2">
-                                      <span className="text-[10px] font-black uppercase tracking-widest">{category}</span>
-                                      {activeCount > 0 && <span className={`px-1.5 py-0.5 text-[8px] font-black rounded-sm ${darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-white'}`}>{activeCount}</span>}
-                                  </div>
-                                  {isOpen ? <ChevronUp className="w-4 h-4 opacity-50" /> : <ChevronDown className="w-4 h-4 opacity-50" />}
-                              </button>
-                              
-                              {isOpen && (
-                                  <div className={`p-3 pt-0 grid grid-cols-1 sm:grid-cols-2 gap-2`}>
-                                      {options.map(option => {
-                                          const isChecked = pendingFilters[category].includes(option);
-                                          const count = filterCounts[category]?.[option] || 0;
-                                          return (
-                                              <label key={option} className={`flex items-center gap-3 p-2 cursor-pointer transition-colors active:scale-95 border-[3px] ${isChecked ? (darkMode ? 'border-cyan-400 bg-cyan-900/40' : 'border-cyan-500 bg-cyan-50') : (darkMode ? 'border-gray-700 hover:border-gray-500' : 'border-gray-200 hover:border-gray-400')}`}>
-                                                  <div className={`w-4 h-4 border-[3px] flex items-center justify-center flex-shrink-0 ${isChecked ? (darkMode ? 'bg-cyan-400 border-cyan-400' : 'bg-cyan-500 border-cyan-500') : (darkMode ? 'border-gray-500' : 'border-gray-400')}`}>
-                                                      {isChecked && <Check className="w-3 h-3 text-black dark:text-white" />}
-                                                  </div>
-                                                  <div className="flex-1 flex justify-between items-center min-w-0">
-                                                      <span className={`text-[9px] font-black uppercase tracking-wider truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{option}</span>
-                                                      <span className={`text-[8px] font-bold px-1.5 py-0.5 ml-2 rounded-sm ${count > 0 ? (darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600') : (darkMode ? 'bg-transparent text-gray-600' : 'bg-transparent text-gray-400')}`}>
-                                                          {count}
-                                                      </span>
-                                                  </div>
-                                              </label>
-                                          );
-                                      })}
-                                  </div>
-                              )}
-                          </div>
-                      );
-                  })}
-              </div>
-              
-              <div className={`p-3 border-t-[4px] flex gap-2 ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
-                  <MButton onClick={clearFilters} variant="white" darkMode={darkMode} className="flex-1 py-3"><Trash2 className="w-4 h-4" /> Limpar</MButton>
-                  <MButton onClick={applyFilters} variant="pink" darkMode={darkMode} className="flex-[2] py-3"><Check className="w-4 h-4" /> Aplicar Filtros</MButton>
+          <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
+              <div className={`w-full sm:max-w-md h-[90vh] sm:h-[80vh] flex flex-col border-t-[4px] sm:border-[4px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
+                  {/* Header Modal Filtro */}
+                  <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
+                      <button onClick={() => setIsFilterMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
+                      <span className="text-[12px] font-black uppercase tracking-widest">Filtros</span>
+                      <div className="w-7"/> {/* placeholder centering */}
+                  </div>
+                  
+                  {/* Conteúdo Accordion */}
+                  <div className="flex-1 overflow-y-auto scrollbar-hide">
+                      {Object.entries(FILTER_OPTIONS).map(([category, options]) => {
+                          const isOpen = expandedSections[category];
+                          const activeCount = pendingFilters[category].length;
+                          return (
+                              <div key={category} className={`border-b-[4px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                                  <button 
+                                      onClick={() => toggleSection(category)}
+                                      className={`w-full p-4 flex justify-between items-center transition-colors ${isOpen ? (darkMode ? 'bg-black/30' : 'bg-gray-100') : ''}`}
+                                  >
+                                      <div className="flex items-center gap-2">
+                                          <span className="text-[11px] font-black uppercase tracking-widest">{category}</span>
+                                          {activeCount > 0 && <span className={`px-1.5 py-0.5 text-[8px] font-black rounded-sm ${darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-white'}`}>{activeCount}</span>}
+                                      </div>
+                                      {isOpen ? <ChevronUp className="w-4 h-4 opacity-50" /> : <ChevronDown className="w-4 h-4 opacity-50" />}
+                                  </button>
+                                  
+                                  {isOpen && (
+                                      <div className={`flex flex-col`}>
+                                          {options.map(option => {
+                                              const isChecked = pendingFilters[category].includes(option);
+                                              const count = filterCounts[category]?.[option] || 0;
+                                              return (
+                                                  <label key={option} className={`flex items-center justify-between p-3 cursor-pointer transition-colors active:bg-black/5 ${darkMode ? 'border-t border-gray-800' : 'border-t border-gray-200'}`}>
+                                                      <span className={`text-[10px] font-black uppercase tracking-wider truncate mr-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{option}</span>
+                                                      <div className="flex items-center gap-3">
+                                                          <span className={`text-[10px] font-bold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{count}</span>
+                                                          <div className={`w-5 h-5 border-[3px] flex items-center justify-center flex-shrink-0 ${isChecked ? (darkMode ? 'border-cyan-400 bg-cyan-900/40' : 'border-cyan-500 bg-cyan-100') : (darkMode ? 'border-gray-500' : 'border-gray-400')}`}>
+                                                              {isChecked && <Check className="w-3 h-3 text-black dark:text-white" />}
+                                                          </div>
+                                                      </div>
+                                                  </label>
+                                              );
+                                          })}
+                                      </div>
+                                  )}
+                              </div>
+                          );
+                      })}
+                  </div>
+                  
+                  {/* Footer Modal Filtro */}
+                  <div className={`p-4 border-t-[4px] flex gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
+                      <MButton onClick={clearFilters} variant="white" darkMode={darkMode} className="flex-1 py-4 text-[10px]">Limpar tudo</MButton>
+                      <MButton onClick={applyFilters} variant="pink" darkMode={darkMode} className="flex-[2] py-4 text-[10px]">Aplicar</MButton>
+                  </div>
               </div>
           </div>
       )}
 
+      {/* MODAL: ORDENAÇÃO */}
+      {isSortMenuOpen && (
+          <div className="fixed inset-0 z-[200] bg-black/80 flex flex-col justify-end sm:justify-center items-center sm:p-4 animate-in fade-in duration-200">
+              <div className={`w-full sm:max-w-md flex flex-col border-t-[4px] sm:border-[4px] max-h-[90vh] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
+                  {/* Header */}
+                  <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
+                      <button onClick={() => setIsSortMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
+                      <span className="text-[12px] font-black uppercase tracking-widest">Ordenar</span>
+                      <div className="w-7"/> {/* placeholder */}
+                  </div>
+                  {/* Content */}
+                  <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
+                      <div className="mb-6">
+                          <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Ordem</div>
+                          <div className={`border-[3px] flex flex-col ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                              <MRadio label="↑ Ascendente" checked={pendingSortOrder==='asc'} onChange={()=>setPendingSortOrder('asc')} darkMode={darkMode} />
+                              <MRadio label="↓ Descendente" checked={pendingSortOrder==='desc'} onChange={()=>setPendingSortOrder('desc')} darkMode={darkMode} />
+                          </div>
+                      </div>
+                      <div>
+                          <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Ordenar por</div>
+                          <div className={`border-[3px] flex flex-col ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                              <MRadio label="Artista / Autor" checked={pendingSortBy==='author'} onChange={()=>setPendingSortBy('author')} darkMode={darkMode} />
+                              <MRadio label="Ano" checked={pendingSortBy==='year'} onChange={()=>setPendingSortBy('year')} darkMode={darkMode} />
+                              <MRadio label="Título" checked={pendingSortBy==='title'} onChange={()=>setPendingSortBy('title')} darkMode={darkMode} />
+                              <MRadio label="Data Adicionada" checked={pendingSortBy==='added'} onChange={()=>setPendingSortBy('added')} darkMode={darkMode} />
+                              <MRadio label="Formato" checked={pendingSortBy==='type'} onChange={()=>setPendingSortBy('type')} darkMode={darkMode} />
+                          </div>
+                      </div>
+                  </div>
+                  {/* Footer */}
+                  <div className={`p-4 border-t-[4px] ${darkMode ? 'border-gray-300' : 'border-black'}`}>
+                      <MButton darkMode={darkMode} variant="black" onClick={applySort} className="w-full py-4 text-[10px]">Aplicar</MButton>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- NOVA ÁREA DE CABEÇALHO DA LISTA (MENOS DESTAQUE, 4 BLOCOS) --- */}
+      <div className={`sticky top-0 z-20 flex flex-col gap-2 pb-2 pt-1 border-b-[4px] ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'} mb-3 px-1`}>
+          
+          {/* Fileira 1: Busca e Alfabeto */}
+          <div className="flex gap-2 w-full">
+              <div className="flex-1 relative">
+                  <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <input 
+                      type="text" 
+                      placeholder="Buscar no acervo..." 
+                      value={searchTerm}
+                      onChange={e => { setSearchTerm(e.target.value); setPage(0); }}
+                      className={`w-full h-10 pl-8 pr-8 border-[3px] font-black text-[11px] uppercase tracking-wider outline-none transition-all focus:border-cyan-400 ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
+                  />
+                  {searchTerm && (
+                      <button onClick={() => {setSearchTerm(''); setPage(0);}} className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>
+                  )}
+              </div>
+              <select 
+                  value={alphaFilter} 
+                  onChange={e => { setAlphaFilter(e.target.value); setPage(0); }}
+                  className={`w-16 h-10 p-1 text-center text-[10px] font-black uppercase tracking-widest border-[3px] outline-none cursor-pointer ${darkMode ? 'border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}
+              >
+                  {alphabetOptions.map(l => <option key={l} value={l}>{l === 'Todos' ? 'A-Z' : l}</option>)}
+              </select>
+          </div>
+
+          {/* Fileira 2: Filtros Avançados e Ordenação */}
+          <div className="flex gap-2 w-full">
+              <button 
+                  onClick={() => {
+                      setPendingFilters(activeFilters); 
+                      setIsFilterMenuOpen(true);
+                  }}
+                  className={`flex-[2] h-10 px-2 flex items-center justify-center gap-2 border-[3px] font-black uppercase text-[9px] sm:text-[10px] tracking-widest transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none ${countActiveFilters > 0 ? (darkMode ? 'bg-pink-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-500 text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]')}`}
+              >
+                  <FilterIcon className="w-4 h-4" /> 
+                  <span>Filtros {countActiveFilters > 0 ? `(${countActiveFilters})` : ''}</span>
+              </button>
+              
+              <button 
+                  onClick={() => {
+                      setPendingSortBy(sortBy);
+                      setPendingSortOrder(sortOrder);
+                      setIsSortMenuOpen(true);
+                  }}
+                  className={`flex-[3] h-10 px-2 flex items-center justify-center gap-2 border-[3px] font-black uppercase text-[9px] sm:text-[10px] tracking-widest transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
+              >
+                  <ArrowUpDownIcon className="w-4 h-4" /> 
+                  <span className="truncate">{sortLabels[sortBy] || 'Ordenar'} ({sortOrder === 'asc' ? '↑' : '↓'})</span>
+              </button>
+          </div>
+          
+          {/* Mostrador Rápido de Contagem */}
+          <div className="px-1 text-[9px] font-black uppercase tracking-widest opacity-60 mt-1">
+              Exibindo {finalProcessedItems.length} {countActiveFilters > 0 || searchTerm ? 'resultados encontrados' : 'itens da coleção'}
+          </div>
+      </div>
+
       {/* ÁREA DA LISTA DE ITENS */}
       <div className="flex-1 overflow-y-auto pb-20 px-1 pt-1 scrollbar-hide">
         {paginatedItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-10 opacity-50 text-center">
+            <div className="flex flex-col items-center justify-center h-[50vh] p-10 opacity-50 text-center">
                 <Ghost className="w-12 h-12 mb-4" />
-                <span className="text-sm font-sans font-black uppercase tracking-widest">Nenhum item encontrado.</span>
-                <span className="text-[10px] font-bold mt-2">Tente ajustar seus filtros ou busca.</span>
+                <span className="text-sm font-sans font-black uppercase tracking-widest">Nenhum item localizado.</span>
+                <span className="text-[10px] font-bold mt-2">Ajuste seus filtros ou barra de busca.</span>
             </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
