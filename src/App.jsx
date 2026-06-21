@@ -94,7 +94,6 @@ const generateId = (itemsArray = []) => {
 };
 
 const reindexCollection = (currentItems) => {
-  // Ordena cronologicamente preservando os 18 primeiros caracteres do ID (Data e Hora exata)
   const sorted = [...currentItems].sort((a, b) => {
      const timeA = String(a.id || '').substring(0, 18);
      const timeB = String(b.id || '').substring(0, 18);
@@ -105,7 +104,6 @@ const reindexCollection = (currentItems) => {
   let globalCounter = 1;
 
   const reindexed = sorted.map(item => {
-     // 1. Corrige o ID Global (mantém Data/Hora, altera os últimos 4 dígitos)
      const idParts = String(item.id || '').split('-');
      let newId = item.id;
      if (idParts.length >= 2) {
@@ -113,7 +111,6 @@ const reindexCollection = (currentItems) => {
          newId = `${timePrefix}-${String(globalCounter).padStart(4, '0')}`;
      }
 
-     // 2. Corrige o Código Arquivístico
      let newArchiveCode = item.archive_code;
      if (item.archive_code) {
          const archParts = String(item.archive_code).split('-');
@@ -129,7 +126,6 @@ const reindexCollection = (currentItems) => {
      return { ...item, id: newId, archive_code: newArchiveCode };
   });
 
-  // Atualiza o cache global para não conflitar as futuras adições manuais
   globalSequenceCache = globalCounter - 1;
   return reindexed;
 };
@@ -169,12 +165,10 @@ const parseCSVText = (rawText) => {
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
 };
 
-const normalizeStr = s => s ? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
 const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim() : '';
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
 const isVariousArtists = name => ['various', 'vários', 'varios', 'various artists', 'variados'].includes(String(name || '').toLowerCase().trim());
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
-const parseTimeStr = str => str ? (String(str).includes(':') ? parseInt(String(str).split(':')[0] || 0) + (parseInt(String(str).split(':')[1] || 0) / 60) : parseFloat(String(str).replace(/[hH]/g, '').replace(',', '.')) || 0) : 0;
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
   if (specificLink?.trim().startsWith('http')) return { url: specificLink.trim(), isExact: true };
@@ -188,7 +182,7 @@ const getExternalLinkInfo = (type, title, specificLink = '') => {
 const getMetricInfo = (itemType, activeCategories) => {
   if ((activeCategories['Livros'] || []).includes(itemType)) return { label: 'Págs', desc: 'Páginas' };
   if ((activeCategories['Discos'] || []).includes(itemType)) return { label: 'Faixas', desc: 'Faixas' };
-  if ((activeCategories['Games'] || []).includes(itemType)) return { label: 'Horas', desc: 'Horas de Jogo' };
+  if ((activeCategories['Games'] || []).includes(itemType)) return { label: 'Horas/Unid', desc: 'Horas/Discos' };
   return { label: 'Und', desc: 'Métrica' };
 };
 
@@ -235,42 +229,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   return null;
 };
 
-const processCompletedGamesCSV = (csvText) => {
-  const rows = parseCSVText(csvText);
-  if (rows.length < 2) return [];
-  const headers = rows[0].map(h => normalizeStr(h));
-  const getIdx = (keywords) => headers.findIndex(h => keywords.some(kw => h === kw || h.includes(kw)));
-  
-  const idx = {
-    nome: getIdx(['nome', 'título', 'jogo']), console: getIdx(['console', 'plataforma']), genero: getIdx(['gênero', 'genero']),
-    tempo: getIdx(['tempo', 'horas']), nota: getIdx(['nota', 'avaliação']), suporte: getIdx(['suporte', 'mídia', 'midia']),
-    dif: getIdx(['dificuldade']), cond: getIdx(['condição', 'condicao', 'objetivo']), obs: getIdx(['observação', 'observacao', 'comentário']),
-    inicio: getIdx(['início', 'inicio', 'começo']), fim: getIdx(['fim', 'término', 'termino', 'conclusão']),
-    precoPago: getIdx(['preço pago', 'preco pago']), precoSemDesc: getIdx(['preço sem desconto', 'preco sem desconto']), link: getIdx(['link', 'url'])
-  };
-
-  const parsed = [];
-  for(let i=1; i<rows.length; i++) {
-    const row = rows[i];
-    if(!row || row.length < 3 || !(idx.nome >= 0 && row[idx.nome])) continue;
-    let supVal = row[idx.suporte]?.trim() || '';
-    let isFisico = supVal.toLowerCase().includes('físic') || supVal === 'F';
-    const rawFim = row[idx.fim]?.trim() || '';
-    const matchFim = rawFim.match(/\b(19|20)\d{2}\b/);
-    parsed.push({
-      id: generateId(parsed), 
-      nome: row[idx.nome]?.trim() || 'Desconhecido', console: row[idx.console]?.trim() || 'Outro', genero: row[idx.genero]?.trim() || 'Outro',
-      tempoHoras: parseTimeStr(row[idx.tempo]), nota: parseFloat((row[idx.nota] || '0').replace(',', '.')) || 0,
-      suporteStr: supVal, suporte: isFisico ? 'Físico' : 'Digital', dificuldade: row[idx.dif]?.trim() || '--',
-      condicao: row[idx.cond]?.trim() || '--', observacao: row[idx.obs]?.trim() || '',
-      inicio: row[idx.inicio]?.trim() || '--', fim: rawFim || '--', anoFim: matchFim ? matchFim[0] : '',
-      precoPago: (row[idx.precoPago] || '').replace(/R\$\s?/gi, '').trim(), precoSemDesc: (row[idx.precoSemDesc] || '').replace(/R\$\s?/gi, '').trim(),
-      link: row[idx.link]?.trim() || ''
-    });
-  }
-  return parsed;
-};
-
 // ==========================================
 // ÍCONES NATIVOS
 // ==========================================
@@ -311,7 +269,6 @@ const XIcon = p => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><li
 const Zap = p => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = p => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
 const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
-const CopyIcon = p => <Icon {...p} path={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />;
 const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
@@ -324,7 +281,7 @@ const usePWA = (iconUrl) => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
   useEffect(() => {
-    const manifest = { name: "Memorabilia", short_name: "Memorabilia", description: "Sua coleção na palma da mão.", start_url: ".", display: "standalone", background_color: "#ffffff", theme_color: "#000000", icons: [ { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" }, { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" } ] };
+    const manifest = { name: "Memorabilia", short_name: "Memorabilia", description: "Sua coleção física na palma da mão.", start_url: ".", display: "standalone", background_color: "#ffffff", theme_color: "#000000", icons: [ { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" }, { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" } ] };
     const manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
     let manifestLink = document.querySelector('link[rel="manifest"]');
     if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
@@ -460,7 +417,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const handleItemPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
   const handleItemClick = (item) => { if (!isLongPress.current) handleSelect(item); };
   
-  // Lista padrão: mais recentes (últimos adicionados) aparecem primeiro
   const paginatedItems = useMemo(() => {
     return [...items].reverse().slice(page * itemsPerPage, (page + 1) * itemsPerPage);
   }, [items, page, itemsPerPage]);
@@ -632,13 +588,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             {paginatedItems.map((item, idx) => (
               <div key={item.id} className="flex flex-row min-h-[140px] cursor-pointer active:scale-[0.98] transition-transform hover:-translate-y-1 hover:shadow-lg" onContextMenu={e => e.preventDefault()} onTouchStart={() => handleItemPressStart(item)} onTouchEnd={handleItemPressEnd} onTouchMove={handleItemPressEnd} onMouseDown={() => handleItemPressStart(item)} onMouseUp={handleItemPressEnd} onMouseLeave={handleItemPressEnd} onClick={() => handleItemClick(item)}>
                 
-                {/* Barra Lateral Colorida */}
                 <MContainer darkMode={darkMode} className="w-5 border-r-0 rounded-l-sm flex-shrink-0" colorClass={getMondrianColor(idx, darkMode)} />
                 
-                {/* Corpo do Card */}
                 <MContainer darkMode={darkMode} className="flex-1 flex flex-row p-2 rounded-r-sm" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
                   
-                  {/* Bloco de Texto (Expansível) */}
                   <div className="flex-1 flex flex-col justify-between pr-3 pointer-events-none">
                     <div className="flex flex-col">
                       <div className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1.5 break-words">
@@ -652,7 +605,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                     </div>
                  </div>
 
-                 {/* Bloco de Imagem e Avaliação (Direita) */}
                  <div className={`w-24 sm:w-28 flex-shrink-0 flex flex-col items-center justify-between border-l-[3px] pl-2 py-0.5 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                     <div className={`w-full ${(activeCategories['Discos'] || []).includes(item.type) ? 'aspect-square' : 'aspect-[3/4]'} border-[3px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
                        {item.cover_url ? <img src={item.cover_url} alt="Capa" className="w-full h-full object-cover"/> : <LibraryBig className={`w-6 h-6 ${darkMode ? 'text-gray-500' : 'text-gray-400'} opacity-50`}/>}
@@ -724,7 +676,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     return () => { isMounted = false; if (scannerInstance) { try { if (scannerInstance.getState() === 2 || scannerInstance.getState() === 1) { scannerInstance.stop().then(() => scannerInstance.clear()).catch(()=>{}); } else { scannerInstance.clear(); } } catch(e) {} scannerRef.current = null; } };
   }, [addMode, isHtml5QrcodeLoaded]);
 
-  // ENGINE DE SCAN PARALELIZADA (Otimizada para Velocidade)
   const fetchMultiDatabaseParallel = async (barcode) => {
     const cleanCode = barcode.replace(/[-\s]/g, "");
     updateStatus('loading', 'Consultando bancos de dados simultaneamente...');
@@ -1088,84 +1039,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   );
 };
 
-const CompletedGamesTab = ({ completedGames, setCompletedGames, settings, darkMode, onShowToast }) => {
-  const [filterConsole, setFilterConsole] = useState('Todos'); const [filterGenre, setFilterGenre] = useState('Todos'); const [filterSupport, setFilterSupport] = useState('Todos');
-  const [page, setPage] = useState(0); const [selectedGame, setSelectedGame] = useState(null); const itemsPerPage = 24;
-
-  const handleManualImport = (e) => {
-    const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
-    reader.onload = (evt) => { const parsed = processCompletedGamesCSV(evt.target.result); if (parsed.length > 0) { setCompletedGames(parsed); playChipBeep('save'); onShowToast('success'); } else { playChipBeep('error'); onShowToast('error'); } };
-    reader.readAsText(file); e.target.value = null;
-  };
-
-  const filteredGames = useMemo(() => completedGames.filter(g => (filterConsole === 'Todos' || g.console === filterConsole) && (filterGenre === 'Todos' || g.genero === filterGenre) && (filterSupport === 'Todos' || g.suporte === filterSupport)), [completedGames, filterConsole, filterGenre, filterSupport]);
-  const paginatedGames = filteredGames.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
-  const totalPages = Math.ceil(filteredGames.length / itemsPerPage) || 1;
-  const uniqueConsoles = [...new Set(completedGames.map(g => g.console))].sort(); const uniqueGenres = [...new Set(completedGames.map(g => g.genero))].sort();
-
-  const chartColors = getChartColors(darkMode); const supportCounts = {}; const consoleChartCounts = {};
-  filteredGames.forEach(g => { supportCounts[g.suporte || 'Outro'] = (supportCounts[g.suporte || 'Outro'] || 0) + 1; consoleChartCounts[g.console || 'Outro'] = (consoleChartCounts[g.console || 'Outro'] || 0) + 1; });
-
-  const supportChartData = Object.entries(supportCounts).map(([label, value], idx) => ({ label, value, colorHex: chartColors[idx % chartColors.length] })).sort((a,b) => b.value - a.value);
-  const consoleChartData = Object.entries(consoleChartCounts).slice(0, 5).map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx+3) % chartColors.length] })).sort((a,b) => b.value - a.value);
-
-  const totalJogos = filteredGames.length; const totalHoras = filteredGames.reduce((acc, g) => acc + (Number(g.tempoHoras)||0), 0).toFixed(1);
-  const notasValidas = filteredGames.filter(g => (Number(g.nota)||0) > 0); const mediaNota = notasValidas.length > 0 ? (notasValidas.reduce((a, b) => a + (Number(b.nota)||0), 0) / notasValidas.length).toFixed(1) : 0;
-  const fisicoPerc = totalJogos > 0 ? ((filteredGames.filter(g => g.suporte === 'Físico').length / totalJogos) * 100).toFixed(0) : 0;
-
-  const byConsole = filteredGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {}); const topConsoles = Object.entries(byConsole).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxConsole = topConsoles.length > 0 ? topConsoles[0][1] : 1;
-  const byGenre = filteredGames.reduce((acc, g) => { acc[g.genero] = (acc[g.genero] || 0) + 1; return acc; }, {}); const topGenres = Object.entries(byGenre).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxGenre = topGenres.length > 0 ? topGenres[0][1] : 1;
-  const byYear = filteredGames.reduce((acc, g) => { const y = parseInt(g.anoFim); if (!isNaN(y) && y > 1950 && y < 2100) acc[y] = (acc[y] || 0) + 1; return acc; }, {}); const yearsKeys = Object.keys(byYear).sort(); const maxYear = yearsKeys.length > 0 ? Math.max(...Object.values(byYear)) : 1;
-  
-  if (completedGames.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-4 text-center max-w-lg mx-auto"><GamepadIcon className="w-16 h-16 mb-4 opacity-20" /><h2 className="text-xl font-black uppercase tracking-widest mb-2">Sem Dados</h2><p className="text-[10px] font-bold mb-6 opacity-70">Acesse a aba Ajustes para fazer o upload do .CSV atualizado da sua lista de jogos zerados.</p><label className={`cursor-pointer w-full py-4 text-center border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-cyan-800 text-white' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-cyan-400 text-black'} text-[10px] font-black uppercase tracking-widest active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>📤 Fazer Upload do CSV<input type="file" accept=".csv" className="hidden" onChange={handleManualImport} /></label></div>
-    );
-  }
-
-  if (selectedGame) {
-    const linkInfo = getExternalLinkInfo('PS4', selectedGame.nome, selectedGame.link);
-    return (
-      <div className="flex flex-col h-full pb-20 relative max-w-4xl mx-auto w-full">
-        <MContainer darkMode={darkMode} className="p-3 mb-4 flex items-center justify-between sticky top-0 z-10" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}><div className="flex items-center gap-2"><button onClick={() => setSelectedGame(null)} className={`p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-gray-100 text-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button><div className="font-black uppercase tracking-widest text-[10px] truncate">Registro de Conclusão</div></div></MContainer>
-        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10">
-          <div className="flex gap-4 flex-col md:flex-row">
-            <MContainer darkMode={darkMode} className="w-32 h-44 md:w-48 md:h-48 mx-auto md:mx-0 flex-shrink-0 flex flex-col items-center justify-center overflow-hidden" colorClass={`border-[4px] ${darkMode ? 'bg-cyan-900' : 'bg-cyan-200'}`}><GamepadIcon className={`w-12 h-12 mb-2 ${darkMode ? 'text-white opacity-40' : 'text-black opacity-30'}`} /><span className="text-[10px] font-black uppercase tracking-widest opacity-60 px-2 text-center">{selectedGame.console}</span></MContainer>
-            <div className="flex flex-col flex-1 justify-between py-1"><div className={`text-[9px] font-mono font-black uppercase tracking-widest border-[3px] w-max px-1.5 py-0.5 mb-2 ${darkMode ? 'border-gray-300 text-cyan-300 bg-cyan-900' : 'border-black text-black bg-cyan-300'}`}>FINALIZADO</div><MReadOnlyBox label="Nome do Jogo" value={selectedGame.nome} darkMode={darkMode} /><MReadOnlyBox label="Gênero" value={selectedGame.genero} darkMode={darkMode} /></div>
-          </div>
-          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] border-black bg-cyan-100 text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}><ExternalLink className="w-4 h-4" /> {linkInfo.isExact ? "Acessar Link Salvo" : `Buscar na Web`}</a>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2"><MReadOnlyBox label="Sua Nota" value={`★ ${selectedGame.nota} / 10`} darkMode={darkMode} emphasize={true} /><MReadOnlyBox label="Tempo de Jogo" value={`${(Number(selectedGame.tempoHoras)||0).toFixed(1)}h`} darkMode={darkMode} emphasize={true} /><MReadOnlyBox label="Dificuldade" value={selectedGame.dificuldade} darkMode={darkMode} /><MReadOnlyBox label="Mídia (Suporte)" value={selectedGame.suporteStr || selectedGame.suporte} darkMode={darkMode} /><MReadOnlyBox label="Início" value={selectedGame.inicio} darkMode={darkMode} /><MReadOnlyBox label="Término" value={selectedGame.fim} darkMode={darkMode} /></div>
-          {(selectedGame.precoPago || selectedGame.precoSemDesc) && (<MContainer darkMode={darkMode} className="p-3 grid grid-cols-2 gap-2" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}><MReadOnlyBox label="Preço Pago" value={selectedGame.precoPago ? `R$ ${selectedGame.precoPago}` : '--'} darkMode={darkMode} /><MReadOnlyBox label="Preço Sem Desconto" value={selectedGame.precoSemDesc ? `R$ ${selectedGame.precoSemDesc}` : '--'} darkMode={darkMode} /></MContainer>)}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2"><MReadOnlyBox label="Objetivo" value={selectedGame.condicao} multiline darkMode={darkMode} /><MReadOnlyBox label="Observações" value={selectedGame.observacao} multiline darkMode={darkMode} /></div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-7xl mx-auto w-full">
-      <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}><div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current"><div className="flex items-center gap-2"><FilterIcon className="w-4 h-4" /> Filtros</div></div><div className="grid grid-cols-3 gap-2 w-full"><select value={filterConsole} onChange={e => { setFilterConsole(e.target.value); setPage(0); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todos">Consoles</option>{uniqueConsoles.map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filterGenre} onChange={e => { setFilterGenre(e.target.value); setPage(0); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todos">Gêneros</option>{uniqueGenres.map(c => <option key={c} value={c}>{c}</option>)}</select><select value={filterSupport} onChange={e => { setFilterSupport(e.target.value); setPage(0); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todos">Mídia</option><option value="Físico">Física</option><option value="Digital/Outro">Digital</option></select></div></MContainer>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black'}><GamepadIcon className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{totalJogos}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Jogos Finalizados</div></MContainer>
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black'}><Clock className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-3xl font-black z-10">{totalHoras}h</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Total de Horas</div></MContainer>
-        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-28" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black'}><div className="text-3xl font-black z-10">★ {mediaNota}</div><div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Média Geral / 10</div></MContainer>
-        <MContainer darkMode={darkMode} className="p-3 flex flex-col items-center justify-center h-28 relative overflow-hidden" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-black text-white'}><DiscIcon className={`absolute -right-2 -bottom-2 w-16 h-16 opacity-20`} /><div className="text-3xl font-black z-10">{fisicoPerc}%</div><div className="text-[8px] font-black uppercase tracking-widest mt-1 z-10 text-center">Mídia Física</div></MContainer>
-      </div>
-      {totalJogos > 0 && (
-        <><div className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4">{supportChartData.length > 0 && <MondrianDonutChart title="Formato" data={supportChartData} darkMode={darkMode} />}{consoleChartData.length > 0 && <MondrianDonutChart title="Top Plataformas" data={consoleChartData} darkMode={darkMode} />}</div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}><div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Consoles Dominantes</div><div className="flex flex-col">{topConsoles.map(([cons, count], index) => <MondrianHBar key={`console-${index}`} label={cons} value={count} max={maxConsole} index={index} darkMode={darkMode} />)}{topConsoles.length === 0 && <span className="opacity-50 text-xs">Sem dados.</span>}</div></MContainer><MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}><div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Gêneros Favoritos</div><div className="flex flex-col">{topGenres.map(([gen, count], index) => <MondrianHBar key={`genre-${index}`} label={gen} value={count} max={maxGenre} index={index + 2} darkMode={darkMode} />)}{topGenres.length === 0 && <span className="opacity-50 text-xs">Sem dados.</span>}</div></MContainer></div></>
-      )}
-      <div className={`text-[10px] font-black uppercase tracking-widest border-b-[4px] pb-2 mt-4 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Lista Completa ({paginatedGames.length} de {filteredGames.length})</div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {paginatedGames.map(g => (
-          <div key={g.id} onClick={() => setSelectedGame(g)} className={`cursor-pointer p-2 border-[4px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white border-black'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all flex justify-between hover:-translate-y-1 hover:shadow-lg`}><div className="flex flex-col flex-1 overflow-hidden pr-2"><div className="text-sm font-black truncate">{g.nome}</div><div className="text-[9px] font-bold uppercase opacity-70 truncate">{g.console} • {g.genero}</div><div className="text-[8px] font-black mt-1 uppercase text-cyan-600 dark:text-cyan-400">{g.suporte} ({g.suporteStr})</div></div><div className="flex flex-col items-end justify-center min-w-[50px] border-l-[3px] border-current pl-2"><div className="text-[12px] font-black leading-none text-amber-500">★ {g.nota}/10</div><div className="text-[8px] font-bold mt-1 opacity-70">{(Number(g.tempoHoras)||0).toFixed(1)}h</div></div></div>
-        ))}
-      </div>
-      {totalPages > 1 && (<div className="flex justify-between items-center mt-4 mb-4 max-w-lg mx-auto w-full"><MButton darkMode={darkMode} onClick={() => setPage(Math.max(0, page - 1))} className="w-12 h-10" disabled={page === 0}><ChevronLeft className="w-5 h-5" /></MButton><div className="font-sans text-[10px] font-black uppercase tracking-widest">Página {page + 1} / {totalPages}</div><MButton darkMode={darkMode} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} className="w-12 h-10" disabled={page === totalPages - 1}><ChevronRight className="w-5 h-5" /></MButton></div>)}
-    </div>
-  );
-};
-
-const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, completedGames, setCompletedGames, activeCategories, activeClassCodes }) => {
+const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false); const [importData, setImportData] = useState(null); const [openSection, setOpenSection] = useState(null); const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
   const coverSyncActiveRef = useRef(false); const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
   
@@ -1199,7 +1073,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                 changedCount++;
                 syncItemToSheets(updatedItems[i], settings?.googleSheetsUrl);
             }
-            await new Promise(r => setTimeout(r, 600)); // Evita bloqueio da API
+            await new Promise(r => setTimeout(r, 600)); 
         }
     }
     
@@ -1208,7 +1082,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         setCoverSync({ active: false, progress: items.length, total: items.length, log: `Concluído! ${changedCount} atualizadas.` });
         if (changedCount > 0) { playChipBeep('success'); onShowToast('success'); }
     } else {
-        setItems(updatedItems); // Salva o progresso feito até cancelar
+        setItems(updatedItems); 
     }
   };
 
@@ -1217,7 +1091,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
     const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes), escape(i.wiki_info)]);
-    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), [headers.join(","), ...rows.map(r => r.join(","))].join("\n")], { type: 'text/csv;charset=utf-8;' })); link.download = `Memorabilia_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), [headers.join(","), ...rows.map(r => r.join(","))].join("\n")], { type: 'text/csv;charset=utf-8;' })); link.download = `Memorabilia_Fisico_${new Date().toISOString().split('T')[0]}.csv`; link.click();
   };
 
   const handleImportCSV = (e) => {
@@ -1240,12 +1114,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     reader.readAsText(file); e.target.value = null;
   };
 
-  const handleImportCompletedCSV = (e) => {
-    const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
-    reader.onload = (evt) => { const parsed = processCompletedGamesCSV(evt.target.result); if (parsed.length > 0) { setCompletedGames(parsed); playChipBeep('save'); onShowToast('success'); } else { playChipBeep('error'); onShowToast('error'); } };
-    reader.readAsText(file); e.target.value = null;
-  };
-
   const handleAddSubclass = () => {
     if (!newSubclass.name || !newSubclass.code) { playChipBeep('error'); onShowToast('error'); return; }
     const updatedCats = { ...activeCategories }; if (!updatedCats[newSubclass.parent]) updatedCats[newSubclass.parent] = [];
@@ -1258,7 +1126,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative max-w-3xl mx-auto w-full">
-      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
+      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens do acervo físico?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
       <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-400 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-400"><Smartphone className="w-8 h-8 mb-2 text-cyan-600 dark:text-cyan-400" /><h3 className="font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-300 text-lg mb-1">Instalar App</h3><MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="cyan" className="w-full py-4 text-sm font-black text-black">📲 Instalar Agora</MButton></MContainer>
@@ -1321,14 +1189,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           </div>
         )}
       </MContainer>
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
-        <button onClick={() => toggleSection('sincronizar')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'sincronizar' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><GamepadIcon className="w-4 h-4" /> Jogos Zerados</span><span className="text-lg font-mono">{openSection === 'sincronizar' ? '−' : '+'}</span></button>
-        {openSection === 'sincronizar' && (
-          <div className="p-4 flex flex-col gap-3">
-            <label className={`w-full flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)] bg-amber-900/50 text-amber-200' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] bg-amber-100 text-amber-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar CSV<input type="file" accept=".csv" className="hidden" onChange={handleImportCompletedCSV} /></label>
-          </div>
-        )}
-      </MContainer>
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-indigo-900/20 text-white' : 'bg-indigo-50 text-black'}>
         <button onClick={() => toggleSection('capas')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'capas' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Recuperação de Capas</span><span className="text-lg font-mono">{openSection === 'capas' ? '−' : '+'}</span></button>
         {openSection === 'capas' && (
@@ -1356,10 +1216,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
         <button onClick={() => toggleSection('backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local</span><span className="text-lg font-mono">{openSection === 'backup' ? '−' : '+'}</span></button>
         {openSection === 'backup' && (
-          <div className="p-4 flex gap-2 flex-col sm:flex-row"><button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button><label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label></div>
+          <div className="p-4 flex gap-2 flex-col sm:flex-row"><button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[4px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar Coleção</button><label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[4px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[4px_4px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[4px_4px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar Coleção<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label></div>
         )}
       </MContainer>
-      <div className="mt-8 mb-4 text-center"><button onClick={() => setShowResetConfirm(true)} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-pink-500 text-pink-500' : 'border-pink-600 text-pink-600'}`}>⚠️ Resetar Coleção</button></div>
+      <div className="mt-8 mb-4 text-center"><button onClick={() => setShowResetConfirm(true)} className={`px-4 py-2 border-[3px] text-[8px] font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-all ${darkMode ? 'border-pink-500 text-pink-500' : 'border-pink-600 text-pink-600'}`}>⚠️ Resetar Coleção Física</button></div>
     </div>
   );
 };
@@ -1369,11 +1229,11 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 // ==========================================
 export default function App() {
   const [activeTab, setActiveTab] = useState('library'); const [addMode, setAddMode] = useState('manual'); const [darkMode, setDarkMode] = useState(false);
-  const [items, setItems] = useState([]); const [completedGames, setCompletedGames] = useState([]);
+  const [items, setItems] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '', discogsToken: '' });
   const [isFetchingCloud, setIsFetchingCloud] = useState(false); const [showSuccessSplash, setShowSuccessSplash] = useState(false); const [initialLoadDone, setInitialLoadDone] = useState(false); const [isLoaded, setIsLoaded] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success' }); const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
-  const [libraryResetKey, setLibraryResetKey] = useState(0); const [completedResetKey, setCompletedResetKey] = useState(0);
+  const [libraryResetKey, setLibraryResetKey] = useState(0);
   const pwa = usePWA(LINK_DO_ICONE_NO_GITHUB); const globalFileInputRef = useRef(null);
   const [aiBoxState, setAiBoxState] = useState('idle'); const [aiBoxMessage, setAiBoxMessage] = useState(''); const [scannedAIData, setScannedAIData] = useState(null);
   
@@ -1428,7 +1288,6 @@ export default function App() {
       if (localStorage.getItem('memorabilia_theme') === 'dark') setDarkMode(true);
       const sItems = localStorage.getItem('memorabilia_items'); if (sItems) setItems(JSON.parse(sItems));
       const sSett = localStorage.getItem('memorabilia_settings'); if (sSett) { savedSettings = JSON.parse(sSett); setSettings(p => ({ ...p, ...savedSettings })); }
-      const sComp = localStorage.getItem('memorabilia_completed'); if (sComp) setCompletedGames(JSON.parse(sComp));
     } catch (e) {}
     
     if (savedSettings?.googleSheetsUrl) {
@@ -1484,7 +1343,6 @@ export default function App() {
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, initialLoadDone]);
-  useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_completed', JSON.stringify(completedGames)); }, [completedGames, initialLoadDone]);
   
   const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
   const rotatingStats = useMemo(() => {
@@ -1537,17 +1395,17 @@ export default function App() {
   const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPercentage = totalPagesCount > 0 ? ((readPages / totalPagesCount) * 100).toFixed(1) : 0;
   
-  const totalJogos = completedGames.length; const tempos = completedGames.map(g => Number(g.tempoHoras) || 0).filter(t => t > 0);
-  const avgTime = tempos.length > 0 ? (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(1) : 0;
-  const maxTime = tempos.length > 0 ? Math.max(...tempos).toFixed(1) : 0;
-  const notasJ = completedGames.filter(g => (Number(g.nota) || 0) > 0); const mediaNotaJ = notasJ.length > 0 ? (notasJ.reduce((a, b) => a + (Number(b.nota) || 0), 0) / notasJ.length).toFixed(1) : 0;
-  
-  let totalGasto = 0;
-  const gamesWithPrices = completedGames.map(g => { const pPago = parseFloat(String(g.precoPago || '0').replace(/\./g, '').replace(',', '.')) || 0; const pCheio = parseFloat(String(g.precoSemDesc || '0').replace(/\./g, '').replace(',', '.')) || 0; totalGasto += pPago; return { ...g, numPago: pPago, numCheio: pCheio, desconto: pCheio - pPago }; });
-  const gamesBought = gamesWithPrices.filter(g => g.numPago > 0); const cheapest = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago < b.numPago ? a : b) : null; const mostExp = gamesBought.length > 0 ? gamesBought.reduce((a, b) => a.numPago > b.numPago ? a : b) : null;
-  const gamesWithDisc = gamesWithPrices.filter(g => g.desconto > 0); const biggestDisc = gamesWithDisc.length > 0 ? gamesWithDisc.reduce((a, b) => a.desconto > b.desconto ? a : b) : null;
+  const catCounts = items.reduce((acc, i) => {
+    let mainCat = 'Outros';
+    for (const [cat, subs] of Object.entries(activeCategories)) {
+      if ((subs || []).includes(i.type)) { mainCat = cat; break; }
+    }
+    acc[mainCat] = (acc[mainCat] || 0) + 1;
+    return acc;
+  }, {});
 
-  const byConsole = completedGames.reduce((acc, g) => { acc[g.console] = (acc[g.console] || 0) + 1; return acc; }, {}); const consoleStatsStr = Object.entries(byConsole).sort((a,b)=>b[1]-a[1]).map(([c, count]) => `${c}: ${count}`).join(' | ');
+  const allRated = items.filter(i => (Number(i.rating) || 0) > 0);
+  const globalAvgRating = allRated.length > 0 ? (allRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / allRated.length).toFixed(1) : 0;
   
   const speed = settings?.marqueeSpeed || 35; const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
@@ -1558,15 +1416,12 @@ export default function App() {
   
   const renderMarqueeContent = () => {
     const statsArr = [];
-    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>FINALIZADOS: {totalJogos}</span>);
-    if (consoleStatsStr) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>CONSOLES: {consoleStatsStr}</span>);
-    statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>TEMPO MEDIO: {avgTime}H</span>);
-    if (Number(maxTime) > 0) statsArr.push(<span key="4" className={`text-pink-400 ${ledItemStyle}`}>MAIOR TEMPO: {maxTime}H</span>);
-    statsArr.push(<span key="5" className={`text-amber-400 ${ledItemStyle}`}>NOTA MEDIA: {mediaNotaJ}/10</span>);
-    statsArr.push(<span key="6" className={`text-cyan-400 ${ledItemStyle}`}>GASTO TOTAL: R$ {totalGasto.toFixed(2).replace('.',',')}</span>);
-    if (mostExp) statsArr.push(<span key="7" className={`text-pink-400 ${ledItemStyle}`}>+ CARO: R$ {mostExp.numPago.toFixed(2).replace('.',',')}</span>);
-    if (cheapest) statsArr.push(<span key="8" className={`text-cyan-400 ${ledItemStyle}`}>+ BARATO: R$ {cheapest.numPago.toFixed(2).replace('.',',')}</span>);
-    if (biggestDisc) statsArr.push(<span key="9" className={`text-amber-400 ${ledItemStyle}`}>MAIOR DESC.: R$ {biggestDisc.desconto.toFixed(2).replace('.',',')} OFF</span>);
+    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>ACERVO FÍSICO: {totalItens} UNIDADES</span>);
+    if (catCounts['Livros']) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>LIVROS: {catCounts['Livros']} UN</span>);
+    if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']} UN</span>);
+    if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']} UN</span>);
+    if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO (DVD/VHS): {catCounts['Vídeo']} UN</span>);
+    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA GERAL DA COLEÇÃO: {globalAvgRating}/5 ESTRELAS</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -1589,8 +1444,6 @@ export default function App() {
   const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
   const handleLibClick = () => { if (!isLibLongPress.current) { setActiveTab('library'); } };
-
-  const handleCompClick = () => { setCompletedResetKey(k => k + 1); setActiveTab('completed'); };
 
   if (isFetchingCloud && !showSuccessSplash) {
     return (
@@ -1625,7 +1478,6 @@ export default function App() {
             <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-400 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><Library className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Coleção</span></button>
             <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white border-l-[4px] border-amber-400' : 'bg-amber-400 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><PlusSquare className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Adicionar</span></button>
             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white border-l-[4px] border-pink-400' : 'bg-pink-500 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Dashboard</span></button>
-            <button onClick={handleCompClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-400 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><MonitorPlay className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Zerados</span></button>
             <div className="mt-auto mb-4"><button onClick={() => setActiveTab('settings')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white border-l-[4px] border-gray-400' : 'bg-gray-200 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}><Settings className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Ajustes</span></button></div>
           </div>
         </nav>
@@ -1665,7 +1517,7 @@ export default function App() {
                 <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
               </div>
               <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                 <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Jogos Zerados</span><span className="animate-pulse text-pink-500 ml-1">REC</span></div>
+                 <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel de Status</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
                  <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
                     <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
                       {renderMarqueeContent()} {renderMarqueeContent()}
@@ -1680,15 +1532,13 @@ export default function App() {
             {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
             {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
             {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
-            {activeTab === 'completed' && <CompletedGamesTab key={completedResetKey} completedGames={completedGames} setCompletedGames={setCompletedGames} settings={settings} darkMode={darkMode} onShowToast={showToast} />}
-            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} completedGames={completedGames} setCompletedGames={setCompletedGames} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
+            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
           </main>
 
           <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
             <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span></button>
             <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}><PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span></button>
             <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}><BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span></button>
-            <button onClick={handleCompClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'completed' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}><MonitorPlay className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Zerados</span></button>
             <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}><Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span></button>
           </nav>
         </div>
