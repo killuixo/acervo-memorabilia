@@ -951,7 +951,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       {/* MODAL: FILTROS AVANÇADOS */}
       {isFilterMenuOpen && (
           <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
-              <div className={`w-full sm:max-w-md h-[90vh] sm:h-[80vh] flex flex-col border-t-[4px] sm:border-[4px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
+              <div className={`w-full sm:max-w-md h-[80vh] sm:h-[80vh] mb-16 md:mb-0 flex flex-col border-t-[4px] sm:border-[4px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
                   {/* Header Modal Filtro */}
                   <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <button onClick={() => setIsFilterMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
@@ -1013,7 +1013,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       {/* MODAL: ORDENAÇÃO */}
       {isSortMenuOpen && (
           <div className="fixed inset-0 z-[200] bg-black/80 flex flex-col justify-end sm:justify-center items-center sm:p-4 animate-in fade-in duration-200">
-              <div className={`w-full sm:max-w-md flex flex-col border-t-[4px] sm:border-[4px] max-h-[90vh] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
+              <div className={`w-full sm:max-w-md flex flex-col border-t-[4px] sm:border-[4px] max-h-[80vh] mb-16 md:mb-0 ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
                   {/* Header */}
                   <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <button onClick={() => setIsSortMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
