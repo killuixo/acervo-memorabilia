@@ -983,7 +983,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                                               const isChecked = pendingFilters[category].includes(option);
                                               const count = filterCounts[category]?.[option] || 0;
                                               return (
-                                                  <label key={option} className={`flex items-center justify-between p-3 cursor-pointer transition-colors active:bg-black/5 ${darkMode ? 'border-t border-gray-800' : 'border-t border-gray-200'}`}>
+                                                  <div key={option} onClick={() => handleCheckboxChange(category, option)} className={`flex items-center justify-between p-3 cursor-pointer transition-colors active:bg-black/5 ${darkMode ? 'border-t border-gray-800' : 'border-t border-gray-200'}`}>
                                                       <span className={`text-[10px] font-black uppercase tracking-wider truncate mr-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{option}</span>
                                                       <div className="flex items-center gap-3">
                                                           <span className={`text-[10px] font-bold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{count}</span>
@@ -991,7 +991,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                                                               {isChecked && <Check className="w-3 h-3 text-black dark:text-white" />}
                                                           </div>
                                                       </div>
-                                                  </label>
+                                                  </div>
                                               );
                                           })}
                                       </div>
@@ -1091,10 +1091,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                   className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[3px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}
                   title={`Ordenar: ${sortLabels[sortBy]}`}
               >
-                  <ArrowUpDownIcon className="w-4 h-4" /> 
-                  <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-[2px] flex items-center justify-center text-[7px] font-black ${darkMode ? 'bg-cyan-700 border-gray-900 text-white' : 'bg-cyan-400 border-white text-black'}`}>
-                      {sortOrder === 'asc' ? '↑' : '↓'}
-                  </div>
+                  {sortOrder === 'asc' ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
               </button>
 
               <select 
