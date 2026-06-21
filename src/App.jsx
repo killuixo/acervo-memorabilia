@@ -429,11 +429,11 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
 };
 
 const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
-  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({...itemToSync, _action: 'upsert'}) }).catch(e => console.error("Erro Google Sheets:", e));
+  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(itemToSync) }).catch(e => console.error("Erro Google Sheets:", e));
 };
 
-const syncDeleteToSheets = (deletedId, newCollection, googleSheetsUrl) => {
-  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ _action: 'delete', id: deletedId, collection: newCollection }) }).catch(e => console.error("Erro Google Sheets:", e));
+const syncDeleteToSheets = (deletedId, googleSheetsUrl) => {
+  if (googleSheetsUrl) fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ _action: 'delete', id: deletedId }) }).catch(e => console.error("Erro Google Sheets:", e));
 };
 
 // ==========================================
@@ -475,17 +475,36 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const saveModifications = () => {
     setItems(items.map(i => i.id === editedItem.id ? editedItem : i)); setSelectedItem(editedItem); playChipBeep('save'); onShowToast('success'); syncItemToSheets(editedItem, settings?.googleSheetsUrl);
   };
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (itemToDelete) { 
        const updatedList = items.filter(item => item.id !== itemToDelete);
        const reindexedList = reindexCollection(updatedList);
+       
        setItems(reindexedList); 
        setItemToDelete(null); 
        setSelectedItem(null); 
        setEditedItem(null); 
        playChipBeep('save'); 
        onShowToast('success'); 
-       syncDeleteToSheets(itemToDelete, reindexedList, settings?.googleSheetsUrl);
+       
+       if (settings?.googleSheetsUrl) {
+          syncDeleteToSheets(itemToDelete, settings.googleSheetsUrl);
+          
+          for (let i = 0; i < reindexedList.length; i++) {
+             const newItem = reindexedList[i];
+             const oldItem = updatedList[i]; 
+             
+             if (newItem.id !== oldItem.id) {
+                syncDeleteToSheets(oldItem.id, settings.googleSheetsUrl);
+                await new Promise(r => setTimeout(r, 400));
+                syncItemToSheets(newItem, settings.googleSheetsUrl);
+                await new Promise(r => setTimeout(r, 400));
+             } else if (newItem.archive_code !== oldItem.archive_code) {
+                syncItemToSheets(newItem, settings.googleSheetsUrl);
+                await new Promise(r => setTimeout(r, 400));
+             }
+          }
+       }
     }
   };
   const fetchWikiInfo = async () => {
@@ -1239,8 +1258,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative max-w-3xl mx-auto w-full">
-      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); syncDeleteToSheets('all', [], settings?.googleSheetsUrl); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
-      <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); syncDeleteToSheets('import', importData, settings?.googleSheetsUrl); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
+      <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
+      <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-400 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-400"><Smartphone className="w-8 h-8 mb-2 text-cyan-600 dark:text-cyan-400" /><h3 className="font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-300 text-lg mb-1">Instalar App</h3><MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="cyan" className="w-full py-4 text-sm font-black text-black">📲 Instalar Agora</MButton></MContainer>
       )}
