@@ -1575,6 +1575,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 };
 
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, activeCategories, activeClassCodes }) => {
+  const navigate = useNavigate();
   const [showResetConfirm, setShowResetConfirm] = useState(false); const [importData, setImportData] = useState(null); const [openSection, setOpenSection] = useState(null); const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
   const coverSyncActiveRef = useRef(false); const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
   
@@ -1762,7 +1763,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 // ==========================================
 // COMPONENTE PRINCIPAL (APP)
 // ==========================================
-export default function App() {
+export default function MemorabiliaApp() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('library'); const [addMode, setAddMode] = useState('manual'); const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
   const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '', discogsToken: '' });
