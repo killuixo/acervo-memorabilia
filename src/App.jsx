@@ -223,7 +223,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const isGame = (activeCategories['Games'] || []).includes(typeRaw);
   const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
 
-  // 0. Se tiver código de barras, tentar UPCItemDB primeiro (é quase 100% exato)
   if (barcodeRaw) {
      try {
         const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw.replace(/[-\s]/g, "")}`);
@@ -232,7 +231,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
      } catch(e) {}
   }
 
-  // 1. DISCOS (Foco no Discogs e MusicBrainz filtrando formato e ano)
   if (isDisc) {
     if (settings?.discogsToken) {
       try {
@@ -242,12 +240,10 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         else if (tLower.includes('cd')) formatQuery = '&format=cd';
         else if (tLower.includes('cassete') || tLower.includes('fita')) formatQuery = '&format=cassette';
 
-        // Busca Super Específica (Título + Autor + Ano + Formato)
         const dcRes = await fetch(`https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${yearRaw ? `&year=${yearRaw}` : ''}${formatQuery}&token=${settings.discogsToken}`);
         const dcData = await dcRes.json();
         if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) return dcData.results[0].cover_image;
 
-        // Fallback amplo no Discogs se a busca exata falhar
         const dcResBroad = await fetch(`https://api.discogs.com/database/search?q=${qTitle}+${qAuthor}&token=${settings.discogsToken}`);
         const dcDataBroad = await dcResBroad.json();
         if (dcDataBroad.results?.[0]?.cover_image && !dcDataBroad.results[0].cover_image.includes('spacer.gif')) return dcDataBroad.results[0].cover_image;
@@ -255,7 +251,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     }
 
     try {
-        // MusicBrainz / Cover Art Archive
         const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=release:${qTitle}%20AND%20artist:${qAuthor}&fmt=json`);
         const mbData = await mbRes.json();
         if (mbData.releases?.length > 0) {
@@ -268,7 +263,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         }
     } catch(e) { console.warn("MusicBrainz err", e); }
     
-    // Fallback Apple Music (apenas para CDs digitais)
     try {
         const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}+${qAuthor}&media=music&entity=album&limit=1`);
         const itData = await itRes.json();
@@ -276,20 +270,17 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     } catch(e) {}
   }
 
-  // 2. LIVROS/HQ (Foco em Editora e Ano de Publicação)
   else if (isBook) {
     try {
-        // Constrói Query Específica do Google Books
         let gbQuery = `intitle:"${titleRaw}"`;
         if (authorRaw) gbQuery += `+inauthor:"${authorRaw}"`;
-        if (pubRaw) gbQuery += `+inpublisher:"${pubRaw}"`; // Cruzar com nome da editora
+        if (pubRaw) gbQuery += `+inpublisher:"${pubRaw}"`; 
         
         const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=5`);
         const gbData = await gbRes.json();
         
         if (gbData.items) {
             let bestMatch = gbData.items[0];
-            // Se informou ano, garimpar a edição com o ano idêntico no JSON
             if (yearRaw) {
                 const exact = gbData.items.find(i => i.volumeInfo?.publishedDate?.startsWith(yearRaw));
                 if (exact && exact.volumeInfo?.imageLinks?.thumbnail) bestMatch = exact;
@@ -299,7 +290,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
             }
         }
         
-        // OpenLibrary Especificando ano/editora
         const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}`);
         const olData = await olRes.json();
         if (olData.docs?.length > 0) {
@@ -316,11 +306,8 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     } catch(e) { console.warn("Books API err", e); }
   }
 
-  // 3. GAMES (Foco na Plataforma cruzada com a Wikipedia)
   else if (isGame) {
       try {
-          // Utilizar API Pública e robusta da Wikipedia. 
-          // Ex: "Megaman PS4 cover"
           const gameQuery = `${titleRaw} ${typeRaw} cover`;
           const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(gameQuery)}&utf8=&format=json&origin=*`);
           const wikiData = await wikiRes.json();
@@ -339,7 +326,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
           }
       } catch(e) { console.warn("Wikipedia Game err", e); }
 
-      // Fallback Apple App Store
       try {
           const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=software&limit=1`);
           const itData = await itRes.json();
@@ -347,7 +333,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch(e) {}
   }
 
-  // 4. VÍDEO (Cruzar ano de lançamento no iTunes e Poster na Wikipedia)
   else if (isVideo) {
       try {
           const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=5`);
@@ -381,7 +366,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch(e) {}
   }
 
-  // Fallback Esmagador Final para qualquer coisa se tudo anterior falhar
   try {
       const fallbackQuery = qAuthor ? `${qTitle}+${qAuthor}` : qTitle;
       const itRes = await fetch(`https://itunes.apple.com/search?term=${fallbackQuery}&media=all&limit=1`);
@@ -512,7 +496,7 @@ const MRadio = ({ label, checked, onChange, darkMode }) => (
 const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText="Sim", cancelText="Cancelar", darkMode }) => {
   if (!isOpen) return null;
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm z-[200]">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</h3>
         <p className="text-sm font-bold opacity-90">{message}</p>
@@ -613,15 +597,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [wikiError, setWikiError] = useState('');
   const itemsPerPage = 12; 
 
-  // --- NOVOS ESTADOS DE FILTRO (DISCOGS-LIKE) ---
   const [searchTerm, setSearchTerm] = useState('');
   const [alphaFilter, setAlphaFilter] = useState('Todos');
   
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
 
-  const [sortBy, setSortBy] = useState('added'); // added, title, author, year, type
-  const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
+  const [sortBy, setSortBy] = useState('added');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   const [pendingSortBy, setPendingSortBy] = useState('added');
   const [pendingSortOrder, setPendingSortOrder] = useState('desc');
@@ -669,7 +652,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       setPage(0);
   };
 
-  // 1. Filtragem Base (Busca Textual e Alfabética)
   const baseFilteredItems = useMemo(() => {
       let result = items;
       if (searchTerm.trim()) {
@@ -691,7 +673,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       return result;
   }, [items, searchTerm, alphaFilter]);
 
-  // 2. Cálculo de Contadores Dinâmicos para as caixas
   const filterCounts = useMemo(() => {
       const counts = { Adicionado: {}, Suporte: {}, Ano: {}, Nota: {}, 'Páginas/Faixa': {} };
       
@@ -735,7 +716,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       'type': 'Formato'
   };
 
-  // 3. Aplicação dos Filtros Ativos e Ordenação Final
   const finalProcessedItems = useMemo(() => {
       let result = baseFilteredItems;
 
@@ -757,7 +737,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           if (sortBy === 'year') {
               return sortOrder === 'asc' ? valA - valB : valB - valA;
           } else {
-              // localeCompare com 'pt-BR' entende que 'é' é como 'e', resolvendo o problema dos acentos
               return sortOrder === 'asc' 
                   ? String(valA).localeCompare(String(valB), 'pt-BR')
                   : String(valB).localeCompare(String(valA), 'pt-BR');
@@ -836,7 +815,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     } catch (e) {
       let errorMsg = e.message;
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
-        errorMsg = "Limite da IA excedido. Tente novamente mais tarde.";
+        errorMsg = "⚠️ Cota gratuita da IA (Gemini) esgotada no momento. Aguarde o reset da API para fazer novas pesquisas enciclopédicas.";
+      } else {
+        errorMsg = `Erro na comunicação com a IA: ${errorMsg}`;
       }
       setWikiError(errorMsg); playChipBeep('error'); 
     } finally { setLoadingWiki(false); }
@@ -844,7 +825,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
   const countActiveFilters = Object.values(activeFilters).reduce((acc, curr) => acc + curr.length, 0);
 
-  // RENDERIZAÇÃO DE DETALHES DO ITEM (EDICAO)
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
     const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
@@ -917,7 +897,10 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 {loadingWiki ? (
                   <div className="flex flex-col items-center"><Sparkles className="w-6 h-6 animate-pulse mb-2 text-pink-500" /><span className="text-[10px] font-black uppercase tracking-widest animate-pulse opacity-70">Consultando oráculo...</span></div>
                 ) : (
-                  <div className="flex flex-col items-center gap-2">{wikiError && <span className="text-[9px] font-bold text-pink-500">{wikiError}</span>}<MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-pink-500 border-black dark:bg-pink-600 text-white">✨ Pesquisar sobre a Obra</MButton></div>
+                  <div className="flex flex-col items-center gap-2">
+                    {wikiError && <div className="text-[9px] font-bold text-white bg-pink-600 p-2 border-[2px] border-black rounded shadow-sm text-center">{wikiError}</div>}
+                    <MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-pink-500 border-black dark:bg-pink-600 text-white">✨ Pesquisar sobre a Obra</MButton>
+                  </div>
                 )}
               </div>
             )}
@@ -929,7 +912,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     );
   }
 
-  // RENDERIZAÇÃO DA LISTA PRINCIPAL E DE SEUS MODAIS
   return (
     <div className="flex flex-col h-full relative">
       <MModal isOpen={!!itemToDelete} title="Excluir Item" message={`Apagar "${editedItem?.title}"?`} onConfirm={confirmDelete} onCancel={() => {setItemToDelete(null); setEditedItem(null);}} darkMode={darkMode} confirmText="Apagar" />
@@ -948,10 +930,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         </div>
       )}
 
-      {/* MODAL: FILTROS AVANÇADOS */}
       {isFilterMenuOpen && (
-          <div className="fixed inset-0 z-[200] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
-              <div className={`w-full sm:max-w-md h-[80vh] sm:h-[80vh] mb-16 md:mb-0 flex flex-col border-t-[4px] sm:border-[4px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
+          <div className="fixed inset-0 z-[999] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
+              <div className={`w-full sm:max-w-md max-h-[85vh] sm:h-[80vh] flex flex-col border-t-[4px] sm:border-[4px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
                   {/* Header Modal Filtro */}
                   <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <button onClick={() => setIsFilterMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
@@ -1010,17 +991,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </div>
       )}
 
-      {/* MODAL: ORDENAÇÃO */}
       {isSortMenuOpen && (
-          <div className="fixed inset-0 z-[200] bg-black/80 flex flex-col justify-end sm:justify-center items-center sm:p-4 animate-in fade-in duration-200">
-              <div className={`w-full sm:max-w-md flex flex-col border-t-[4px] sm:border-[4px] max-h-[80vh] mb-16 md:mb-0 ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
-                  {/* Header */}
+          <div className="fixed inset-0 z-[999] bg-black/80 flex flex-col justify-end sm:justify-center items-center sm:p-4 animate-in fade-in duration-200">
+              <div className={`w-full sm:max-w-md flex flex-col border-t-[4px] sm:border-[4px] max-h-[85vh] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
                   <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <button onClick={() => setIsSortMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
                       <span className="text-[12px] font-black uppercase tracking-widest">Ordenar</span>
                       <div className="w-7"/> {/* placeholder */}
                   </div>
-                  {/* Content */}
                   <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                       <div className="mb-6">
                           <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Ordem</div>
@@ -1040,7 +1018,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                           </div>
                       </div>
                   </div>
-                  {/* Footer */}
                   <div className={`p-4 border-t-[4px] ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <MButton darkMode={darkMode} variant="black" onClick={applySort} className="w-full py-4 text-[10px]">Aplicar</MButton>
                   </div>
@@ -1048,7 +1025,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </div>
       )}
 
-      {/* --- NOVA ÁREA DE CABEÇALHO DA LISTA (COMPACTA, 4 BLOCOS NA MESMA LINHA) --- */}
       <div className={`sticky top-0 z-20 flex flex-col gap-2 pb-2 pt-1 border-b-[4px] ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'} mb-3 px-1`}>
           
           <div className="flex gap-1 sm:gap-2 w-full">
@@ -1103,13 +1079,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               </select>
           </div>
           
-          {/* Mostrador Rápido de Contagem */}
           <div className="px-1 text-[9px] font-black uppercase tracking-widest opacity-60 mt-1">
               Exibindo {finalProcessedItems.length} {countActiveFilters > 0 || searchTerm ? 'resultados encontrados' : 'itens da coleção'}
           </div>
       </div>
 
-      {/* ÁREA DA LISTA DE ITENS */}
       <div className="flex-1 overflow-y-auto pb-20 px-1 pt-1 scrollbar-hide">
         {paginatedItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[50vh] p-10 opacity-50 text-center">
@@ -1308,7 +1282,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         <MButton darkMode={darkMode} variant="pink" onClick={triggerGlobalAI} className="flex-1 py-2 text-[10px]"><Camera className="w-4 h-4" /> Auto IA</MButton>
       </div>
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-700 border-gray-300 text-white' : 'bg-amber-400 border-black text-black') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-pink-800 border-gray-300 text-white' : 'bg-pink-500 border-black text-white')}`}>
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-700 border-gray-300 text-white' : 'bg-amber-400 border-black text-black') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-pink-800 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
           {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-sm animate-spin flex-shrink-0" />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
@@ -1800,9 +1774,11 @@ export default function App() {
     } catch (e) {
       let errorMsg = e.message;
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
-         errorMsg = "Limite da IA excedido (Quota). Aguarde um instante e tente novamente.";
+         errorMsg = "Cota gratuita da IA esgotada no momento. ⚠️\nUse o botão 'Barcode' (Código de Barras) para pesquisar bases de dados sem limite, ou preencha manualmente até a cota resetar.";
+      } else {
+         errorMsg = `Falha na IA: ${errorMsg}\nTente focar bem a capa ou use o modo Barcode.`;
       }
-      setAiBoxState('error'); setAiBoxMessage(`Erro: ${errorMsg}`); playChipBeep('error'); showToast('error'); 
+      setAiBoxState('error'); setAiBoxMessage(errorMsg); playChipBeep('error'); showToast('error'); 
     }
   };
 
@@ -2061,7 +2037,7 @@ export default function App() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative z-0 flex flex-col">
+          <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative flex flex-col">
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             
             {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
