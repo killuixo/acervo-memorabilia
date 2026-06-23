@@ -179,10 +179,7 @@ const parseCSVText = (rawText) => {
 
 const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim() : '';
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
-const isVariousArtists = name => {
-  const n = String(name || '').toLowerCase().trim();
-  return ['various', 'vários', 'varios', 'various artists', 'variados', 'coleções', 'colecoes', 'coleção', 'colecao', 'compilações', 'compilacoes', 'compilação', 'compilacao', 'diversos'].includes(n);
-};
+const isVariousArtists = name => ['various', 'vários', 'varios', 'various artists', 'variados'].includes(String(name || '').toLowerCase().trim());
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
@@ -811,9 +808,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
     setLoadingWiki(true); setWikiError('');
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] }] }) });
-      const data = await res.json(); 
-      if (!res.ok || data.error) throw new Error(data.error?.message || "Erro desconhecido na API.");
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] }] }) });
+      const data = await res.json(); if (data.error) throw new Error(data.error.message);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
     } catch (e) {
@@ -1395,11 +1391,10 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   
   const byAuthor = dashItems.reduce((acc, i) => {
     if (i.author_developer) {
-      const rawAuthor = i.author_developer.trim(); 
-      if (isVariousArtists(rawAuthor)) return acc;
-      const normTitle = normalizeWorkTitle(i.title);
+      const rawAuthor = i.author_developer.trim(); const normTitle = normalizeWorkTitle(i.title);
       let normAuthor = getSortableName(rawAuthor).toLowerCase();
-      if (!acc[normAuthor]) acc[normAuthor] = { display: rawAuthor, titles: new Set() };
+      if (isVariousArtists(rawAuthor)) normAuthor = "vários artistas / compilações";
+      if (!acc[normAuthor]) acc[normAuthor] = { display: isVariousArtists(rawAuthor) ? 'Vários Artistas' : rawAuthor, titles: new Set() };
       acc[normAuthor].titles.add(normTitle);
     }
     return acc;
@@ -1463,11 +1458,8 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
          const faixas = parseInt(i.pages_or_time);
          totalFaixas += faixas;
          if (i.author_developer) {
-            const rawAuthor = i.author_developer.trim();
-            if (!isVariousArtists(rawAuthor)) {
-                const auth = getSortableName(rawAuthor);
-                trackByArtist[auth] = (trackByArtist[auth] || 0) + faixas;
-            }
+            let auth = isVariousArtists(i.author_developer) ? "Vários Artistas" : getSortableName(i.author_developer);
+            trackByArtist[auth] = (trackByArtist[auth] || 0) + faixas;
          }
      });
      
@@ -1475,7 +1467,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      
      let topArtist = { name: '--', count: 0 };
      for (const [art, count] of Object.entries(trackByArtist)) {
-         if (count > topArtist.count) topArtist = { name: art, count };
+         if (count > topArtist.count && art !== "Vários Artistas") topArtist = { name: art, count };
      }
 
      return { qtyOuvidos, percOuvidos, mediaNota, totalFaixas, mediaFaixas, topArtist };
@@ -1773,12 +1765,11 @@ export default function App() {
     setAiBoxState('loading'); setAiBoxMessage('Analisando imagem...');
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `Extraia dados desta capa. Retorne apenas JSON: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "2000", "publisher": "Editora", "pages_or_time": "300", "description": "Resumo"}. Opções type: ${allTypes.join(', ')}.` }, { inlineData: { mimeType: "image/jpeg", data: b64 } }] }], generationConfig: { responseMimeType: "application/json" } }) });
-      const data = await res.json(); 
-      if (!res.ok || data.error) throw new Error(data.error?.message || "Erro desconhecido na API");
-      let text = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!text) throw new Error("A IA não retornou texto.");
-      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); 
-      if (text.includes('{') && text.includes('}')) { text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1); }
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `Extraia dados desta capa. Retorne apenas JSON: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "2000", "publisher": "Editora", "pages_or_time": "300", "description": "Resumo"}. Opções type: ${allTypes.join(', ')}.` }, { inlineData: { mimeType: "image/jpeg", data: b64 } }] }], generationConfig: { responseMimeType: "application/json" } }) });
+      if (!res.ok) throw new Error(`Erro API`);
+      const data = await res.json(); if (data.error) throw new Error(data.error.message);
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!text) throw new Error("Vazio.");
+      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
       setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com IA!'); playChipBeep('save'); showToast('success');
     } catch (e) {
       let errorMsg = e.message;
@@ -1881,17 +1872,13 @@ export default function App() {
     }
     const ac = items.reduce((acc, i) => { 
        if(i.author_developer) {
-          const ra = i.author_developer.trim(); 
-          if (isVariousArtists(ra)) return acc;
-          const na = getSortableName(ra).toLowerCase(); 
-          const nt = normalizeWorkTitle(i.title);
-          if (!acc[na]) acc[na] = { d: ra, t: new Set() }; 
-          acc[na].t.add(nt);
-       } 
-       return acc; 
+          let ra = i.author_developer.trim(); if (isVariousArtists(ra)) ra = 'Vários Artistas';
+          const na = getSortableName(ra).toLowerCase(); const nt = normalizeWorkTitle(i.title);
+          if (!acc[na]) acc[na] = { d: ra, t: new Set() }; acc[na].t.add(nt);
+       } return acc; 
     }, {});
     const ta = Object.entries(ac).map(([na, d]) => [d.d, d.t.size]).sort((a,b)=>b[1]-a[1])[0];
-    if (ta && ta[1] > 1) stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
+    if (ta && ta[1] > 1 && ta[0] !== 'Vários Artistas') stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
   }, [items, activeCategories]);
 
