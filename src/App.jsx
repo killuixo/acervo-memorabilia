@@ -211,10 +211,7 @@ const parseCSVText = (rawText) => {
 
 const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim() : '';
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
-const isVariousArtists = name => {
-  const n = String(name || '').toLowerCase().trim();
-  return ['various', 'vários', 'varios', 'variados', 'coleção', 'coleções', 'colecoes', 'collection', 'compilação', 'compilações'].some(k => n.includes(k));
-};
+const isVariousArtists = name => ['various', 'vários', 'varios', 'various artists', 'variados'].includes(String(name || '').toLowerCase().trim());
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
@@ -978,30 +975,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const fetchWikiInfo = async () => {
     const apiKey = settings?.geminiApiKey || ""; 
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
-    
-    setLoadingWiki(true); 
-    setWikiError('');
+    setLoadingWiki(true); setWikiError('');
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-          contents: [{ 
-            role: "user", 
-            parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] 
-          }] 
-        }) 
-      });
-      
-      const data = await res.json(); 
-      if (data.error) throw new Error(data.error.message);
-      
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] }] }) });
+      const data = await res.json(); if (data.error) throw new Error(data.error.message);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) { 
-        setEditedItem({...editedItem, wiki_info: text}); 
-        playChipBeep('save'); 
-        onShowToast('success'); 
-      }
+      if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
     } catch (e) {
       let errorMsg = e.message;
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
@@ -1036,7 +1015,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             </button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
             Salvar
           </button>
         </MContainer>
@@ -1690,12 +1669,10 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   
   const byAuthor = dashItems.reduce((acc, i) => {
     if (i.author_developer) {
-      const rawAuthor = i.author_developer.trim(); 
-      if (isVariousArtists(rawAuthor)) return acc;
-      
-      const normTitle = normalizeWorkTitle(i.title);
+      const rawAuthor = i.author_developer.trim(); const normTitle = normalizeWorkTitle(i.title);
       let normAuthor = getSortableName(rawAuthor).toLowerCase();
-      if (!acc[normAuthor]) acc[normAuthor] = { display: rawAuthor, titles: new Set() };
+      if (isVariousArtists(rawAuthor)) normAuthor = "vários artistas / compilações";
+      if (!acc[normAuthor]) acc[normAuthor] = { display: isVariousArtists(rawAuthor) ? 'Vários Artistas' : rawAuthor, titles: new Set() };
       acc[normAuthor].titles.add(normTitle);
     }
     return acc;
@@ -1759,11 +1736,8 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
          const faixas = parseInt(i.pages_or_time);
          totalFaixas += faixas;
          if (i.author_developer) {
-            const rawAuthor = i.author_developer.trim();
-            if (!isVariousArtists(rawAuthor)) {
-               let auth = getSortableName(rawAuthor);
-               trackByArtist[auth] = (trackByArtist[auth] || 0) + faixas;
-            }
+            let auth = isVariousArtists(i.author_developer) ? "Vários Artistas" : getSortableName(i.author_developer);
+            trackByArtist[auth] = (trackByArtist[auth] || 0) + faixas;
          }
      });
      
@@ -1771,7 +1745,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      
      let topArtist = { name: '--', count: 0 };
      for (const [art, count] of Object.entries(trackByArtist)) {
-         if (count > topArtist.count) topArtist = { name: art, count };
+         if (count > topArtist.count && art !== "Vários Artistas") topArtist = { name: art, count };
      }
 
      return { qtyOuvidos, percOuvidos, mediaNota, totalFaixas, mediaFaixas, topArtist };
@@ -2153,69 +2127,26 @@ export default function App() {
     return rated.length > 0 ? (rated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / rated.length).toFixed(1) : 0;
   }, [items, currentRatingCat, activeCategories]);
 
-  const triggerGlobalAI = () => { 
-    setActiveTab('add'); 
-    setAddMode('manual'); 
-    if (globalFileInputRef.current) globalFileInputRef.current.click(); 
-  };
-  
-  const handleGlobalFileChange = (e) => { 
-    const file = e.target.files[0]; 
-    if (file) { 
-      setActiveTab('add'); 
-      setAddMode('manual'); 
-      processGlobalAIFile(file); 
-    } 
-    e.target.value = null; 
-  };
+  const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
+  const handleGlobalFileChange = (e) => { const file = e.target.files[0]; if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); } e.target.value = null; };
 
   const processGlobalAIFile = async (file) => {
-    const apiKey = settings?.geminiApiKey || ""; 
-    if (!apiKey) { 
-      setAiBoxState('error'); 
-      setAiBoxMessage('Chave API ausente.'); 
-      playChipBeep('error'); 
-      return; 
-    }
-    
-    setAiBoxState('loading'); 
-    setAiBoxMessage('Analisando imagem com IA...');
-    
+    const apiKey = settings?.geminiApiKey || ""; if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente.'); playChipBeep('error'); return; }
+    setAiBoxState('loading'); setAiBoxMessage('Analisando imagem...');
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-      
-      const res = await fetch(url, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-          contents: [{ 
-            parts: [
-              { text: `Extraia dados desta capa. Retorne apenas JSON válido: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "2000", "publisher": "Editora", "pages_or_time": "300", "description": "Resumo"}. Opções type: ${allTypes.join(', ')}.` }, 
-              { inlineData: { mimeType: "image/jpeg", data: b64 } }
-            ] 
-          }], 
-          generationConfig: { responseMimeType: "application/json" } 
-        }) 
-      });
-      
+      const promptText = `Analise esta imagem (pode ser uma capa, contracapa ou ficha catalográfica/expediente). Extraia os metadados da obra. Retorne APENAS um JSON válido.
+      Formato: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "Ano", "publisher": "Editora", "pages_or_time": "Quantidade", "description": "Resumo"}.
+      Regras:
+      - type deve ser um destes: ${allTypes.join(', ')}. Tente inferir (Ex: se ver DC Comics, Panini, Abril Jovem = "Quadrinho").
+      - Converta datas abreviadas para ano exato (Ex: Julho/90 = "1990").
+      - Extraia o Título principal destacado, Editora e Nomes de autores/roteiristas/artistas.`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }, { inlineData: { mimeType: "image/jpeg", data: b64 } }] }], generationConfig: { responseMimeType: "application/json" } }) });
       if (!res.ok) throw new Error(`Erro API Google HTTP: ${res.status}`);
-      
-      const data = await res.json(); 
-      if (data.error) throw new Error(data.error.message);
-      
-      let text = data.candidates?.[0]?.content?.parts?.[0]?.text; 
-      if (!text) throw new Error("Retorno vazio da IA.");
-      
-      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); 
-      text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-      
-      setScannedAIData(JSON.parse(text)); 
-      setAiBoxState('success'); 
-      setAiBoxMessage('Extraído com sucesso!'); 
-      playChipBeep('save'); 
-      showToast('success');
-      
+      const data = await res.json(); if (data.error) throw new Error(data.error.message);
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!text) throw new Error("Vazio.");
+      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+      setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com IA!'); playChipBeep('save'); showToast('success');
     } catch (e) {
       let errorMsg = e.message;
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
@@ -2429,7 +2360,7 @@ export default function App() {
     const ac = items.reduce((acc, i) => { 
        if(i.author_developer) {
           let ra = i.author_developer.trim(); 
-          if (isVariousArtists(ra)) return acc;
+          if (isVariousArtists(ra)) ra = 'Vários Artistas';
           const na = getSortableName(ra).toLowerCase(); 
           const nt = normalizeWorkTitle(i.title);
           if (!acc[na]) acc[na] = { d: ra, t: new Set() }; 
@@ -2438,9 +2369,8 @@ export default function App() {
        return acc; 
     }, {});
     
-    const sortedAuthorsStat = Object.entries(ac).map(([na, d]) => [d.d, d.t.size]).sort((a,b)=>b[1]-a[1]);
-    const ta = sortedAuthorsStat[0];
-    if (ta && ta[1] > 1) stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
+    const ta = Object.entries(ac).map(([na, d]) => [d.d, d.t.size]).sort((a,b)=>b[1]-a[1])[0];
+    if (ta && ta[1] > 1 && ta[0] !== 'Vários Artistas') stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
     
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
   }, [items, activeCategories]);
@@ -2508,12 +2438,12 @@ export default function App() {
   
   const renderMarqueeContent = () => {
     const statsArr = [];
-    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>ACERVO FÍSICO: {totalItens}</span>);
-    if (catCounts['Livros']) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>LIVROS: {catCounts['Livros']}</span>);
-    if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']}</span>);
-    if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']}</span>);
-    if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO DVD/VHS: {catCounts['Vídeo']}</span>);
-    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA GERAL DA COLEÇÃO: {globalAvgRating}/5</span>);
+    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>ACERVO FÍSICO: {totalItens} UNIDADES</span>);
+    if (catCounts['Livros']) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>LIVROS: {catCounts['Livros']} UN</span>);
+    if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']} UN</span>);
+    if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']} UN</span>);
+    if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO (DVD/VHS): {catCounts['Vídeo']} UN</span>);
+    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA GERAL DA COLEÇÃO: {globalAvgRating}/5 ESTRELAS</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2643,11 +2573,11 @@ export default function App() {
 
             <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
               <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens}</span></div>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
                 <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
-                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} {readPercentage}%</span></div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
                 <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
-                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota {currentRatingCat}:</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
+                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
               </div>
               <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                  <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel de Status</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
