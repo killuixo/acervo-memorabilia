@@ -501,6 +501,7 @@ const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
+const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
 
 
 // ==========================================
@@ -754,6 +755,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   const [itemToDelete, setItemToDelete] = useState(null);
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [page, setPage] = useState(0);
+  const [isSearchingCover, setIsSearchingCover] = useState(false);
   
   const [loadingWiki, setLoadingWiki] = useState(false);
   const [wikiError, setWikiError] = useState('');
@@ -942,6 +944,24 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     syncItemToSheets(editedItem, settings?.googleSheetsUrl);
   };
   
+  const handleSearchCover = async () => {
+    setIsSearchingCover(true);
+    try {
+      const newCover = await fetchCoverBySearch(editedItem, settings, activeCategories);
+      if (newCover) {
+        setEditedItem(prev => ({ ...prev, cover_url: newCover }));
+        playChipBeep('success');
+        onShowToast('success');
+      } else {
+        playChipBeep('error');
+      }
+    } catch (e) {
+      playChipBeep('error');
+    } finally {
+      setIsSearchingCover(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (itemToDelete) { 
        const updatedList = items.filter(item => item.id !== itemToDelete);
@@ -1036,7 +1056,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             </button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
             Salvar
           </button>
         </MContainer>
@@ -1054,10 +1074,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <MInput label="Autor/Artista" value={editedItem.author_developer || ''} onChange={e => setEditedItem({...editedItem, author_developer: e.target.value})} darkMode={darkMode} />
             </div>
           </div>
-          
-          <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`w-full p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
-            <ExternalLink className="w-4 h-4" /> Buscar na Web
-          </a>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <MInput label="Ano" value={editedItem.year || ''} onChange={e => setEditedItem({...editedItem, year: e.target.value})} type="text" darkMode={darkMode} />
@@ -1094,6 +1110,17 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-100 text-black'}>
             <MInput label="Anotações" multiline value={editedItem.notes || ''} onChange={e => setEditedItem({...editedItem, notes: e.target.value})} darkMode={darkMode} />
           </MContainer>
+
+          <div className="flex gap-2">
+            <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+              <ExternalLink className="w-4 h-4" /> Buscar na Web
+            </a>
+            {isDiscItem && (
+              <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title||'')+' '+(editedItem.author_developer||''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-green-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-green-100 border-black text-green-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+                <Headphones className="w-4 h-4" /> Spotify
+              </a>
+            )}
+          </div>
           
           <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-100 text-black'}>
             <div className={`flex justify-between items-center mb-3 border-b-[4px] pb-1 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
@@ -1122,8 +1149,15 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             <Check className="w-5 h-5" /> Salvar Alterações
           </button>
           
-          <div className="mt-8 mb-2 text-center">
-            <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>Apagar este item</button>
+          <div className="mt-8 mb-2 flex justify-center items-center gap-6">
+            <button onClick={handleSearchCover} disabled={isSearchingCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
+                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                {isSearchingCover ? 'Buscando...' : 'Procurar Capa (IA)'}
+            </button>
+            <span className="opacity-20 text-[9px]">|</span>
+            <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>
+                <Trash2 className="w-3 h-3" /> Apagar item
+            </button>
           </div>
         </div>
       </div>
@@ -2191,12 +2225,7 @@ export default function App() {
         body: JSON.stringify({ 
           contents: [{ 
             parts: [
-              { text: `Analise esta imagem (pode ser uma capa, contracapa ou ficha catalográfica/expediente). Extraia os metadados da obra. Retorne APENAS um JSON válido.
-Formato: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "Ano", "publisher": "Editora", "pages_or_time": "Quantidade", "description": "Resumo"}.
-Regras:
-- type deve ser um destes: ${allTypes.join(', ')}. Tente inferir.
-- Converta datas abreviadas para ano exato (Ex: Julho/90 = "1990").
-- Extraia o Título principal destacado, Editora e Nomes de autores/roteiristas/artistas.` }, 
+              { text: `Extraia dados desta capa. Retorne apenas JSON válido: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "2000", "publisher": "Editora", "pages_or_time": "300", "description": "Resumo"}. Opções type: ${allTypes.join(', ')}.` }, 
               { inlineData: { mimeType: "image/jpeg", data: b64 } }
             ] 
           }], 
@@ -2496,6 +2525,13 @@ Regras:
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
+  const formatStars = (ratingNum) => {
+    if (!ratingNum || ratingNum === 0) return '';
+    const fullStars = Math.floor(ratingNum);
+    const hasHalf = (ratingNum - fullStars) >= 0.5;
+    return '★'.repeat(fullStars) + (hasHalf ? '½' : '');
+  };
+
   const renderKatamariSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} /></div>);
   const renderPacmanEnd = () => (
     <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
@@ -2518,13 +2554,7 @@ Regras:
     if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']}</span>);
     if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']}</span>);
     if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO: {catCounts['Vídeo']}</span>);
-    
-    if (Number(globalAvgRating) > 0) {
-      const fullStars = Math.floor(Number(globalAvgRating));
-      const hasHalf = (Number(globalAvgRating) - fullStars) >= 0.5;
-      const starsStr = '★'.repeat(fullStars) + (hasHalf ? '½' : '');
-      statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA MÉDIA: {starsStr}</span>);
-    }
+    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA MÉDIA: {formatStars(Number(globalAvgRating))}</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
