@@ -1002,6 +1002,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     setLoadingWiki(true); 
     setWikiError('');
     try {
+      // Usa v1beta, o modelo padrão recomendado para texto
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
@@ -1111,14 +1112,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             <MInput label="Anotações" multiline value={editedItem.notes || ''} onChange={e => setEditedItem({...editedItem, notes: e.target.value})} darkMode={darkMode} />
           </MContainer>
 
-          <div className="flex gap-2">
-            <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
-              <ExternalLink className="w-4 h-4" /> Buscar na Web
+          <div className="flex gap-2 flex-col sm:flex-row">
+            <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+              <ExternalLink className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Buscar na Web</span>
             </a>
             {isDiscItem && (
-              <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title||'')+' '+(editedItem.author_developer||''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-green-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-green-100 border-black text-green-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
-                <Headphones className="w-4 h-4" /> Spotify
-              </a>
+               <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-green-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-green-100 border-black text-green-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+                  <Headphones className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Spotify</span>
+               </a>
             )}
           </div>
           
@@ -1149,14 +1150,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             <Check className="w-5 h-5" /> Salvar Alterações
           </button>
           
-          <div className="mt-8 mb-2 flex justify-center items-center gap-6">
-            <button onClick={handleSearchCover} disabled={isSearchingCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
-                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-                {isSearchingCover ? 'Buscando...' : 'Procurar Capa (IA)'}
-            </button>
-            <span className="opacity-20 text-[9px]">|</span>
-            <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>
-                <Trash2 className="w-3 h-3" /> Apagar item
+          <div className="mt-8 mb-2 flex flex-row items-center justify-center gap-6">
+            <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
+            <span className="opacity-20 text-[9px] font-black">|</span>
+            <button disabled={isSearchingCover} onClick={handleSearchCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
+                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
+                {isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
             </button>
           </div>
         </div>
@@ -2225,7 +2224,7 @@ export default function App() {
         body: JSON.stringify({ 
           contents: [{ 
             parts: [
-              { text: `Extraia dados desta capa. Retorne apenas JSON válido: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "2000", "publisher": "Editora", "pages_or_time": "300", "description": "Resumo"}. Opções type: ${allTypes.join(', ')}.` }, 
+              { text: `Analise esta imagem (pode ser uma capa, contracapa ou ficha catalográfica/expediente). Extraia os dados e retorne APENAS um JSON válido no seguinte formato: {"type": "Livro", "title": "Nome da Obra", "author_developer": "Nome do Autor", "year": "2000", "publisher": "Nome da Editora", "pages_or_time": "300", "description": "Resumo"}. Opções aceitas em 'type': ${allTypes.join(', ')}. IMPORTANTE: Converta datas abreviadas para o ano em 4 dígitos (ex: "Julho/90" deve virar "1990").` }, 
               { inlineData: { mimeType: "image/jpeg", data: b64 } }
             ] 
           }], 
