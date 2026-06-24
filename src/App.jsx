@@ -1036,7 +1036,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             </button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
             Salvar
           </button>
         </MContainer>
@@ -2185,20 +2185,18 @@ export default function App() {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
       
-      const promptText = `Analise esta imagem (pode ser uma capa, contracapa ou ficha catalográfica/expediente). Extraia os metadados da obra. Retorne APENAS um JSON válido.
-      Formato: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "Ano", "publisher": "Editora", "pages_or_time": "Quantidade", "description": "Resumo"}.
-      Regras:
-      - type deve ser um destes: ${allTypes.join(', ')}. Tente inferir (Ex: se ver DC Comics, Panini, Abril Jovem = "Quadrinho").
-      - Converta datas abreviadas para ano exato (Ex: Julho/90 = "1990").
-      - Extraia o Título principal destacado, Editora e Nomes de autores/roteiristas/artistas.`;
-
       const res = await fetch(url, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ 
           contents: [{ 
             parts: [
-              { text: promptText }, 
+              { text: `Analise esta imagem (pode ser uma capa, contracapa ou ficha catalográfica/expediente). Extraia os metadados da obra. Retorne APENAS um JSON válido.
+Formato: {"type": "Livro", "title": "Nome", "author_developer": "Autor", "year": "Ano", "publisher": "Editora", "pages_or_time": "Quantidade", "description": "Resumo"}.
+Regras:
+- type deve ser um destes: ${allTypes.join(', ')}. Tente inferir.
+- Converta datas abreviadas para ano exato (Ex: Julho/90 = "1990").
+- Extraia o Título principal destacado, Editora e Nomes de autores/roteiristas/artistas.` }, 
               { inlineData: { mimeType: "image/jpeg", data: b64 } }
             ] 
           }], 
@@ -2228,7 +2226,7 @@ export default function App() {
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
          errorMsg = "Cota gratuita da IA esgotada no momento. ⚠️\nUse o botão 'Barcode' (Código de Barras) para pesquisar bases de dados sem limite, ou preencha manualmente até a cota resetar.";
       } else {
-         errorMsg = `Falha na IA: ${errorMsg}\nTente focar bem a capa, contra-capa ou ficha, ou use o modo Barcode.`;
+         errorMsg = `Falha na IA: ${errorMsg}\nTente focar bem a capa ou use o modo Barcode.`;
       }
       setAiBoxState('error'); 
       setAiBoxMessage(errorMsg); 
@@ -2515,12 +2513,18 @@ export default function App() {
   
   const renderMarqueeContent = () => {
     const statsArr = [];
-    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>ACERVO FÍSICO: {totalItens} UNIDADES</span>);
-    if (catCounts['Livros']) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>LIVROS: {catCounts['Livros']} UN</span>);
-    if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']} UN</span>);
-    if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']} UN</span>);
-    if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO (DVD/VHS): {catCounts['Vídeo']} UN</span>);
-    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA GERAL DA COLEÇÃO: {globalAvgRating}/5 ESTRELAS</span>);
+    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>TOTAL: {totalItens}</span>);
+    if (catCounts['Livros']) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>LIVROS: {catCounts['Livros']}</span>);
+    if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']}</span>);
+    if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']}</span>);
+    if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO: {catCounts['Vídeo']}</span>);
+    
+    if (Number(globalAvgRating) > 0) {
+      const fullStars = Math.floor(Number(globalAvgRating));
+      const hasHalf = (Number(globalAvgRating) - fullStars) >= 0.5;
+      const starsStr = '★'.repeat(fullStars) + (hasHalf ? '½' : '');
+      statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA MÉDIA: {starsStr}</span>);
+    }
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2650,7 +2654,7 @@ export default function App() {
 
             <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
               <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens}</span></div>
                 <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
                 <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
                 <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
