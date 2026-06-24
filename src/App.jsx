@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 // CONFIGURAÇÕES DO APLICATIVO E ARQUIVOLOGIA
 // ==========================================
 const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/acervo-memorabilia/main/icon-192.png";
-const GEMINI_MODEL = "gemini-1.5-flash"; // Nome exato do modelo (sempre em minúsculo)
 
 const DEFAULT_CATEGORIES = {
   'Livros': ['Livro', 'Quadrinho', 'Revista'],
@@ -260,7 +259,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const isGame = (activeCategories['Games'] || []).includes(typeRaw);
   const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
 
-  // 1. CÓDIGO DE BARRAS / ISBN (Busca mais exata e fiel possível)
   if (barcodeRaw) {
      try {
         const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
@@ -295,7 +293,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
      }
   }
 
-  // 2. DISCOS (Música) - Refinado por Gravadora, Formato e Ano
   if (isDisc) {
     if (settings?.discogsToken) {
       try {
@@ -316,7 +313,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
             return dcData.results[0].cover_image;
         }
 
-        // Fallback: tenta sem a gravadora caso seja muito restritiva e falhe
         if (pubRaw) {
             const dcResFallback = await fetch(`https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`);
             const dcDataFallback = await dcResFallback.json();
@@ -337,7 +333,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         
         if (mbData.releases?.length > 0) {
             let targetReleases = mbData.releases;
-            // Força a prioridade na exatidão do Ano de Lançamento se disponível
             if (yearRaw) {
                 const exactYearReleases = targetReleases.filter(r => r.date && r.date.startsWith(yearRaw));
                 if (exactYearReleases.length > 0) targetReleases = exactYearReleases;
@@ -352,18 +347,15 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     } catch(e) { console.warn("MusicBrainz err", e); }
   }
 
-  // 3. LIVROS (Busca Refinada por Editora e Ano)
   else if (isBook) {
     try {
         let gbQuery = `intitle:"${titleRaw}"`;
         if (authorRaw) gbQuery += `+inauthor:"${authorRaw}"`;
         
-        // Tenta cruzar exato com a editora
         let gbQueryExact = pubRaw ? `${gbQuery}+inpublisher:"${pubRaw}"` : gbQuery;
         let gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQueryExact)}&maxResults=10`);
         let gbData = await gbRes.json();
         
-        // Se a busca com editora exata falhar, tenta só título e autor
         if ((!gbData.items || gbData.items.length === 0) && pubRaw) {
             gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=10`);
             gbData = await gbRes.json();
@@ -371,11 +363,8 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         
         if (gbData.items) {
             let bestMatch = null;
-            // Prioridade 1: Mesmo Ano de Lançamento
             if (yearRaw) bestMatch = gbData.items.find(i => i.volumeInfo?.publishedDate?.startsWith(yearRaw) && i.volumeInfo?.imageLinks?.thumbnail);
-            // Prioridade 2: Mesma Editora
             if (!bestMatch && pubRaw) bestMatch = gbData.items.find(i => i.volumeInfo?.publisher?.toLowerCase().includes(pubRaw.toLowerCase()) && i.volumeInfo?.imageLinks?.thumbnail);
-            // Prioridade 3: O primeiro que tiver capa
             if (!bestMatch) bestMatch = gbData.items.find(i => i.volumeInfo?.imageLinks?.thumbnail);
 
             if (bestMatch?.volumeInfo?.imageLinks?.thumbnail) {
@@ -383,7 +372,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
             }
         }
         
-        // Fallback OpenLibrary
         let olQuery = `title=${qTitle}`;
         if (authorRaw) olQuery += `&author=${qAuthor}`;
         const olRes = await fetch(`https://openlibrary.org/search.json?${olQuery}`);
@@ -403,7 +391,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     } catch(e) { console.warn("Books API err", e); }
   }
 
-  // 4. GAMES (Foco na Plataforma Exata)
   else if (isGame) {
       try {
           const gameQuery = `${titleRaw} ${typeRaw} game cover`;
@@ -411,7 +398,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
           const wikiData = await wikiRes.json();
           
           if (wikiData.query?.search?.length > 0) {
-              // Tenta priorizar artigos que mencionem a plataforma no snippet ou título para isolar versões (ex: Mega Drive vs PS4)
               let bestResult = wikiData.query.search.find(s => 
                   s.title.toLowerCase().includes(typeRaw.toLowerCase()) || 
                   s.snippet.toLowerCase().includes(typeRaw.toLowerCase())
@@ -430,14 +416,12 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch(e) { console.warn("Wikipedia Game err", e); }
   }
 
-  // 5. VÍDEO (Filmes em DVD/VHS)
   else if (isVideo) {
       try {
           const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=10`);
           const itData = await itRes.json();
           if (itData.results?.length > 0) {
               let bestMovie = itData.results[0];
-              // Restringe ao ano exato caso o filme possua diversos remakes (ex: Duna 1984 vs 2021)
               if (yearRaw) {
                   const exact = itData.results.find(m => m.releaseDate?.startsWith(yearRaw));
                   if (exact) bestMovie = exact;
@@ -996,14 +980,13 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   };
 
   const fetchWikiInfo = async () => {
-    const apiKey = settings?.geminiApiKey || ""; 
+    const apiKey = (settings?.geminiApiKey || "").trim(); 
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
     
     setLoadingWiki(true); 
     setWikiError('');
     try {
-      // Usa v1beta, o modelo padrão recomendado para texto
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, { 
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ 
@@ -1014,9 +997,16 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         }) 
       });
       
-      const data = await res.json(); 
-      if (data.error) throw new Error(data.error.message);
+      if (!res.ok) {
+          let errMsg = `Erro HTTP: ${res.status}`;
+          try {
+              const errData = await res.json();
+              if (errData.error && errData.error.message) errMsg = errData.error.message;
+          } catch(e) {}
+          throw new Error(errMsg);
+      }
       
+      const data = await res.json(); 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) { 
         setEditedItem({...editedItem, wiki_info: text}); 
@@ -1815,7 +1805,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current"><FilterIcon className="w-4 h-4" /> Filtros Interativos</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
-          <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterSubtype('Todos'); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todas">Tudo</option>{Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
+          <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterSubtype('Todos'); }} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} text-[9px] font-black uppercase outline-none cursor-pointer`}><option value="Todas">Tudo</option>{Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
           {filterCat !== 'Todas' && activeCategories[filterCat] ? (
             <select value={filterSubtype} onChange={e => setFilterSubtype(e.target.value)} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-900 text-cyan-100' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 text-cyan-900'}`}><option value="Todos">Todos (Subtipo)</option>{activeCategories[filterCat].map(sub => <option key={sub} value={sub}>{sub}</option>)}</select>
           ) : <select disabled className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none opacity-50 cursor-not-allowed ${darkMode ? 'border-gray-300 bg-gray-800 text-white' : 'border-black bg-gray-100 text-gray-500'}`}><option>Todos (Subtipo)</option></select>}
@@ -2203,7 +2193,7 @@ export default function App() {
   };
 
   const processGlobalAIFile = async (file) => {
-    const apiKey = settings?.geminiApiKey || ""; 
+    const apiKey = (settings?.geminiApiKey || "").trim(); 
     if (!apiKey) { 
       setAiBoxState('error'); 
       setAiBoxMessage('Chave API ausente.'); 
@@ -2216,15 +2206,16 @@ export default function App() {
     
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
       
-      const res = await fetch(url, { 
+      const promptInstructions = `Analise a imagem (pode ser capa, contracapa ou ficha catalográfica/expediente). Extraia os metadados com precisão e retorne APENAS um JSON válido. Formato exigido: {"type": "Livro", "title": "Título", "author_developer": "Autor(es)", "year": "YYYY", "publisher": "Editora", "pages_or_time": "Páginas", "description": "Breve sinopse"}. Opções para 'type': ${allTypes.join(', ')}. REGRAS: 1) Em gibis, busque no expediente termos como 'Editora Abril', 'Panini', etc. 2) Datas como 'Julho/90' ou '90' devem virar '1990'. 3) Retorne o JSON puro, sem crases de markdown.`;
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ 
           contents: [{ 
             parts: [
-              { text: `Analise esta imagem (pode ser uma capa, contracapa ou ficha catalográfica/expediente). Extraia os dados e retorne APENAS um JSON válido no seguinte formato: {"type": "Livro", "title": "Nome da Obra", "author_developer": "Nome do Autor", "year": "2000", "publisher": "Nome da Editora", "pages_or_time": "300", "description": "Resumo"}. Opções aceitas em 'type': ${allTypes.join(', ')}. IMPORTANTE: Converta datas abreviadas para o ano em 4 dígitos (ex: "Julho/90" deve virar "1990").` }, 
+              { text: promptInstructions }, 
               { inlineData: { mimeType: "image/jpeg", data: b64 } }
             ] 
           }], 
@@ -2232,11 +2223,16 @@ export default function App() {
         }) 
       });
       
-      if (!res.ok) throw new Error(`Erro API Google HTTP: ${res.status}`);
+      if (!res.ok) {
+          let errMsg = `Erro HTTP: ${res.status}`;
+          try {
+              const errData = await res.json();
+              if (errData.error && errData.error.message) errMsg = errData.error.message;
+          } catch(e) {}
+          throw new Error(errMsg);
+      }
       
       const data = await res.json(); 
-      if (data.error) throw new Error(data.error.message);
-      
       let text = data.candidates?.[0]?.content?.parts?.[0]?.text; 
       if (!text) throw new Error("Retorno vazio da IA.");
       
@@ -2505,7 +2501,7 @@ export default function App() {
   const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
   const readPercentage = totalPagesCount > 0 ? ((readPages / totalPagesCount) * 100).toFixed(1) : 0;
-  
+
   const catCounts = items.reduce((acc, i) => {
     let mainCat = 'Outros';
     for (const [cat, subs] of Object.entries(activeCategories)) {
@@ -2517,19 +2513,12 @@ export default function App() {
 
   const allRated = items.filter(i => (Number(i.rating) || 0) > 0);
   const globalAvgRating = allRated.length > 0 ? (allRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / allRated.length).toFixed(1) : 0;
-  
-  const speed = settings?.marqueeSpeed || 35; 
+
+  const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
-  
+
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
-
-  const formatStars = (ratingNum) => {
-    if (!ratingNum || ratingNum === 0) return '';
-    const fullStars = Math.floor(ratingNum);
-    const hasHalf = (ratingNum - fullStars) >= 0.5;
-    return '★'.repeat(fullStars) + (hasHalf ? '½' : '');
-  };
 
   const renderKatamariSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} /></div>);
   const renderPacmanEnd = () => (
@@ -2545,7 +2534,15 @@ export default function App() {
       </svg>
     </div>
   );
-  
+
+  const formatStars = (ratingStr) => {
+     const val = Number(ratingStr);
+     if (!val) return '0';
+     const full = Math.floor(val);
+     const half = val % 1 >= 0.5 ? '½' : '';
+     return '★'.repeat(full) + half;
+  };
+
   const renderMarqueeContent = () => {
     const statsArr = [];
     statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>TOTAL: {totalItens}</span>);
@@ -2553,7 +2550,7 @@ export default function App() {
     if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']}</span>);
     if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']}</span>);
     if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO: {catCounts['Vídeo']}</span>);
-    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA MÉDIA: {formatStars(Number(globalAvgRating))}</span>);
+    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA MÉDIA: {formatStars(globalAvgRating)}</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2561,20 +2558,20 @@ export default function App() {
       </div>
     );
   };
-  
-  const suggPressTimer = useRef(null); 
+
+  const suggPressTimer = useRef(null);
   const isSuggLongPress = useRef(false);
   const handleSuggPressStart = () => { isSuggLongPress.current = false; suggPressTimer.current = setTimeout(() => { isSuggLongPress.current = true; shuffleSuggestion(); }, 500); };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
   const handleSuggClick = () => { if (!isSuggLongPress.current && suggestion) window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank'); };
 
-  const pressTimer = useRef(null); 
+  const pressTimer = useRef(null);
   const isLongPress = useRef(false);
   const handleAddPressStart = () => { isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
   const handleAddPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
   const handleAddClick = () => { if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
 
-  const libPressTimer = useRef(null); 
+  const libPressTimer = useRef(null);
   const isLibLongPress = useRef(false);
   const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
@@ -2683,7 +2680,7 @@ export default function App() {
 
             <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
               <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens}</span></div>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
                 <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
                 <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
                 <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
