@@ -211,7 +211,10 @@ const parseCSVText = (rawText) => {
 
 const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim() : '';
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
-const isVariousArtists = name => ['various', 'vários', 'varios', 'various artists', 'variados'].includes(String(name || '').toLowerCase().trim());
+const isVariousArtists = name => {
+  const n = String(name || '').toLowerCase().trim();
+  return ['various', 'vários', 'varios', 'variados', 'coleção', 'coleções', 'colecoes', 'collection', 'compilação', 'compilações'].some(k => n.includes(k));
+};
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
@@ -241,28 +244,58 @@ const isImageBroken = (url) => {
 };
 
 const fetchCoverBySearch = async (item, settings, activeCategories) => {
-  const qTitle = encodeURIComponent(item.title || '');
-  const qAuthor = encodeURIComponent(item.author_developer || '');
-  const titleRaw = item.title || '';
-  const authorRaw = item.author_developer || '';
-  const typeRaw = item.type || '';
+  const titleRaw = item.title ? item.title.trim() : '';
+  const authorRaw = item.author_developer ? item.author_developer.trim() : '';
+  const typeRaw = item.type ? item.type.trim() : '';
   const yearRaw = item.year ? String(item.year).trim() : '';
-  const pubRaw = item.publisher || '';
-  const barcodeRaw = item.barcode || '';
+  const pubRaw = item.publisher ? item.publisher.trim() : '';
+  const barcodeRaw = item.barcode ? item.barcode.replace(/[-\s]/g, "") : '';
+
+  const qTitle = encodeURIComponent(titleRaw);
+  const qAuthor = encodeURIComponent(authorRaw);
+  const qPub = encodeURIComponent(pubRaw);
 
   const isBook = (activeCategories['Livros'] || []).includes(typeRaw);
   const isDisc = (activeCategories['Discos'] || []).includes(typeRaw);
   const isGame = (activeCategories['Games'] || []).includes(typeRaw);
   const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
 
+  // 1. CÓDIGO DE BARRAS / ISBN (Busca mais exata e fiel possível)
   if (barcodeRaw) {
      try {
-        const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw.replace(/[-\s]/g, "")}`);
+        const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
         const upcData = await upcRes.json();
         if (upcData.items?.[0]?.images?.[0]) return upcData.items[0].images[0];
      } catch(e) {}
+
+     if (isBook) {
+        try {
+           const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcodeRaw}`);
+           const gbData = await gbRes.json();
+           if (gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) {
+               return gbData.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
+           }
+        } catch(e) {}
+        try {
+           const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${barcodeRaw}&jscmd=data&format=json`);
+           const olData = await olRes.json();
+           const olKey = `ISBN:${barcodeRaw}`;
+           if (olData[olKey]?.cover?.large) return olData[olKey].cover.large;
+        } catch(e) {}
+     }
+     
+     if (isDisc && settings?.discogsToken) {
+        try {
+           const dcRes = await fetch(`https://api.discogs.com/database/search?barcode=${barcodeRaw}&token=${settings.discogsToken}`);
+           const dcData = await dcRes.json();
+           if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) {
+               return dcData.results[0].cover_image;
+           }
+        } catch(e) {}
+     }
   }
 
+  // 2. DISCOS (Música) - Refinado por Gravadora, Formato e Ano
   if (isDisc) {
     if (settings?.discogsToken) {
       try {
@@ -272,21 +305,44 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         else if (tLower.includes('cd')) formatQuery = '&format=cd';
         else if (tLower.includes('cassete') || tLower.includes('fita')) formatQuery = '&format=cassette';
 
-        const dcRes = await fetch(`https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${yearRaw ? `&year=${yearRaw}` : ''}${formatQuery}&token=${settings.discogsToken}`);
-        const dcData = await dcRes.json();
-        if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) return dcData.results[0].cover_image;
+        let queryUrl = `https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`;
+        if (yearRaw) queryUrl += `&year=${yearRaw}`;
+        if (pubRaw) queryUrl += `&label=${qPub}`;
 
-        const dcResBroad = await fetch(`https://api.discogs.com/database/search?q=${qTitle}+${qAuthor}&token=${settings.discogsToken}`);
-        const dcDataBroad = await dcResBroad.json();
-        if (dcDataBroad.results?.[0]?.cover_image && !dcDataBroad.results[0].cover_image.includes('spacer.gif')) return dcDataBroad.results[0].cover_image;
+        const dcRes = await fetch(queryUrl);
+        const dcData = await dcRes.json();
+        
+        if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) {
+            return dcData.results[0].cover_image;
+        }
+
+        // Fallback: tenta sem a gravadora caso seja muito restritiva e falhe
+        if (pubRaw) {
+            const dcResFallback = await fetch(`https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`);
+            const dcDataFallback = await dcResFallback.json();
+            if (dcDataFallback.results?.[0]?.cover_image && !dcDataFallback.results[0].cover_image.includes('spacer.gif')) {
+                return dcDataFallback.results[0].cover_image;
+            }
+        }
       } catch(e) { console.warn("Discogs API err", e); }
     }
 
     try {
-        const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=release:${qTitle}%20AND%20artist:${qAuthor}&fmt=json`);
+        let mbQuery = `release:${qTitle}`;
+        if (authorRaw) mbQuery += ` AND artist:${qAuthor}`;
+        if (pubRaw) mbQuery += ` AND label:${qPub}`;
+        
+        const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(mbQuery)}&fmt=json`);
         const mbData = await mbRes.json();
+        
         if (mbData.releases?.length > 0) {
-            for (const release of mbData.releases) {
+            let targetReleases = mbData.releases;
+            // Força a prioridade na exatidão do Ano de Lançamento se disponível
+            if (yearRaw) {
+                const exactYearReleases = targetReleases.filter(r => r.date && r.date.startsWith(yearRaw));
+                if (exactYearReleases.length > 0) targetReleases = exactYearReleases;
+            }
+            for (const release of targetReleases) {
                 try {
                     const caaRes = await fetch(`https://coverartarchive.org/release/${release.id}/front`);
                     if (caaRes.ok) return caaRes.url; 
@@ -294,58 +350,75 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
             }
         }
     } catch(e) { console.warn("MusicBrainz err", e); }
-    
-    try {
-        const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}+${qAuthor}&media=music&entity=album&limit=1`);
-        const itData = await itRes.json();
-        if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
-    } catch(e) {}
   }
 
+  // 3. LIVROS (Busca Refinada por Editora e Ano)
   else if (isBook) {
     try {
         let gbQuery = `intitle:"${titleRaw}"`;
         if (authorRaw) gbQuery += `+inauthor:"${authorRaw}"`;
-        if (pubRaw) gbQuery += `+inpublisher:"${pubRaw}"`; 
         
-        const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=5`);
-        const gbData = await gbRes.json();
+        // Tenta cruzar exato com a editora
+        let gbQueryExact = pubRaw ? `${gbQuery}+inpublisher:"${pubRaw}"` : gbQuery;
+        let gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQueryExact)}&maxResults=10`);
+        let gbData = await gbRes.json();
+        
+        // Se a busca com editora exata falhar, tenta só título e autor
+        if ((!gbData.items || gbData.items.length === 0) && pubRaw) {
+            gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=10`);
+            gbData = await gbRes.json();
+        }
         
         if (gbData.items) {
-            let bestMatch = gbData.items[0];
-            if (yearRaw) {
-                const exact = gbData.items.find(i => i.volumeInfo?.publishedDate?.startsWith(yearRaw));
-                if (exact && exact.volumeInfo?.imageLinks?.thumbnail) bestMatch = exact;
-            }
+            let bestMatch = null;
+            // Prioridade 1: Mesmo Ano de Lançamento
+            if (yearRaw) bestMatch = gbData.items.find(i => i.volumeInfo?.publishedDate?.startsWith(yearRaw) && i.volumeInfo?.imageLinks?.thumbnail);
+            // Prioridade 2: Mesma Editora
+            if (!bestMatch && pubRaw) bestMatch = gbData.items.find(i => i.volumeInfo?.publisher?.toLowerCase().includes(pubRaw.toLowerCase()) && i.volumeInfo?.imageLinks?.thumbnail);
+            // Prioridade 3: O primeiro que tiver capa
+            if (!bestMatch) bestMatch = gbData.items.find(i => i.volumeInfo?.imageLinks?.thumbnail);
+
             if (bestMatch?.volumeInfo?.imageLinks?.thumbnail) {
                 return bestMatch.volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
             }
         }
         
-        const olRes = await fetch(`https://openlibrary.org/search.json?title=${qTitle}&author=${qAuthor}`);
+        // Fallback OpenLibrary
+        let olQuery = `title=${qTitle}`;
+        if (authorRaw) olQuery += `&author=${qAuthor}`;
+        const olRes = await fetch(`https://openlibrary.org/search.json?${olQuery}`);
         const olData = await olRes.json();
+        
         if (olData.docs?.length > 0) {
-            let bestDoc = olData.docs[0];
+            let bestDoc = null;
             if (yearRaw || pubRaw) {
-                const exact = olData.docs.find(d => 
-                    (yearRaw && (d.first_publish_year == yearRaw || (d.publish_year && d.publish_year.includes(parseInt(yearRaw))))) ||
-                    (pubRaw && d.publisher && d.publisher.some(p => p.toLowerCase().includes(pubRaw.toLowerCase())))
+                bestDoc = olData.docs.find(d => 
+                    ((yearRaw && (d.first_publish_year == yearRaw || (d.publish_year && d.publish_year.includes(parseInt(yearRaw))))) ||
+                    (pubRaw && d.publisher && d.publisher.some(p => p.toLowerCase().includes(pubRaw.toLowerCase())))) && d.cover_i
                 );
-                if (exact && exact.cover_i) bestDoc = exact;
             }
-            if (bestDoc.cover_i) return `https://covers.openlibrary.org/b/id/${bestDoc.cover_i}-L.jpg`;
+            if (!bestDoc) bestDoc = olData.docs.find(d => d.cover_i);
+            if (bestDoc?.cover_i) return `https://covers.openlibrary.org/b/id/${bestDoc.cover_i}-L.jpg`;
         }
     } catch(e) { console.warn("Books API err", e); }
   }
 
+  // 4. GAMES (Foco na Plataforma Exata)
   else if (isGame) {
       try {
-          const gameQuery = `${titleRaw} ${typeRaw} cover`;
+          const gameQuery = `${titleRaw} ${typeRaw} game cover`;
           const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(gameQuery)}&utf8=&format=json&origin=*`);
           const wikiData = await wikiRes.json();
           
           if (wikiData.query?.search?.length > 0) {
-              const title = wikiData.query.search[0].title;
+              // Tenta priorizar artigos que mencionem a plataforma no snippet ou título para isolar versões (ex: Mega Drive vs PS4)
+              let bestResult = wikiData.query.search.find(s => 
+                  s.title.toLowerCase().includes(typeRaw.toLowerCase()) || 
+                  s.snippet.toLowerCase().includes(typeRaw.toLowerCase())
+              );
+              if (!bestResult) bestResult = wikiData.query.search[0];
+
+              const title = bestResult.title;
               const imgRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
               const imgData = await imgRes.json();
               const pages = imgData.query?.pages;
@@ -355,20 +428,16 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
               }
           }
       } catch(e) { console.warn("Wikipedia Game err", e); }
-
-      try {
-          const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=software&limit=1`);
-          const itData = await itRes.json();
-          if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
-      } catch(e) {}
   }
 
+  // 5. VÍDEO (Filmes em DVD/VHS)
   else if (isVideo) {
       try {
-          const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=5`);
+          const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=10`);
           const itData = await itRes.json();
           if (itData.results?.length > 0) {
               let bestMovie = itData.results[0];
+              // Restringe ao ano exato caso o filme possua diversos remakes (ex: Duna 1984 vs 2021)
               if (yearRaw) {
                   const exact = itData.results.find(m => m.releaseDate?.startsWith(yearRaw));
                   if (exact) bestMovie = exact;
@@ -376,30 +445,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
               if (bestMovie?.artworkUrl100) return bestMovie.artworkUrl100.replace('100x100bb', '600x600bb');
           }
       } catch (e) {}
-
-      try {
-          const movieQuery = `${titleRaw} film poster`;
-          const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(movieQuery)}&utf8=&format=json&origin=*`);
-          const wikiData = await wikiRes.json();
-          if (wikiData.query?.search?.length > 0) {
-              const title = wikiData.query.search[0].title;
-              const imgRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
-              const imgData = await imgRes.json();
-              const pages = imgData.query?.pages;
-              if (pages) {
-                  const pageId = Object.keys(pages)[0];
-                  if (pages[pageId]?.thumbnail?.source) return pages[pageId].thumbnail.source;
-              }
-          }
-      } catch(e) {}
   }
-
-  try {
-      const fallbackQuery = qAuthor ? `${qTitle}+${qAuthor}` : qTitle;
-      const itRes = await fetch(`https://itunes.apple.com/search?term=${fallbackQuery}&media=all&limit=1`);
-      const itData = await itRes.json();
-      if (itData.results?.[0]?.artworkUrl100) return itData.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
-  } catch(e) {}
 
   return null;
 };
@@ -990,7 +1036,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             </button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'bg-cyan-400 border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
             Salvar
           </button>
         </MContainer>
@@ -1644,10 +1690,12 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
   
   const byAuthor = dashItems.reduce((acc, i) => {
     if (i.author_developer) {
-      const rawAuthor = i.author_developer.trim(); const normTitle = normalizeWorkTitle(i.title);
+      const rawAuthor = i.author_developer.trim(); 
+      if (isVariousArtists(rawAuthor)) return acc;
+      
+      const normTitle = normalizeWorkTitle(i.title);
       let normAuthor = getSortableName(rawAuthor).toLowerCase();
-      if (isVariousArtists(rawAuthor)) normAuthor = "vários artistas / compilações";
-      if (!acc[normAuthor]) acc[normAuthor] = { display: isVariousArtists(rawAuthor) ? 'Vários Artistas' : rawAuthor, titles: new Set() };
+      if (!acc[normAuthor]) acc[normAuthor] = { display: rawAuthor, titles: new Set() };
       acc[normAuthor].titles.add(normTitle);
     }
     return acc;
@@ -1711,8 +1759,11 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
          const faixas = parseInt(i.pages_or_time);
          totalFaixas += faixas;
          if (i.author_developer) {
-            let auth = isVariousArtists(i.author_developer) ? "Vários Artistas" : getSortableName(i.author_developer);
-            trackByArtist[auth] = (trackByArtist[auth] || 0) + faixas;
+            const rawAuthor = i.author_developer.trim();
+            if (!isVariousArtists(rawAuthor)) {
+               let auth = getSortableName(rawAuthor);
+               trackByArtist[auth] = (trackByArtist[auth] || 0) + faixas;
+            }
          }
      });
      
@@ -1720,7 +1771,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      
      let topArtist = { name: '--', count: 0 };
      for (const [art, count] of Object.entries(trackByArtist)) {
-         if (count > topArtist.count && art !== "Vários Artistas") topArtist = { name: art, count };
+         if (count > topArtist.count) topArtist = { name: art, count };
      }
 
      return { qtyOuvidos, percOuvidos, mediaNota, totalFaixas, mediaFaixas, topArtist };
@@ -2378,7 +2429,7 @@ export default function App() {
     const ac = items.reduce((acc, i) => { 
        if(i.author_developer) {
           let ra = i.author_developer.trim(); 
-          if (isVariousArtists(ra)) ra = 'Vários Artistas';
+          if (isVariousArtists(ra)) return acc;
           const na = getSortableName(ra).toLowerCase(); 
           const nt = normalizeWorkTitle(i.title);
           if (!acc[na]) acc[na] = { d: ra, t: new Set() }; 
@@ -2387,8 +2438,9 @@ export default function App() {
        return acc; 
     }, {});
     
-    const ta = Object.entries(ac).map(([na, d]) => [d.d, d.t.size]).sort((a,b)=>b[1]-a[1])[0];
-    if (ta && ta[1] > 1 && ta[0] !== 'Vários Artistas') stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
+    const sortedAuthorsStat = Object.entries(ac).map(([na, d]) => [d.d, d.t.size]).sort((a,b)=>b[1]-a[1]);
+    const ta = sortedAuthorsStat[0];
+    if (ta && ta[1] > 1) stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
     
     return stats.length > 0 ? stats : ["Sua Coleção Física"];
   }, [items, activeCategories]);
@@ -2456,12 +2508,12 @@ export default function App() {
   
   const renderMarqueeContent = () => {
     const statsArr = [];
-    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>ACERVO FÍSICO: {totalItens} UNIDADES</span>);
-    if (catCounts['Livros']) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>LIVROS: {catCounts['Livros']} UN</span>);
-    if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']} UN</span>);
-    if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']} UN</span>);
-    if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO (DVD/VHS): {catCounts['Vídeo']} UN</span>);
-    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA GERAL DA COLEÇÃO: {globalAvgRating}/5 ESTRELAS</span>);
+    statsArr.push(<span key="1" className={`text-cyan-400 ${ledItemStyle}`}>ACERVO FÍSICO: {totalItens}</span>);
+    if (catCounts['Livros']) statsArr.push(<span key="2" className={`text-pink-400 ${ledItemStyle}`}>LIVROS: {catCounts['Livros']}</span>);
+    if (catCounts['Discos']) statsArr.push(<span key="3" className={`text-amber-400 ${ledItemStyle}`}>DISCOS: {catCounts['Discos']}</span>);
+    if (catCounts['Games']) statsArr.push(<span key="4" className={`text-cyan-400 ${ledItemStyle}`}>GAMES: {catCounts['Games']}</span>);
+    if (catCounts['Vídeo']) statsArr.push(<span key="5" className={`text-pink-400 ${ledItemStyle}`}>VÍDEO DVD/VHS: {catCounts['Vídeo']}</span>);
+    if (Number(globalAvgRating) > 0) statsArr.push(<span key="6" className={`text-amber-400 ${ledItemStyle}`}>NOTA GERAL DA COLEÇÃO: {globalAvgRating}/5</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2591,11 +2643,11 @@ export default function App() {
 
             <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
               <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens}</span></div>
                 <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
-                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} {readPercentage}%</span></div>
                 <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
-                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
+                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota {currentRatingCat}:</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
               </div>
               <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                  <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel de Status</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
