@@ -236,8 +236,9 @@ const isImageBroken = (url) => {
   return new Promise((resolve) => {
     if (!url || typeof url !== 'string' || url.trim() === '') return resolve(true);
     const img = new Image();
-    img.onload = () => resolve(false);
-    img.onerror = () => resolve(true);
+    const timer = setTimeout(() => resolve(true), 5000); // 5s timeout para não travar o loop
+    img.onload = () => { clearTimeout(timer); resolve(false); };
+    img.onerror = () => { clearTimeout(timer); resolve(true); };
     img.src = url;
   });
 };
@@ -259,6 +260,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const isGame = (activeCategories['Games'] || []).includes(typeRaw);
   const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
 
+  // 1. Busca por Código de Barras (Mais precisa)
   if (barcodeRaw) {
      try {
         const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
@@ -293,6 +295,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
      }
   }
 
+  // 2. Busca rigorosa por Metadados (Só retorna se for bem fiel)
   if (isDisc) {
     if (settings?.discogsToken) {
       try {
@@ -303,31 +306,29 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         else if (tLower.includes('cassete') || tLower.includes('fita')) formatQuery = '&format=cassette';
 
         let queryUrl = `https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`;
-        if (yearRaw) queryUrl += `&year=${yearRaw}`;
-        if (pubRaw) queryUrl += `&label=${qPub}`;
-
+        
         const dcRes = await fetch(queryUrl);
         const dcData = await dcRes.json();
         
-        if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) {
-            return dcData.results[0].cover_image;
-        }
+        if (dcData.results?.length > 0) {
+            // Tenta achar ano ou selo exato
+            let bestMatch = dcData.results.find(r => 
+                (yearRaw && r.year === yearRaw) || 
+                (pubRaw && r.label && r.label.some(l => l.toLowerCase().includes(pubRaw.toLowerCase())))
+            );
+            if (!bestMatch) bestMatch = dcData.results[0]; // Se não, pega o primeiro
 
-        if (pubRaw) {
-            const dcResFallback = await fetch(`https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`);
-            const dcDataFallback = await dcResFallback.json();
-            if (dcDataFallback.results?.[0]?.cover_image && !dcDataFallback.results[0].cover_image.includes('spacer.gif')) {
-                return dcDataFallback.results[0].cover_image;
+            if (bestMatch?.cover_image && !bestMatch.cover_image.includes('spacer.gif')) {
+                return bestMatch.cover_image;
             }
         }
       } catch(e) { console.warn("Discogs API err", e); }
     }
-
+    
+    // Fallback MusicBrainz (menos restritivo, mas útil)
     try {
         let mbQuery = `release:${qTitle}`;
         if (authorRaw) mbQuery += ` AND artist:${qAuthor}`;
-        if (pubRaw) mbQuery += ` AND label:${qPub}`;
-        
         const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(mbQuery)}&fmt=json`);
         const mbData = await mbRes.json();
         
@@ -352,41 +353,25 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         let gbQuery = `intitle:"${titleRaw}"`;
         if (authorRaw) gbQuery += `+inauthor:"${authorRaw}"`;
         
-        let gbQueryExact = pubRaw ? `${gbQuery}+inpublisher:"${pubRaw}"` : gbQuery;
-        let gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQueryExact)}&maxResults=10`);
+        let gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=10`);
         let gbData = await gbRes.json();
         
-        if ((!gbData.items || gbData.items.length === 0) && pubRaw) {
-            gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=10`);
-            gbData = await gbRes.json();
-        }
-        
         if (gbData.items) {
+            // Filtro rigoroso: Se usuário informou ano ou editora, tentar casar.
             let bestMatch = null;
-            if (yearRaw) bestMatch = gbData.items.find(i => i.volumeInfo?.publishedDate?.startsWith(yearRaw) && i.volumeInfo?.imageLinks?.thumbnail);
-            if (!bestMatch && pubRaw) bestMatch = gbData.items.find(i => i.volumeInfo?.publisher?.toLowerCase().includes(pubRaw.toLowerCase()) && i.volumeInfo?.imageLinks?.thumbnail);
+            if (yearRaw || pubRaw) {
+                 bestMatch = gbData.items.find(i => {
+                    const vInfo = i.volumeInfo;
+                    const matchYear = yearRaw && vInfo.publishedDate && vInfo.publishedDate.startsWith(yearRaw);
+                    const matchPub = pubRaw && vInfo.publisher && vInfo.publisher.toLowerCase().includes(pubRaw.toLowerCase());
+                    return (matchYear || matchPub) && vInfo?.imageLinks?.thumbnail;
+                });
+            }
             if (!bestMatch) bestMatch = gbData.items.find(i => i.volumeInfo?.imageLinks?.thumbnail);
 
             if (bestMatch?.volumeInfo?.imageLinks?.thumbnail) {
                 return bestMatch.volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
             }
-        }
-        
-        let olQuery = `title=${qTitle}`;
-        if (authorRaw) olQuery += `&author=${qAuthor}`;
-        const olRes = await fetch(`https://openlibrary.org/search.json?${olQuery}`);
-        const olData = await olRes.json();
-        
-        if (olData.docs?.length > 0) {
-            let bestDoc = null;
-            if (yearRaw || pubRaw) {
-                bestDoc = olData.docs.find(d => 
-                    ((yearRaw && (d.first_publish_year == yearRaw || (d.publish_year && d.publish_year.includes(parseInt(yearRaw))))) ||
-                    (pubRaw && d.publisher && d.publisher.some(p => p.toLowerCase().includes(pubRaw.toLowerCase())))) && d.cover_i
-                );
-            }
-            if (!bestDoc) bestDoc = olData.docs.find(d => d.cover_i);
-            if (bestDoc?.cover_i) return `https://covers.openlibrary.org/b/id/${bestDoc.cover_i}-L.jpg`;
         }
     } catch(e) { console.warn("Books API err", e); }
   }
@@ -398,12 +383,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
           const wikiData = await wikiRes.json();
           
           if (wikiData.query?.search?.length > 0) {
-              let bestResult = wikiData.query.search.find(s => 
-                  s.title.toLowerCase().includes(typeRaw.toLowerCase()) || 
-                  s.snippet.toLowerCase().includes(typeRaw.toLowerCase())
-              );
-              if (!bestResult) bestResult = wikiData.query.search[0];
-
+              const bestResult = wikiData.query.search[0];
               const title = bestResult.title;
               const imgRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
               const imgData = await imgRes.json();
@@ -431,6 +411,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch (e) {}
   }
 
+  // Se chegou aqui, não achou edição exata (ou aceitável), retorna null para não sujar a base.
   return null;
 };
 
@@ -486,7 +467,6 @@ const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
 const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
-
 
 // ==========================================
 // PWA ENGINE
@@ -549,9 +529,9 @@ const usePWA = (iconUrl) => {
 };
 
 // ==========================================
-// COMPONENTES UI MONDRIAN
+// COMPONENTES UI MONDRIAN (Estética Rigorosa)
 // ==========================================
-const getChartColors = darkMode => darkMode ? ['#be185d', '#0e7490', '#d97706', '#b91c1c', '#7e22ce', '#15803d'] : ['#ec4899', '#22d3ee', '#fbbf24', '#f87171', '#a855f7', '#4ade80'];
+const getChartColors = darkMode => darkMode ? ['#be185d', '#0e7490', '#d97706', '#9d174d', '#164e63', '#b45309'] : ['#ec4899', '#22d3ee', '#fbbf24', '#f472b6', '#06b6d4', '#f59e0b'];
 const getMondrianColor = (index, darkMode) => darkMode ? ['bg-pink-800', 'bg-cyan-800', 'bg-amber-700', 'bg-gray-800'][index % 4] : ['bg-pink-500', 'bg-cyan-400', 'bg-amber-400', 'bg-white'][index % 4];
 
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
@@ -563,8 +543,8 @@ const MContainer = ({ children, className = '', colorClass = '', darkMode }) => 
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
   let bg = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
   if (['pink', 'red'].includes(variant)) bg = darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500 text-black';
-  if (['cyan', 'blue'].includes(variant)) bg = darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black';
-  if (['amber', 'yellow'].includes(variant)) bg = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black';
+  if (['cyan', 'blue', 'green'].includes(variant)) bg = darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black';
+  if (['amber', 'yellow', 'indigo'].includes(variant)) bg = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black';
   if (variant === 'black') bg = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
   if (variant === 'light-cyan') bg = darkMode ? 'bg-cyan-900/50 text-cyan-200' : 'bg-cyan-100 text-cyan-900';
   if (variant === 'light-pink') bg = darkMode ? 'bg-pink-900/50 text-pink-200' : 'bg-pink-100 text-pink-900';
@@ -937,6 +917,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         playChipBeep('success');
         onShowToast('success');
       } else {
+        // Se a função de busca rigorosa não achar nada, não sobrepõe
         playChipBeep('error');
       }
     } catch (e) {
@@ -986,7 +967,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     setLoadingWiki(true); 
     setWikiError('');
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { 
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ 
@@ -1047,7 +1028,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             </button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'border-black text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[4px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-400 border-gray-300 text-black shadow-[3px_3px_0px_rgba(209,213,219,1)]' : 'border-black bg-cyan-400 text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
             Salvar
           </button>
         </MContainer>
@@ -1107,7 +1088,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               <ExternalLink className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Buscar na Web</span>
             </a>
             {isDiscItem && (
-               <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-green-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-green-100 border-black text-green-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+               <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
                   <Headphones className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Spotify</span>
                </a>
             )}
@@ -1826,7 +1807,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       </div>
 
       {hasMusicStats && (
-        <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-indigo-900/40 text-white' : 'bg-indigo-100 text-black'}>
+        <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-amber-900/40 text-white' : 'bg-amber-100 text-black'}>
            <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}><Music className="w-4 h-4" /> Auditoria Musical (Discos no Filtro: {musicItems.length})</div>
            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Discos Ouvidos</span><span className="text-xl font-black">{musicStats.qtyOuvidos} <span className="text-[10px]">({musicStats.percOuvidos}%)</span></span></div>
@@ -1915,7 +1896,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                 changedCount++;
                 syncItemToSheets(updatedItems[i], settings?.googleSheetsUrl);
             }
-            await new Promise(r => setTimeout(r, 600)); 
+            // Delay obrigatório para não esbarrar no limitador de taxa (Rate Limit) das APIs
+            await new Promise(r => setTimeout(r, 1000)); 
         }
     }
     
@@ -2090,7 +2072,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
       
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-indigo-900/20 text-white' : 'bg-indigo-50 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
         <button onClick={() => toggleSection('capas')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'capas' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Recuperação de Capas</span><span className="text-lg font-mono">{openSection === 'capas' ? '−' : '+'}</span></button>
         {openSection === 'capas' && (
           <div className="p-4 flex flex-col gap-3">
@@ -2107,7 +2089,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                 <div className="text-[9px] font-bold opacity-80 mb-2">Selecione o modo de varredura automática de capas:</div>
                 <MButton darkMode={darkMode} onClick={() => runCoverSync('missing_errors')} variant="cyan" className="w-full py-3 text-[9px]"><Search className="w-4 h-4" /> Recuperar Faltantes e Com Erro</MButton>
                 <MButton darkMode={darkMode} onClick={() => runCoverSync('errors_only')} variant="amber" className="w-full py-3 text-[9px]"><AlertTriangle className="w-4 h-4" /> Corrigir Apenas Erros (Links Quebrados)</MButton>
-                <MButton darkMode={darkMode} onClick={() => runCoverSync('all')} variant="light-pink" className="w-full py-3 text-[9px]"><RefreshIcon className="w-4 h-4" /> Recarregar Todas (Forçar Substituição)</MButton>
+                <MButton darkMode={darkMode} onClick={() => runCoverSync('all')} variant="light-pink" className="w-full py-3 text-[9px]"><RefreshIcon className="w-4 h-4" /> Recarregar Todas (Atenção ao Limite de API)</MButton>
                 {coverSync.log && !coverSync.active && <div className="text-[9px] font-black uppercase tracking-widest text-center mt-2 text-pink-500 border-[2px] p-2 border-pink-500 bg-pink-100 dark:bg-pink-900/30">{coverSync.log}</div>}
               </>
             )}
@@ -2207,9 +2189,28 @@ export default function App() {
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
       
-      const promptInstructions = `Analise a imagem (pode ser capa, contracapa ou ficha catalográfica/expediente). Extraia os metadados com precisão e retorne APENAS um JSON válido. Formato exigido: {"type": "Livro", "title": "Título", "author_developer": "Autor(es)", "year": "YYYY", "publisher": "Editora", "pages_or_time": "Páginas", "description": "Breve sinopse"}. Opções para 'type': ${allTypes.join(', ')}. REGRAS: 1) Em gibis, busque no expediente termos como 'Editora Abril', 'Panini', etc. 2) Datas como 'Julho/90' ou '90' devem virar '1990'. 3) Retorne o JSON puro, sem crases de markdown.`;
+      const promptInstructions = `Aja como um arquivista e bibliotecário especializado.
+Analise a imagem enviada. Pode ser uma capa de livro, quadrinho, encarte de CD/Vinil/Fita, caixa de DVD, capa de game ou FICHA CATALOGRÁFICA (expediente).
+Extraia os metadados com precisão e retorne EXCLUSIVAMENTE um JSON válido, sem crases de markdown.
+Formato exigido:
+{
+  "type": "Escolha APENAS uma: ${allTypes.join(', ')}",
+  "title": "Título Principal da obra",
+  "author_developer": "Autor(es), Artista, Banda ou Desenvolvedora",
+  "year": "Ano de lançamento original ou da edição (formato YYYY, ex: 1990)",
+  "publisher": "Editora, Gravadora ou Produtora",
+  "pages_or_time": "Número de páginas (para mídia impressa) ou número de faixas (para discos)",
+  "description": "Breve sinopse identificada ou resumo da obra"
+}
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { 
+REGRAS RÍGIDAS:
+1. Em gibis e revistas (como na imagem de expediente), procure informações miúdas como 'Editora Abril', 'Panini', etc. 
+2. Datas abreviadas como 'Julho/90' devem ser formatadas apenas como '1990'.
+3. O título deve ser o nome principal em destaque (ex: 'Lex Luthor').
+4. Retorne APENAS o JSON puro. Nenhuma palavra a mais.`;
+
+      // Atualizado para o Endpoint robusto mais recente da API Vision (gemini-2.5-flash)
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ 
@@ -2241,7 +2242,7 @@ export default function App() {
       
       setScannedAIData(JSON.parse(text)); 
       setAiBoxState('success'); 
-      setAiBoxMessage('Extraído com sucesso!'); 
+      setAiBoxMessage('Extraído com sucesso da imagem!'); 
       playChipBeep('save'); 
       showToast('success');
       
@@ -2250,7 +2251,7 @@ export default function App() {
       if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
          errorMsg = "Cota gratuita da IA esgotada no momento. ⚠️\nUse o botão 'Barcode' (Código de Barras) para pesquisar bases de dados sem limite, ou preencha manualmente até a cota resetar.";
       } else {
-         errorMsg = `Falha na IA: ${errorMsg}\nTente focar bem a capa ou use o modo Barcode.`;
+         errorMsg = `Falha na IA: ${errorMsg}\nTente focar bem o texto do expediente ou use o modo Barcode.`;
       }
       setAiBoxState('error'); 
       setAiBoxMessage(errorMsg); 
