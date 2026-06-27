@@ -2115,7 +2115,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                   <div className="text-[8px] font-bold mb-3">{coverSync.progress} / {coverSync.total} Itens Analisados</div>
                   <MButton darkMode={darkMode} onClick={() => {
                       coverSyncActiveRef.current = false;
-                      setCoverSync(prev => ({ ...prev, log: 'Cancelando... finalizando checagem do item atual.' }));
+                      setCoverSync(prev => ({ ...prev, log: 'Cancelando processo...' }));
                   }} variant="pink" className="py-2 text-[9px] w-full max-w-[200px]">Cancelar Busca</MButton>
               </div>
             ) : (
