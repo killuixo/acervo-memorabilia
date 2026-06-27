@@ -2114,8 +2114,8 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                   <div className="w-full bg-gray-200 h-2 mb-3 border-[2px] border-black dark:border-gray-300"><div className="bg-cyan-500 h-full transition-all duration-300" style={{width: `${(coverSync.progress / Math.max(1, coverSync.total)) * 100}%`}}></div></div>
                   <div className="text-[8px] font-bold mb-3">{coverSync.progress} / {coverSync.total} Itens Analisados</div>
                   <MButton darkMode={darkMode} onClick={() => {
-                      coverSyncActiveRef.current = false;
-                      setCoverSync(prev => ({ ...prev, log: 'Cancelando processo...' }));
+                      if (activeSyncController.current) activeSyncController.current.abort();
+                      setCoverSync(prev => ({ ...prev, log: 'Cancelando forçadamente...' }));
                   }} variant="pink" className="py-2 text-[9px] w-full max-w-[200px]">Cancelar Busca</MButton>
               </div>
             ) : (
