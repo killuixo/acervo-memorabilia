@@ -243,6 +243,27 @@ const isImageBroken = (url) => {
   });
 };
 
+// UTILITÁRIO: Fetch com timeout para não travar loops longos
+const fetchTimeout = (url, options = {}, timeoutMs = 8000) => {
+    return new Promise((resolve, reject) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+            controller.abort();
+            reject(new Error("Timeout limite atingido da API externa"));
+        }, timeoutMs);
+
+        fetch(url, { ...options, signal: controller.signal })
+            .then(response => {
+                clearTimeout(timer);
+                resolve(response);
+            })
+            .catch(err => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+};
+
 const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const titleRaw = item.title ? item.title.trim() : '';
   const authorRaw = item.author_developer ? item.author_developer.trim() : '';
@@ -263,21 +284,21 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   // 1. Busca por Código de Barras (Mais precisa)
   if (barcodeRaw) {
      try {
-        const upcRes = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
+        const upcRes = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
         const upcData = await upcRes.json();
         if (upcData.items?.[0]?.images?.[0]) return upcData.items[0].images[0];
      } catch(e) {}
 
      if (isBook) {
         try {
-           const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcodeRaw}`);
+           const gbRes = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcodeRaw}`);
            const gbData = await gbRes.json();
            if (gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) {
                return gbData.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
            }
         } catch(e) {}
         try {
-           const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${barcodeRaw}&jscmd=data&format=json`);
+           const olRes = await fetchTimeout(`https://openlibrary.org/api/books?bibkeys=ISBN:${barcodeRaw}&jscmd=data&format=json`);
            const olData = await olRes.json();
            const olKey = `ISBN:${barcodeRaw}`;
            if (olData[olKey]?.cover?.large) return olData[olKey].cover.large;
@@ -286,7 +307,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
      
      if (isDisc && settings?.discogsToken) {
         try {
-           const dcRes = await fetch(`https://api.discogs.com/database/search?barcode=${barcodeRaw}&token=${settings.discogsToken}`);
+           const dcRes = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${barcodeRaw}&token=${settings.discogsToken}`);
            const dcData = await dcRes.json();
            if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) {
                return dcData.results[0].cover_image;
@@ -307,7 +328,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 
         let queryUrl = `https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`;
         
-        const dcRes = await fetch(queryUrl);
+        const dcRes = await fetchTimeout(queryUrl);
         const dcData = await dcRes.json();
         
         if (dcData.results?.length > 0) {
@@ -329,7 +350,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     try {
         let mbQuery = `release:${qTitle}`;
         if (authorRaw) mbQuery += ` AND artist:${qAuthor}`;
-        const mbRes = await fetch(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(mbQuery)}&fmt=json`);
+        const mbRes = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(mbQuery)}&fmt=json`);
         const mbData = await mbRes.json();
         
         if (mbData.releases?.length > 0) {
@@ -338,9 +359,12 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
                 const exactYearReleases = targetReleases.filter(r => r.date && r.date.startsWith(yearRaw));
                 if (exactYearReleases.length > 0) targetReleases = exactYearReleases;
             }
-            for (const release of targetReleases) {
+            // Limitar tentativas de fallback no arquivo de capas para não travar a thread
+            const maxAttempts = Math.min(targetReleases.length, 3);
+            for (let i = 0; i < maxAttempts; i++) {
+                const release = targetReleases[i];
                 try {
-                    const caaRes = await fetch(`https://coverartarchive.org/release/${release.id}/front`);
+                    const caaRes = await fetchTimeout(`https://coverartarchive.org/release/${release.id}/front`, {}, 5000);
                     if (caaRes.ok) return caaRes.url; 
                 } catch(e) {}
             }
@@ -353,7 +377,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         let gbQuery = `intitle:"${titleRaw}"`;
         if (authorRaw) gbQuery += `+inauthor:"${authorRaw}"`;
         
-        let gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=10`);
+        let gbRes = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=10`);
         let gbData = await gbRes.json();
         
         if (gbData.items) {
@@ -379,13 +403,13 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   else if (isGame) {
       try {
           const gameQuery = `${titleRaw} ${typeRaw} game cover`;
-          const wikiRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(gameQuery)}&utf8=&format=json&origin=*`);
+          const wikiRes = await fetchTimeout(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(gameQuery)}&utf8=&format=json&origin=*`);
           const wikiData = await wikiRes.json();
           
           if (wikiData.query?.search?.length > 0) {
               const bestResult = wikiData.query.search[0];
               const title = bestResult.title;
-              const imgRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
+              const imgRes = await fetchTimeout(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
               const imgData = await imgRes.json();
               const pages = imgData.query?.pages;
               if (pages) {
@@ -398,7 +422,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 
   else if (isVideo) {
       try {
-          const itRes = await fetch(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=10`);
+          const itRes = await fetchTimeout(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=10`);
           const itData = await itRes.json();
           if (itData.results?.length > 0) {
               let bestMovie = itData.results[0];
@@ -411,7 +435,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch (e) {}
   }
 
-  // Se chegou aqui, não achou edição exata (ou aceitável), retorna null para não sujar a base.
   return null;
 };
 
@@ -917,7 +940,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         playChipBeep('success');
         onShowToast('success');
       } else {
-        // Se a função de busca rigorosa não achar nada, não sobrepõe
         playChipBeep('error');
       }
     } catch (e) {
@@ -1342,7 +1364,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                  </div>
 
                  <div className={`w-24 sm:w-28 flex-shrink-0 flex flex-col items-center justify-between border-l-[3px] pl-2 py-0.5 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
-                    <div className={`w-full ${(activeCategories['Discos'] || []).includes(item.type) ? 'aspect-square' : 'aspect-[3/4]'} border-[3px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
+                    <div className={`w-full ${(activeCategories['Discos'] || []).includes(item.type) ? 'aspect-square' : 'border-[3px] aspect-[3/4]'} ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
                        {item.cover_url ? <img src={item.cover_url} alt="Capa" className="w-full h-full object-cover"/> : <LibraryBig className={`w-6 h-6 ${darkMode ? 'text-gray-500' : 'text-gray-400'} opacity-50`}/>}
                     </div>
                     <div className="flex flex-nowrap justify-center items-center gap-0.5 pointer-events-auto w-full" onClick={e => e.stopPropagation()}>
@@ -1454,7 +1476,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
-      const res = await fetch(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
       const data = await res.json();
       if (!data.results || data.results.length === 0) throw new Error("Not found");
       const item = data.results[0]; 
@@ -1467,7 +1489,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchMBrainz = async () => {
-      const res = await fetch(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
+      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
       const data = await res.json();
       if (!data.releases || data.releases.length === 0) throw new Error("Not found");
       const release = data.releases[0]; let fmt = 'CD'; let tc = '';
@@ -1480,7 +1502,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchUPC = async () => {
-      const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
+      const res = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
       const data = await res.json();
       if (!data.items || data.items.length === 0) throw new Error("Not found");
       const item = data.items[0]; const cat = String(item.category || "").toLowerCase(); const tit = String(item.title || "").toLowerCase();
@@ -1492,7 +1514,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchGBooks = async () => {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
+      const res = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
       const data = await res.json();
       if (!data.items || data.items.length === 0) throw new Error("Not found");
       const info = data.items[0].volumeInfo;
@@ -1502,7 +1524,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchOpenLib = async () => {
-      const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
+      const res = await fetchTimeout(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
       const data = await res.json();
       const info = data[`ISBN:${cleanCode}`];
       if (!info) throw new Error("Not found");
@@ -1875,6 +1897,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     let changedCount = 0;
 
     for (let i = 0; i < updatedItems.length; i++) {
+        // Verifica a cada loop se o usuário cancelou a ação
         if (!coverSyncActiveRef.current) {
             setCoverSync(prev => ({ ...prev, active: false, log: 'Busca cancelada pelo usuário.' }));
             break;
@@ -1891,6 +1914,13 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         if (needsFetch) {
             setCoverSync(prev => ({ ...prev, log: `Buscando capa: ${item.title}` }));
             const newCover = await fetchCoverBySearch(item, settings, activeCategories);
+            
+            // Re-verifica, caso tenha cancelado DURANTE a promessa do request
+            if (!coverSyncActiveRef.current) {
+                setCoverSync(prev => ({ ...prev, active: false, log: 'Busca cancelada pelo usuário.' }));
+                break;
+            }
+
             if (newCover && newCover !== item.cover_url) {
                 updatedItems[i] = { ...item, cover_url: newCover };
                 changedCount++;
@@ -1906,6 +1936,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         setCoverSync({ active: false, progress: items.length, total: items.length, log: `Concluído! ${changedCount} atualizadas.` });
         if (changedCount > 0) { playChipBeep('success'); onShowToast('success'); }
     } else {
+        // Mantém as que foram resolvidas antes de cancelar
         setItems(updatedItems); 
     }
   };
@@ -2082,7 +2113,10 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                   <div className="text-[10px] font-black uppercase tracking-widest mb-1">{coverSync.log}</div>
                   <div className="w-full bg-gray-200 h-2 mb-3 border-[2px] border-black dark:border-gray-300"><div className="bg-cyan-500 h-full transition-all duration-300" style={{width: `${(coverSync.progress / Math.max(1, coverSync.total)) * 100}%`}}></div></div>
                   <div className="text-[8px] font-bold mb-3">{coverSync.progress} / {coverSync.total} Itens Analisados</div>
-                  <MButton darkMode={darkMode} onClick={() => coverSyncActiveRef.current = false} variant="pink" className="py-2 text-[9px] w-full max-w-[200px]">Cancelar Busca</MButton>
+                  <MButton darkMode={darkMode} onClick={() => {
+                      coverSyncActiveRef.current = false;
+                      setCoverSync(prev => ({ ...prev, log: 'Cancelando... finalizando checagem do item atual.' }));
+                  }} variant="pink" className="py-2 text-[9px] w-full max-w-[200px]">Cancelar Busca</MButton>
               </div>
             ) : (
               <>
