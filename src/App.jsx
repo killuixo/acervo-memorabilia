@@ -228,7 +228,6 @@ const getExternalLinkInfo = (type, title, specificLink = '') => {
 const getMetricInfo = (itemType, activeCategories) => {
   if ((activeCategories['Livros'] || []).includes(itemType)) return { label: 'Págs', desc: 'Páginas' };
   if ((activeCategories['Discos'] || []).includes(itemType)) return { label: 'Faixas', desc: 'Faixas' };
-  if ((activeCategories['Vídeo'] || []).includes(itemType)) return { label: 'Minutos', desc: 'Minutos' };
   if ((activeCategories['Games'] || []).includes(itemType)) return { label: 'Horas/Unid', desc: 'Horas/Discos' };
   return { label: 'Und', desc: 'Métrica' };
 };
@@ -794,7 +793,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       }
       if (alphaFilter !== 'Todos') {
           if (alphaFilter === '#') {
-              result = result.filter(i => /^[^a-zA-ZÀ-ÿ]/i.test((i.title || '').trim()));
+              result = result.filter(i => /^[^a-zA-Z]/.test((i.title || '').trim()));
           } else {
               result = result.filter(i => (i.title || '').trim().toUpperCase().startsWith(alphaFilter));
           }
@@ -857,43 +856,18 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       result = [...result].sort((a, b) => {
           let valA, valB;
           switch (sortBy) {
-              case 'title': 
-                  valA = (a.title||'').toLowerCase(); 
-                  valB = (b.title||'').toLowerCase(); 
-                  break;
-              case 'author': 
-                  valA = isVariousArtists(a.author_developer) ? (a.title||'').toLowerCase() : (a.author_developer||'').toLowerCase(); 
-                  valB = isVariousArtists(b.author_developer) ? (b.title||'').toLowerCase() : (b.author_developer||'').toLowerCase(); 
-                  break;
-              case 'year': 
-                  valA = parseInt(a.year) || 0; 
-                  valB = parseInt(b.year) || 0; 
-                  break;
-              case 'type': 
-                  valA = (a.type||'').toLowerCase(); 
-                  valB = (b.type||'').toLowerCase(); 
-                  break;
-              case 'added': default: 
-                  valA = a.id || ''; 
-                  valB = b.id || ''; 
-                  break;
+              case 'title': valA = (a.title||'').toLowerCase(); valB = (b.title||'').toLowerCase(); break;
+              case 'author': valA = (a.author_developer||'').toLowerCase(); valB = (b.author_developer||'').toLowerCase(); break;
+              case 'year': valA = parseInt(a.year) || 0; valB = parseInt(b.year) || 0; break;
+              case 'type': valA = (a.type||'').toLowerCase(); valB = (b.type||'').toLowerCase(); break;
+              case 'added': default: valA = a.id || ''; valB = b.id || ''; break;
           }
-
           if (sortBy === 'year') {
               return sortOrder === 'asc' ? valA - valB : valB - valA;
           } else {
-              const strA = String(valA).trim();
-              const strB = String(valB).trim();
-              
-              const isNonAlphaA = /^[^a-zA-ZÀ-ÿ]/i.test(strA);
-              const isNonAlphaB = /^[^a-zA-ZÀ-ÿ]/i.test(strB);
-
-              if (isNonAlphaA && !isNonAlphaB) return sortOrder === 'asc' ? -1 : 1;
-              if (!isNonAlphaA && isNonAlphaB) return sortOrder === 'asc' ? 1 : -1;
-
               return sortOrder === 'asc' 
-                  ? strA.localeCompare(strB, 'pt-BR')
-                  : strB.localeCompare(strA, 'pt-BR');
+                  ? String(valA).localeCompare(String(valB), 'pt-BR')
+                  : String(valB).localeCompare(String(valA), 'pt-BR');
           }
       });
 
@@ -1090,7 +1064,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[3px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'border-black bg-cyan-400 text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[3px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-400 border-black text-black') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </MContainer>
@@ -1687,8 +1661,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       }
       if (filterStatus !== 'Todos') {
          const isDisc = (activeCategories['Discos'] || []).includes(item.type);
-         const isVideo = (activeCategories['Vídeo'] || []).includes(item.type);
-         if (isDisc || isVideo) mStatus = false;
+         if (isDisc) mStatus = false;
          else mStatus = item.status === filterStatus;
       }
       if (filterRating !== 'Todas') mRating = item.rating === parseInt(filterRating);
@@ -1705,8 +1678,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     catCounts[foundCat] = (catCounts[foundCat] || 0) + 1;
 
     const isDisc = (activeCategories['Discos'] || []).includes(item.type);
-    const isVideo = (activeCategories['Vídeo'] || []).includes(item.type);
-    if (!isDisc && !isVideo) {
+    if (!isDisc) {
       const st = item.status || 'Não Iniciado';
       statusCounts[st] = (statusCounts[st] || 0) + 1;
     }
@@ -1765,8 +1737,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
     const vergonha = dashItems.filter(i => {
        const isDisc = (activeCategories['Discos'] || []).includes(i.type);
-       const isVideo = (activeCategories['Vídeo'] || []).includes(i.type);
-       if (isDisc || isVideo) return (Number(i.rating) || 0) === 0;
+       if (isDisc) return (Number(i.rating) || 0) === 0;
        return i.status === 'Não Iniciado';
     }).length;
 
@@ -1810,31 +1781,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      return { qtyOuvidos, percOuvidos, mediaNota, totalFaixas, mediaFaixas, topArtist };
   }, [musicItems, hasMusicStats]);
 
-  const videoItems = dashItems.filter(i => (activeCategories['Vídeo'] || []).includes(i.type));
-  const hasVideoStats = videoItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Vídeo');
-
-  const videoStats = useMemo(() => {
-     if (!hasVideoStats) return null;
-     const assistidos = videoItems.filter(i => (Number(i.rating) || 0) > 0);
-     const qtyAssistidos = assistidos.length;
-     const mediaNota = qtyAssistidos > 0 ? (assistidos.reduce((acc, i) => acc + Number(i.rating), 0) / qtyAssistidos).toFixed(1) : 0;
-     const percAssistidos = videoItems.length > 0 ? Math.round((qtyAssistidos / videoItems.length) * 100) : 0;
-
-     let totalMinutos = 0;
-     videoItems.forEach(i => {
-         totalMinutos += parseInt(i.pages_or_time) || 0;
-     });
-     const totalHoras = Math.round(totalMinutos / 60);
-
-     let totalAssistidosMinutos = 0;
-     assistidos.forEach(i => {
-         totalAssistidosMinutos += parseInt(i.pages_or_time) || 0;
-     });
-     const totalAssistidosHoras = Math.round(totalAssistidosMinutos / 60);
-
-     return { qtyAssistidos, percAssistidos, mediaNota, totalHoras, totalAssistidosHoras, totalMinutos };
-  }, [videoItems, hasVideoStats]);
-
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -1868,18 +1814,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
               <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Total Faixas</span><span className="text-xl font-black">{musicStats.totalFaixas} <span className="text-[10px]">Músicas</span></span></div>
               <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Média Faixas/Disco</span><span className="text-xl font-black">{musicStats.mediaFaixas} <span className="text-[10px]">Músicas/Und</span></span></div>
               <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest truncate">Mais Faixas: {musicStats.topArtist.name}</span><span className="text-xl font-black truncate">{musicStats.topArtist.count} <span className="text-[10px]">Músicas</span></span></div>
-           </div>
-        </MContainer>
-      )}
-
-      {hasVideoStats && (
-        <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}>
-           <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}><MonitorPlay className="w-4 h-4" /> Auditoria de Vídeo (Filmes no Filtro: {videoItems.length})</div>
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Assistidos</span><span className="text-xl font-black">{videoStats.qtyAssistidos} <span className="text-[10px]">({videoStats.percAssistidos}%)</span></span></div>
-              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Tempo Total</span><span className="text-xl font-black">{videoStats.totalHoras} <span className="text-[10px]">Horas</span></span></div>
-              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Tempo Consumido</span><span className="text-xl font-black">{videoStats.totalAssistidosHoras} <span className="text-[10px]">Horas</span></span></div>
-              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Nota Média</span><span className="text-xl font-black">{videoStats.mediaNota} <span className="text-[10px]">Estrelas</span></span></div>
            </div>
         </MContainer>
       )}
@@ -2757,40 +2691,40 @@ REGRAS RÍGIDAS:
                  <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel de Status</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
                  <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
                     <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
-                      {renderMarqueeContent()}
+                      {renderMarqueeContent()} {renderMarqueeContent()}
                     </div>
-                 </div>
+                  </div>
               </div>
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden bg-transparent">
-            {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
-            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => {setAiBoxState('idle'); setAiBoxMessage('');}} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
-            {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
-            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
+          <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative flex flex-col">
+            <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
+            
+            {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
+            {activeTab === 'add' && <div className="p-3 overflow-y-auto w-full"><AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} /></div>}
+            {activeTab === 'dashboard' && <div className="p-3 overflow-y-auto w-full"><DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} /></div>}
+            {activeTab === 'settings' && <div className="p-3 overflow-y-auto w-full"><SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} /></div>}
           </main>
-          
-          <nav className={`md:hidden flex-none flex border-t-[4px] z-20 pb-safe ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
-            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] p-2 transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}>
+
+          <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}>
               <Library className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Coleção</span>
             </button>
-            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] p-2 transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400') : ''}`}>
               <PlusSquare className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
-            <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] p-2 transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}>
+            <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-500') : ''}`}>
               <BarChart2 className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Geral</span>
             </button>
-            <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center justify-center p-2 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}>
+            <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200') : ''}`}>
               <Settings className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span>
             </button>
           </nav>
-          
-          <input type="file" accept="image/*" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
         </div>
       </div>
     </div>
