@@ -802,19 +802,25 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           );
       }
       if (alphaFilter !== 'Todos') {
-          if (alphaFilter === '#') {
-              result = result.filter(i => /^[^a-zA-Záéíóúâêôãõç]/i.test((i.title || '').trim()));
-          } else {
-              result = result.filter(i => {
-                  const firstChar = (i.title || '').trim().charAt(0).toUpperCase();
-                  // Compara a primeira letra normalizada para capturar acentos corretamente (ex: Á -> A)
+          result = result.filter(i => {
+              // O filtro alfabético respeita a ordenação atual. Se ordenado por Autor, filtra por Autor (exceto Various)
+              let targetText = i.title;
+              if (sortBy === 'author' && !isVariousArtists(i.author_developer)) {
+                  targetText = i.author_developer;
+              }
+              const cleanStr = (targetText || '').trim();
+              
+              if (alphaFilter === '#') {
+                  return /^[^a-zA-Záéíóúâêôãõç]/i.test(cleanStr);
+              } else {
+                  const firstChar = cleanStr.charAt(0).toUpperCase();
                   const normalizedChar = firstChar.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                   return normalizedChar === alphaFilter;
-              });
-          }
+              }
+          });
       }
       return result;
-  }, [items, searchTerm, alphaFilter]);
+  }, [items, searchTerm, alphaFilter, sortBy]);
 
   const filterCounts = useMemo(() => {
       const counts = { Adicionado: {}, Suporte: {}, Ano: {}, Nota: {}, 'Páginas/Faixa': {} };
@@ -879,27 +885,23 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                   valA = isVariousArtists(a.author_developer) ? (a.title||'').trim() : (a.author_developer||'').trim(); 
                   valB = isVariousArtists(b.author_developer) ? (b.title||'').trim() : (b.author_developer||'').trim(); 
                   break;
-              case 'year': 
-                  valA = parseInt(a.year) || 0; 
-                  valB = parseInt(b.year) || 0; 
-                  break;
               case 'type': 
                   valA = (a.type||'').trim(); 
                   valB = (b.type||'').trim(); 
                   break;
-              case 'added': default: 
-                  valA = a.id || ''; 
-                  valB = b.id || ''; 
-                  break;
           }
           
           if (sortBy === 'year') {
-              return sortOrder === 'asc' ? valA - valB : valB - valA;
+              const yA = parseInt(a.year) || 0;
+              const yB = parseInt(b.year) || 0;
+              return sortOrder === 'asc' ? yA - yB : yB - yA;
           } else if (sortBy === 'added') {
+              valA = a.id || ''; 
+              valB = b.id || '';
               return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
           } else {
-              // Ordenação Alfabética Inteligente (Numerais cronológicos e ignora acentos na posição)
-              const cmp = String(valA).localeCompare(String(valB), 'pt-BR', { numeric: true, sensitivity: 'base' });
+              // Ordenação Alfabética Inteligente, normalizada, que posiciona números/símbolos corretamente antes do A
+              const cmp = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase(), 'pt-BR', { numeric: true, sensitivity: 'base' });
               return sortOrder === 'asc' ? cmp : -cmp;
           }
       });
