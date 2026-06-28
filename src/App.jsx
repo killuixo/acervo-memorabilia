@@ -212,7 +212,7 @@ const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
 const isVariousArtists = name => {
   const n = String(name || '').toLowerCase().trim();
-  return ['various', 'vários', 'varios', 'variados', 'coleção', 'coleções', 'colecoes', 'collection', 'compilação', 'compilações'].some(k => n.includes(k));
+  return ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => n.includes(k));
 };
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
@@ -808,7 +808,8 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               if (sortBy === 'author' && !isVariousArtists(i.author_developer)) {
                   targetText = i.author_developer;
               }
-              const cleanStr = (targetText || '').trim();
+              // IGNORA ARTIGOS PARA O FILTRO ALFABÉTICO (ex: O Auto da Compadecida -> Auto da Compadecida)
+              const cleanStr = getSortableName(targetText);
               
               if (alphaFilter === '#') {
                   return /^[^a-zA-Záéíóúâêôãõç]/i.test(cleanStr);
@@ -878,12 +879,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           let valA = '', valB = '';
           switch (sortBy) {
               case 'title': 
-                  valA = (a.title||'').trim(); 
-                  valB = (b.title||'').trim(); 
+                  valA = getSortableName(a.title); 
+                  valB = getSortableName(b.title); 
                   break;
               case 'author': 
-                  valA = isVariousArtists(a.author_developer) ? (a.title||'').trim() : (a.author_developer||'').trim(); 
-                  valB = isVariousArtists(b.author_developer) ? (b.title||'').trim() : (b.author_developer||'').trim(); 
+                  valA = isVariousArtists(a.author_developer) ? getSortableName(a.title) : getSortableName(a.author_developer); 
+                  valB = isVariousArtists(b.author_developer) ? getSortableName(b.title) : getSortableName(b.author_developer); 
                   break;
               case 'type': 
                   valA = (a.type||'').trim(); 
