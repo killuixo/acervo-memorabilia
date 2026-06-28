@@ -229,18 +229,8 @@ const getMetricInfo = (itemType, activeCategories) => {
   if ((activeCategories['Livros'] || []).includes(itemType)) return { label: 'Págs', desc: 'Páginas' };
   if ((activeCategories['Discos'] || []).includes(itemType)) return { label: 'Faixas', desc: 'Faixas' };
   if ((activeCategories['Games'] || []).includes(itemType)) return { label: 'Horas/Unid', desc: 'Horas/Discos' };
+  if ((activeCategories['Vídeo'] || []).includes(itemType)) return { label: 'Min', desc: 'Minutos' };
   return { label: 'Und', desc: 'Métrica' };
-};
-
-const isImageBroken = (url) => {
-  return new Promise((resolve) => {
-    if (!url || typeof url !== 'string' || url.trim() === '') return resolve(true);
-    const img = new Image();
-    const timer = setTimeout(() => resolve(true), 5000); // 5s timeout para não travar o loop
-    img.onload = () => { clearTimeout(timer); resolve(false); };
-    img.onerror = () => { clearTimeout(timer); resolve(true); };
-    img.src = url;
-  });
 };
 
 // UTILITÁRIO: Fetch com timeout para não travar loops longos
@@ -316,7 +306,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
      }
   }
 
-  // 2. Busca rigorosa por Metadados (Só retorna se for bem fiel)
+  // 2. Busca rigorosa por Metadados
   if (isDisc) {
     if (settings?.discogsToken) {
       try {
@@ -332,12 +322,11 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         const dcData = await dcRes.json();
         
         if (dcData.results?.length > 0) {
-            // Tenta achar ano ou selo exato
             let bestMatch = dcData.results.find(r => 
                 (yearRaw && r.year === yearRaw) || 
                 (pubRaw && r.label && r.label.some(l => l.toLowerCase().includes(pubRaw.toLowerCase())))
             );
-            if (!bestMatch) bestMatch = dcData.results[0]; // Se não, pega o primeiro
+            if (!bestMatch) bestMatch = dcData.results[0];
 
             if (bestMatch?.cover_image && !bestMatch.cover_image.includes('spacer.gif')) {
                 return bestMatch.cover_image;
@@ -346,7 +335,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch(e) { console.warn("Discogs API err", e); }
     }
     
-    // Fallback MusicBrainz (menos restritivo, mas útil)
+    // Fallback MusicBrainz
     try {
         let mbQuery = `release:${qTitle}`;
         if (authorRaw) mbQuery += ` AND artist:${qAuthor}`;
@@ -359,7 +348,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
                 const exactYearReleases = targetReleases.filter(r => r.date && r.date.startsWith(yearRaw));
                 if (exactYearReleases.length > 0) targetReleases = exactYearReleases;
             }
-            // Limitar tentativas de fallback no arquivo de capas para não travar a thread
             const maxAttempts = Math.min(targetReleases.length, 3);
             for (let i = 0; i < maxAttempts; i++) {
                 const release = targetReleases[i];
@@ -381,7 +369,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         let gbData = await gbRes.json();
         
         if (gbData.items) {
-            // Filtro rigoroso: Se usuário informou ano ou editora, tentar casar.
             let bestMatch = null;
             if (yearRaw || pubRaw) {
                  bestMatch = gbData.items.find(i => {
@@ -816,9 +803,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       }
       if (alphaFilter !== 'Todos') {
           if (alphaFilter === '#') {
-              result = result.filter(i => /^[^a-zA-Z]/.test((i.title || '').trim()));
+              result = result.filter(i => /^[^a-zA-Záéíóúâêôãõç]/i.test((i.title || '').trim()));
           } else {
-              result = result.filter(i => (i.title || '').trim().toUpperCase().startsWith(alphaFilter));
+              result = result.filter(i => {
+                  const firstChar = (i.title || '').trim().charAt(0).toUpperCase();
+                  // Compara a primeira letra normalizada para capturar acentos corretamente (ex: Á -> A)
+                  const normalizedChar = firstChar.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                  return normalizedChar === alphaFilter;
+              });
           }
       }
       return result;
@@ -877,20 +869,24 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       if (activeFilters['Páginas/Faixa'].length > 0) result = result.filter(i => activeFilters['Páginas/Faixa'].includes(getPagesBucket(i.pages_or_time)));
 
       result = [...result].sort((a, b) => {
-          let valA, valB;
+          let valA = '', valB = '';
           switch (sortBy) {
-              case 'title': valA = (a.title||'').toLowerCase(); valB = (b.title||'').toLowerCase(); break;
-              case 'author': valA = (a.author_developer||'').toLowerCase(); valB = (b.author_developer||'').toLowerCase(); break;
-              case 'year': valA = parseInt(a.year) || 0; valB = parseInt(b.year) || 0; break;
-              case 'type': valA = (a.type||'').toLowerCase(); valB = (b.type||'').toLowerCase(); break;
-              case 'added': default: valA = a.id || ''; valB = b.id || ''; break;
+              case 'title': valA = (a.title||'').trim(); valB = (b.title||'').trim(); break;
+              case 'author': valA = (a.author_developer||'').trim(); valB = (b.author_developer||'').trim(); break;
+              case 'type': valA = (a.type||'').trim(); valB = (b.type||'').trim(); break;
+              // 'year' and 'added' são tratados nos ifs abaixo
           }
           if (sortBy === 'year') {
-              return sortOrder === 'asc' ? valA - valB : valB - valA;
+              const yA = parseInt(a.year) || 0;
+              const yB = parseInt(b.year) || 0;
+              return sortOrder === 'asc' ? yA - yB : yB - yA;
+          } else if (sortBy === 'added') {
+              valA = a.id || ''; valB = b.id || '';
+              return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
           } else {
-              return sortOrder === 'asc' 
-                  ? String(valA).localeCompare(String(valB), 'pt-BR')
-                  : String(valB).localeCompare(String(valA), 'pt-BR');
+              // Ordenação Alfabética Inteligente: numeric para números ("2" antes de "16"), base para normalizar acentos
+              const cmp = String(valA).localeCompare(String(valB), 'pt-BR', { numeric: true, sensitivity: 'base' });
+              return sortOrder === 'asc' ? cmp : -cmp;
           }
       });
 
@@ -1035,6 +1031,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
     const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
+    const isVideoItem = (activeCategories['Vídeo'] || []).includes(editedItem.type);
     const linkInfo = getExternalLinkInfo(editedItem.type, editedItem.title);
     const metricLabel = getMetricInfo(editedItem.type, activeCategories).label;
     const imageContainerClass = isDiscItem ? "w-40 h-40 md:w-56 md:h-56 aspect-square" : "w-32 h-44 md:w-48 md:h-64 aspect-[3/4]";
@@ -1683,7 +1680,8 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
       }
       if (filterStatus !== 'Todos') {
          const isDisc = (activeCategories['Discos'] || []).includes(item.type);
-         if (isDisc) mStatus = false;
+         const isVideo = (activeCategories['Vídeo'] || []).includes(item.type);
+         if (isDisc || isVideo) mStatus = false;
          else mStatus = item.status === filterStatus;
       }
       if (filterRating !== 'Todas') mRating = item.rating === parseInt(filterRating);
@@ -1700,7 +1698,8 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     catCounts[foundCat] = (catCounts[foundCat] || 0) + 1;
 
     const isDisc = (activeCategories['Discos'] || []).includes(item.type);
-    if (!isDisc) {
+    const isVideo = (activeCategories['Vídeo'] || []).includes(item.type);
+    if (!isDisc && !isVideo) {
       const st = item.status || 'Não Iniciado';
       statusCounts[st] = (statusCounts[st] || 0) + 1;
     }
@@ -1759,13 +1758,16 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
     const vergonha = dashItems.filter(i => {
        const isDisc = (activeCategories['Discos'] || []).includes(i.type);
-       if (isDisc) return (Number(i.rating) || 0) === 0;
+       const isVideo = (activeCategories['Vídeo'] || []).includes(i.type);
+       // Filmes (Vídeo) e Discos são contados como backlog/vergonha caso a nota seja zero (não assistidos/escutados)
+       if (isDisc || isVideo) return (Number(i.rating) || 0) === 0;
        return i.status === 'Não Iniciado';
     }).length;
 
     return { reliquia, epico, vergonha };
   }, [dashItems, totalDash, activeCategories]);
 
+  // MUSICA
   const musicItems = dashItems.filter(i => (activeCategories['Discos'] || []).includes(i.type));
   const hasMusicStats = musicItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Discos');
   
@@ -1778,7 +1780,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      
      let totalFaixas = 0;
      const trackByArtist = {};
-     
      const discsWithTracks = musicItems.filter(i => parseInt(i.pages_or_time) > 0);
      
      discsWithTracks.forEach(i => {
@@ -1802,6 +1803,45 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
      return { qtyOuvidos, percOuvidos, mediaNota, totalFaixas, mediaFaixas, topArtist };
   }, [musicItems, hasMusicStats]);
+
+  // VIDEO (FILMES)
+  const videoItems = dashItems.filter(i => (activeCategories['Vídeo'] || []).includes(i.type));
+  const hasVideoStats = videoItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Vídeo');
+  
+  const videoStats = useMemo(() => {
+     if (!hasVideoStats) return null;
+     const assistidos = videoItems.filter(i => (Number(i.rating) || 0) > 0);
+     const qtyAssistidos = assistidos.length;
+     const mediaNota = qtyAssistidos > 0 ? (assistidos.reduce((acc, i) => acc + Number(i.rating), 0) / qtyAssistidos).toFixed(1) : 0;
+     const percAssistidos = videoItems.length > 0 ? Math.round((qtyAssistidos / videoItems.length) * 100) : 0;
+     
+     let totalMinutos = 0;
+     const minByDirector = {};
+     const videosWithTime = videoItems.filter(i => parseInt(i.pages_or_time) > 0);
+     
+     videosWithTime.forEach(i => {
+         const minutos = parseInt(i.pages_or_time);
+         totalMinutos += minutos;
+         if (i.author_developer) {
+            const rawAuthor = i.author_developer.trim();
+            if (!isVariousArtists(rawAuthor)) {
+               let auth = getSortableName(rawAuthor);
+               minByDirector[auth] = (minByDirector[auth] || 0) + minutos;
+            }
+         }
+     });
+     
+     const totalHoras = Math.round(totalMinutos / 60);
+     const mediaMinutos = videosWithTime.length > 0 ? Math.round(totalMinutos / videosWithTime.length) : 0;
+     
+     let topDirector = { name: '--', count: 0 };
+     for (const [art, count] of Object.entries(minByDirector)) {
+         if (count > topDirector.count) topDirector = { name: art, count };
+     }
+
+     return { qtyAssistidos, percAssistidos, mediaNota, totalHoras, mediaMinutos, topDirector };
+  }, [videoItems, hasVideoStats]);
+
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
@@ -1836,6 +1876,18 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
               <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Total Faixas</span><span className="text-xl font-black">{musicStats.totalFaixas} <span className="text-[10px]">Músicas</span></span></div>
               <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Média Faixas/Disco</span><span className="text-xl font-black">{musicStats.mediaFaixas} <span className="text-[10px]">Músicas/Und</span></span></div>
               <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest truncate">Mais Faixas: {musicStats.topArtist.name}</span><span className="text-xl font-black truncate">{musicStats.topArtist.count} <span className="text-[10px]">Músicas</span></span></div>
+           </div>
+        </MContainer>
+      )}
+
+      {hasVideoStats && (
+        <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-pink-900/40 text-white' : 'bg-pink-100 text-black'}>
+           <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}><MonitorPlay className="w-4 h-4" /> Auditoria Cinematográfica (Filmes: {videoItems.length})</div>
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Assistidos</span><span className="text-xl font-black">{videoStats.qtyAssistidos} <span className="text-[10px]">({videoStats.percAssistidos}%)</span></span></div>
+              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Total Tempo</span><span className="text-xl font-black">{videoStats.totalHoras} <span className="text-[10px]">Horas</span></span></div>
+              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Média Duração</span><span className="text-xl font-black">{videoStats.mediaMinutos} <span className="text-[10px]">Min/Filme</span></span></div>
+              <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest truncate">Mais Horas: {videoStats.topDirector.name}</span><span className="text-xl font-black truncate">{Math.round(videoStats.topDirector.count/60)} <span className="text-[10px]">Horas</span></span></div>
            </div>
         </MContainer>
       )}
@@ -1883,64 +1935,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const [openSection, setOpenSection] = useState(null); 
   const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
   
-  const coverSyncActiveRef = useRef(false); 
-  const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
-  
-  useEffect(() => { 
-    return () => { coverSyncActiveRef.current = false; }; 
-  }, []);
-
-  const runCoverSync = async (mode) => {
-    coverSyncActiveRef.current = true;
-    setCoverSync({ active: true, progress: 0, total: items.length, log: 'Iniciando varredura...' });
-    let updatedItems = [...items];
-    let changedCount = 0;
-
-    for (let i = 0; i < updatedItems.length; i++) {
-        // Verifica a cada loop se o usuário cancelou a ação
-        if (!coverSyncActiveRef.current) {
-            setCoverSync(prev => ({ ...prev, active: false, log: 'Busca cancelada pelo usuário.' }));
-            break;
-        }
-        let item = updatedItems[i];
-        let needsFetch = false;
-
-        setCoverSync(prev => ({ ...prev, progress: i, log: `Analisando: ${item.title}` }));
-
-        if (mode === 'all') needsFetch = true;
-        else if (mode === 'missing_errors') needsFetch = !item.cover_url || await isImageBroken(item.cover_url);
-        else if (mode === 'errors_only') needsFetch = item.cover_url && await isImageBroken(item.cover_url);
-
-        if (needsFetch) {
-            setCoverSync(prev => ({ ...prev, log: `Buscando capa: ${item.title}` }));
-            const newCover = await fetchCoverBySearch(item, settings, activeCategories);
-            
-            // Re-verifica, caso tenha cancelado DURANTE a promessa do request
-            if (!coverSyncActiveRef.current) {
-                setCoverSync(prev => ({ ...prev, active: false, log: 'Busca cancelada pelo usuário.' }));
-                break;
-            }
-
-            if (newCover && newCover !== item.cover_url) {
-                updatedItems[i] = { ...item, cover_url: newCover };
-                changedCount++;
-                syncItemToSheets(updatedItems[i], settings?.googleSheetsUrl);
-            }
-            // Delay obrigatório para não esbarrar no limitador de taxa (Rate Limit) das APIs
-            await new Promise(r => setTimeout(r, 1000)); 
-        }
-    }
-    
-    if (coverSyncActiveRef.current) {
-        setItems(updatedItems);
-        setCoverSync({ active: false, progress: items.length, total: items.length, log: `Concluído! ${changedCount} atualizadas.` });
-        if (changedCount > 0) { playChipBeep('success'); onShowToast('success'); }
-    } else {
-        // Mantém as que foram resolvidas antes de cancelar
-        setItems(updatedItems); 
-    }
-  };
-
   const handleExportCSV = () => {
     if (items.length === 0) return;
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
@@ -2103,34 +2097,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
       
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
-        <button onClick={() => toggleSection('capas')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'capas' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Recuperação de Capas</span><span className="text-lg font-mono">{openSection === 'capas' ? '−' : '+'}</span></button>
-        {openSection === 'capas' && (
-          <div className="p-4 flex flex-col gap-3">
-            {coverSync.active ? (
-              <div className={`p-4 border-[4px] flex flex-col items-center justify-center text-center ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-white'}`}>
-                  <RefreshIcon className="w-8 h-8 mb-2 animate-spin text-cyan-500" />
-                  <div className="text-[10px] font-black uppercase tracking-widest mb-1">{coverSync.log}</div>
-                  <div className="w-full bg-gray-200 h-2 mb-3 border-[2px] border-black dark:border-gray-300"><div className="bg-cyan-500 h-full transition-all duration-300" style={{width: `${(coverSync.progress / Math.max(1, coverSync.total)) * 100}%`}}></div></div>
-                  <div className="text-[8px] font-bold mb-3">{coverSync.progress} / {coverSync.total} Itens Analisados</div>
-                  <MButton darkMode={darkMode} onClick={() => {
-                      coverSyncActiveRef.current = false;
-                      setCoverSync(prev => ({ ...prev, log: 'Cancelando... Aguarde um instante.' }));
-                  }} variant="pink" className="py-2 text-[9px] w-full max-w-[200px]">Cancelar Busca</MButton>
-              </div>
-            ) : (
-              <>
-                <div className="text-[9px] font-bold opacity-80 mb-2">Selecione o modo de varredura automática de capas:</div>
-                <MButton darkMode={darkMode} onClick={() => runCoverSync('missing_errors')} variant="cyan" className="w-full py-3 text-[9px]"><Search className="w-4 h-4" /> Recuperar Faltantes e Com Erro</MButton>
-                <MButton darkMode={darkMode} onClick={() => runCoverSync('errors_only')} variant="amber" className="w-full py-3 text-[9px]"><AlertTriangle className="w-4 h-4" /> Corrigir Apenas Erros (Links Quebrados)</MButton>
-                <MButton darkMode={darkMode} onClick={() => runCoverSync('all')} variant="light-pink" className="w-full py-3 text-[9px]"><RefreshIcon className="w-4 h-4" /> Recarregar Todas (Atenção ao Limite de API)</MButton>
-                {coverSync.log && !coverSync.active && <div className="text-[9px] font-black uppercase tracking-widest text-center mt-2 text-pink-500 border-[2px] p-2 border-pink-500 bg-pink-100 dark:bg-pink-900/30">{coverSync.log}</div>}
-              </>
-            )}
-          </div>
-        )}
-      </MContainer>
-      
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
         <button onClick={() => toggleSection('backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local</span><span className="text-lg font-mono">{openSection === 'backup' ? '−' : '+'}</span></button>
         {openSection === 'backup' && (
@@ -2233,7 +2199,7 @@ Formato exigido:
   "author_developer": "Autor(es), Artista, Banda ou Desenvolvedora",
   "year": "Ano de lançamento original ou da edição (formato YYYY, ex: 1990)",
   "publisher": "Editora, Gravadora ou Produtora",
-  "pages_or_time": "Número de páginas (para mídia impressa) ou número de faixas (para discos)",
+  "pages_or_time": "Número de páginas (impressos), faixas (música) ou minutos (filmes)",
   "description": "Breve sinopse identificada ou resumo da obra"
 }
 
