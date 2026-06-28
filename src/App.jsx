@@ -232,18 +232,6 @@ const getMetricInfo = (itemType, activeCategories) => {
   return { label: 'Und', desc: 'Métrica' };
 };
 
-const isImageBroken = (url) => {
-  return new Promise((resolve) => {
-    if (!url || typeof url !== 'string' || url.trim() === '') return resolve(true);
-    const img = new Image();
-    const timer = setTimeout(() => resolve(true), 5000); // 5s timeout para não travar o loop
-    img.onload = () => { clearTimeout(timer); resolve(false); };
-    img.onerror = () => { clearTimeout(timer); resolve(true); };
-    img.src = url;
-  });
-};
-
-// UTILITÁRIO: Fetch com timeout para não travar loops longos
 const fetchTimeout = (url, options = {}, timeoutMs = 8000) => {
     return new Promise((resolve, reject) => {
         const controller = new AbortController();
@@ -332,12 +320,11 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         const dcData = await dcRes.json();
         
         if (dcData.results?.length > 0) {
-            // Tenta achar ano ou selo exato
             let bestMatch = dcData.results.find(r => 
                 (yearRaw && r.year === yearRaw) || 
                 (pubRaw && r.label && r.label.some(l => l.toLowerCase().includes(pubRaw.toLowerCase())))
             );
-            if (!bestMatch) bestMatch = dcData.results[0]; // Se não, pega o primeiro
+            if (!bestMatch) bestMatch = dcData.results[0]; 
 
             if (bestMatch?.cover_image && !bestMatch.cover_image.includes('spacer.gif')) {
                 return bestMatch.cover_image;
@@ -346,7 +333,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch(e) { console.warn("Discogs API err", e); }
     }
     
-    // Fallback MusicBrainz (menos restritivo, mas útil)
     try {
         let mbQuery = `release:${qTitle}`;
         if (authorRaw) mbQuery += ` AND artist:${qAuthor}`;
@@ -359,7 +345,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
                 const exactYearReleases = targetReleases.filter(r => r.date && r.date.startsWith(yearRaw));
                 if (exactYearReleases.length > 0) targetReleases = exactYearReleases;
             }
-            // Limitar tentativas de fallback no arquivo de capas para não travar a thread
             const maxAttempts = Math.min(targetReleases.length, 3);
             for (let i = 0; i < maxAttempts; i++) {
                 const release = targetReleases[i];
@@ -381,7 +366,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         let gbData = await gbRes.json();
         
         if (gbData.items) {
-            // Filtro rigoroso: Se usuário informou ano ou editora, tentar casar.
             let bestMatch = null;
             if (yearRaw || pubRaw) {
                  bestMatch = gbData.items.find(i => {
@@ -469,7 +453,7 @@ const ChevronRight = p => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
 const ChevronDown = p => <Icon {...p} path={<path d="m6 9 6 6 6-6"/>} />;
 const ChevronUp = p => <Icon {...p} path={<path d="m18 15-6-6-6 6"/>} />;
 const Check = p => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
-const ScanLine = p => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
+const ScanLine = p => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2-2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
 const Clock = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></>} />;
 const Flame = p => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
 const Ghost = p => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
@@ -576,7 +560,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
     <button 
       disabled={disabled} 
       onClick={onClick} 
-      className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}
+      className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[4px] ${darkMode ? 'border-gray-300 shadow-[4px_4px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1 cursor-not-allowed' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}
     >
       {icon} {children}
     </button>
@@ -624,7 +608,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[4px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</h3>
-        <p className="text-sm font-bold opacity-90">{message}</p>
+        <p className="text-sm font-bold opacity-90 whitespace-pre-wrap">{message}</p>
         <div className="flex gap-2 mt-4">
           <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
           <MButton darkMode={darkMode} variant="pink" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
@@ -1105,12 +1089,18 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
             <MInput label="Anotações" multiline value={editedItem.notes || ''} onChange={e => setEditedItem({...editedItem, notes: e.target.value})} darkMode={darkMode} />
           </MContainer>
 
-          <div className="flex gap-2 flex-col sm:flex-row">
+          <div className="flex gap-2 flex-col sm:flex-row flex-wrap">
             <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
               <ExternalLink className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Buscar na Web</span>
             </a>
+            
+            <button disabled={isSearchingCover} onClick={handleSearchCover} className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-pink-900 border-gray-300 text-pink-300' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-pink-100 border-black text-pink-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed`}>
+              {isSearchingCover ? <RefreshIcon className="w-4 h-4 flex-shrink-0 animate-spin" /> : <ImageIcon className="w-4 h-4 flex-shrink-0" />} 
+              <span className="truncate">{isSearchingCover ? 'Buscando...' : 'Buscar Capa'}</span>
+            </button>
+
             {isDiscItem && (
-               <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
+               <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-amber-900 border-gray-300 text-amber-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-amber-100 border-black text-amber-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
                   <Headphones className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Spotify</span>
                </a>
             )}
@@ -1145,11 +1135,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           
           <div className="mt-8 mb-2 flex flex-row items-center justify-center gap-6">
             <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
-            <span className="opacity-20 text-[9px] font-black">|</span>
-            <button disabled={isSearchingCover} onClick={handleSearchCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
-                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
-                {isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
-            </button>
           </div>
         </div>
       </div>
@@ -1883,64 +1868,73 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   const [openSection, setOpenSection] = useState(null); 
   const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
   
-  const coverSyncActiveRef = useRef(false); 
-  const [coverSync, setCoverSync] = useState({ active: false, progress: 0, total: 0, log: '' });
-  
-  useEffect(() => { 
-    return () => { coverSyncActiveRef.current = false; }; 
-  }, []);
+  const [batchState, setBatchState] = useState({ active: false, statusText: '', total: 0, current: 0, found: 0 });
+  const abortBatchRef = useRef(false);
 
-  const runCoverSync = async (mode) => {
-    coverSyncActiveRef.current = true;
-    setCoverSync({ active: true, progress: 0, total: items.length, log: 'Iniciando varredura...' });
-    let updatedItems = [...items];
-    let changedCount = 0;
+  const checkImageError = (url) => new Promise((resolve) => {
+      if (!url || url.trim() === '') return resolve(true);
+      const img = new Image();
+      img.onload = () => resolve(false);
+      img.onerror = () => resolve(true);
+      img.src = url;
+  });
 
-    for (let i = 0; i < updatedItems.length; i++) {
-        // Verifica a cada loop se o usuário cancelou a ação
-        if (!coverSyncActiveRef.current) {
-            setCoverSync(prev => ({ ...prev, active: false, log: 'Busca cancelada pelo usuário.' }));
-            break;
-        }
-        let item = updatedItems[i];
-        let needsFetch = false;
+  const runBatchCoverFetch = async (mode) => {
+    abortBatchRef.current = false;
+    setBatchState({ active: true, statusText: 'Analisando acervo...', total: 0, current: 0, found: 0 });
 
-        setCoverSync(prev => ({ ...prev, progress: i, log: `Analisando: ${item.title}` }));
-
-        if (mode === 'all') needsFetch = true;
-        else if (mode === 'missing_errors') needsFetch = !item.cover_url || await isImageBroken(item.cover_url);
-        else if (mode === 'errors_only') needsFetch = item.cover_url && await isImageBroken(item.cover_url);
-
-        if (needsFetch) {
-            setCoverSync(prev => ({ ...prev, log: `Buscando capa: ${item.title}` }));
-            const newCover = await fetchCoverBySearch(item, settings, activeCategories);
-            
-            // Re-verifica, caso tenha cancelado DURANTE a promessa do request
-            if (!coverSyncActiveRef.current) {
-                setCoverSync(prev => ({ ...prev, active: false, log: 'Busca cancelada pelo usuário.' }));
-                break;
-            }
-
-            if (newCover && newCover !== item.cover_url) {
-                updatedItems[i] = { ...item, cover_url: newCover };
-                changedCount++;
-                syncItemToSheets(updatedItems[i], settings?.googleSheetsUrl);
-            }
-            // Delay obrigatório para não esbarrar no limitador de taxa (Rate Limit) das APIs
-            await new Promise(r => setTimeout(r, 1000)); 
-        }
+    let targetItems = [];
+    if (mode === 'all') {
+      targetItems = items;
+    } else if (mode === 'missing') {
+      targetItems = items.filter(i => !i.cover_url || i.cover_url.trim() === '');
+    } else if (mode === 'error') {
+      setBatchState(prev => ({ ...prev, statusText: 'Verificando links quebrados...' }));
+      const checks = await Promise.all(items.map(async (i) => {
+        const hasError = await checkImageError(i.cover_url);
+        return hasError ? i : null;
+      }));
+      targetItems = checks.filter(i => i !== null);
     }
-    
-    if (coverSyncActiveRef.current) {
-        setItems(updatedItems);
-        setCoverSync({ active: false, progress: items.length, total: items.length, log: `Concluído! ${changedCount} atualizadas.` });
-        if (changedCount > 0) { playChipBeep('success'); onShowToast('success'); }
-    } else {
-        // Mantém as que foram resolvidas antes de cancelar
-        setItems(updatedItems); 
+
+    if (targetItems.length === 0) {
+      setBatchState(prev => ({ ...prev, active: false }));
+      playChipBeep('success');
+      onShowToast('success');
+      return;
     }
+
+    setBatchState(prev => ({ ...prev, statusText: 'Buscando capas...', total: targetItems.length }));
+
+    let foundCount = 0;
+    for (let i = 0; i < targetItems.length; i++) {
+      if (abortBatchRef.current) break;
+      setBatchState(prev => ({ ...prev, current: i + 1 }));
+
+      const item = targetItems[i];
+      try {
+        const newCover = await fetchCoverBySearch(item, settings, activeCategories);
+        if (newCover && newCover !== item.cover_url) {
+          foundCount++;
+          setItems(prevItems => prevItems.map(it => it.id === item.id ? { ...it, cover_url: newCover } : it));
+          syncItemToSheets({ ...item, cover_url: newCover }, settings?.googleSheetsUrl);
+          setBatchState(prev => ({ ...prev, found: foundCount }));
+        }
+      } catch (e) {
+        console.warn("Falha ao buscar capa para", item.title);
+      }
+
+      if (i < targetItems.length - 1) {
+        // Pausa de segurança de 2 segundos para evitar "Rate Limit" nas APIs
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+
+    setBatchState(prev => ({ ...prev, active: false }));
+    playChipBeep('success');
+    onShowToast('success');
   };
-
+  
   const handleExportCSV = () => {
     if (items.length === 0) return;
     const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
@@ -2051,6 +2045,40 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           </div>
         )}
       </MContainer>
+
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-50 text-black'}>
+        <button onClick={() => toggleSection('recuperacao')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'recuperacao' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Recuperação de Capas</span><span className="text-lg font-mono">{openSection === 'recuperacao' ? '−' : '+'}</span></button>
+        {openSection === 'recuperacao' && (
+           <div className="p-4 flex flex-col gap-4">
+             {batchState.active ? (
+                <div className={`p-4 border-[4px] flex flex-col gap-3 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+                  <div className="text-[10px] font-black uppercase tracking-widest flex justify-between items-center">
+                    <span className="truncate mr-2">{batchState.statusText}</span>
+                    {batchState.total > 0 && <span className="flex-shrink-0">{batchState.current} / {batchState.total}</span>}
+                  </div>
+                  {batchState.total > 0 && (
+                     <div className={`w-full h-4 border-[3px] overflow-hidden ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-200'}`}>
+                        <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${(batchState.current / batchState.total) * 100}%` }} />
+                     </div>
+                  )}
+                  <div className="text-[9px] font-bold opacity-70 text-right">Capas atualizadas: {batchState.found}</div>
+                  <MButton variant="red" darkMode={darkMode} onClick={() => { abortBatchRef.current = true; }} className="w-full mt-2"><XIcon className="w-4 h-4" /> Parar Processo</MButton>
+                </div>
+             ) : (
+                <>
+                   <p className="text-[9px] font-bold uppercase tracking-widest leading-relaxed opacity-80 text-justify">
+                     Busca e auditoria em massa de capas nas bases de dados conectadas (Discogs, Google, UPC, etc). O processo contém pausas intencionais de segurança entre os itens para não bloquear sua rede.
+                   </p>
+                   <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                     <MButton variant="light-cyan" darkMode={darkMode} onClick={() => runBatchCoverFetch('missing')} className="flex-1 py-3 text-[9px]"><ImageIcon className="w-4 h-4" /> Faltantes</MButton>
+                     <MButton variant="light-pink" darkMode={darkMode} onClick={() => runBatchCoverFetch('error')} className="flex-1 py-3 text-[9px]"><AlertTriangle className="w-4 h-4" /> Com Erro</MButton>
+                     <MButton variant="amber" darkMode={darkMode} onClick={() => runBatchCoverFetch('all')} className="flex-1 py-3 text-[9px]"><RefreshIcon className="w-4 h-4" /> Todas</MButton>
+                   </div>
+                </>
+             )}
+           </div>
+        )}
+      </MContainer>
       
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
         <button onClick={() => toggleSection('arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ListIcon className="w-4 h-4" /> Gestão de Classes</span><span className="text-lg font-mono">{openSection === 'arquivologia' ? '−' : '+'}</span></button>
@@ -2099,34 +2127,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
             <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Share className="w-4 h-4"/> Google Sheets</div><MInput darkMode={darkMode} label="Webhook URL" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} /></div>
             <div className={`border-t-[4px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Headphones className="w-4 h-4"/> Last.FM</div><MInput darkMode={darkMode} label="Username" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} /><MInput darkMode={darkMode} label="API Key" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} /></div>
             <MButton darkMode={darkMode} onClick={() => { playChipBeep('save'); onShowToast('success'); }} variant="light-pink" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
-          </div>
-        )}
-      </MContainer>
-      
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
-        <button onClick={() => toggleSection('capas')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'capas' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Recuperação de Capas</span><span className="text-lg font-mono">{openSection === 'capas' ? '−' : '+'}</span></button>
-        {openSection === 'capas' && (
-          <div className="p-4 flex flex-col gap-3">
-            {coverSync.active ? (
-              <div className={`p-4 border-[4px] flex flex-col items-center justify-center text-center ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-white'}`}>
-                  <RefreshIcon className="w-8 h-8 mb-2 animate-spin text-cyan-500" />
-                  <div className="text-[10px] font-black uppercase tracking-widest mb-1">{coverSync.log}</div>
-                  <div className="w-full bg-gray-200 h-2 mb-3 border-[2px] border-black dark:border-gray-300"><div className="bg-cyan-500 h-full transition-all duration-300" style={{width: `${(coverSync.progress / Math.max(1, coverSync.total)) * 100}%`}}></div></div>
-                  <div className="text-[8px] font-bold mb-3">{coverSync.progress} / {coverSync.total} Itens Analisados</div>
-                  <MButton darkMode={darkMode} onClick={() => {
-                      coverSyncActiveRef.current = false;
-                      setCoverSync(prev => ({ ...prev, log: 'Cancelando... Aguarde um instante.' }));
-                  }} variant="pink" className="py-2 text-[9px] w-full max-w-[200px]">Cancelar Busca</MButton>
-              </div>
-            ) : (
-              <>
-                <div className="text-[9px] font-bold opacity-80 mb-2">Selecione o modo de varredura automática de capas:</div>
-                <MButton darkMode={darkMode} onClick={() => runCoverSync('missing_errors')} variant="cyan" className="w-full py-3 text-[9px]"><Search className="w-4 h-4" /> Recuperar Faltantes e Com Erro</MButton>
-                <MButton darkMode={darkMode} onClick={() => runCoverSync('errors_only')} variant="amber" className="w-full py-3 text-[9px]"><AlertTriangle className="w-4 h-4" /> Corrigir Apenas Erros (Links Quebrados)</MButton>
-                <MButton darkMode={darkMode} onClick={() => runCoverSync('all')} variant="light-pink" className="w-full py-3 text-[9px]"><RefreshIcon className="w-4 h-4" /> Recarregar Todas (Atenção ao Limite de API)</MButton>
-                {coverSync.log && !coverSync.active && <div className="text-[9px] font-black uppercase tracking-widest text-center mt-2 text-pink-500 border-[2px] p-2 border-pink-500 bg-pink-100 dark:bg-pink-900/30">{coverSync.log}</div>}
-              </>
-            )}
           </div>
         )}
       </MContainer>
@@ -2192,6 +2192,15 @@ export default function App() {
     return rated.length > 0 ? (rated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / rated.length).toFixed(1) : 0;
   }, [items, currentRatingCat, activeCategories]);
 
+  const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRotatingStatIdx((prev) => prev + 1);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   const triggerGlobalAI = () => { 
     setActiveTab('add'); 
     setAddMode('manual'); 
@@ -2243,7 +2252,6 @@ REGRAS RÍGIDAS:
 3. O título deve ser o nome principal em destaque (ex: 'Lex Luthor').
 4. Retorne APENAS o JSON puro. Nenhuma palavra a mais.`;
 
-      // Atualizado para o Endpoint robusto mais recente da API Vision (gemini-2.5-flash)
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
@@ -2455,8 +2463,6 @@ REGRAS RÍGIDAS:
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, initialLoadDone]);
-  
-  const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
   
   const rotatingStats = useMemo(() => {
     if (items.length === 0) return ["Acervo em Formação"]; 
@@ -2715,33 +2721,27 @@ REGRAS RÍGIDAS:
 
             <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
               <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
-                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
-                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
-                <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
-                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
+                <div className="border-b-[2px] pb-1 mb-1 border-current opacity-70">Destaques</div>
+                <div className="flex-1 flex items-center justify-center text-center px-1 break-words">
+                  {rotatingStats[rotatingStatIdx % Math.max(1, rotatingStats.length)]}
+                </div>
               </div>
-              <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                 <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel de Status</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
-                 <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
-                    <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
-                      {renderMarqueeContent()} {renderMarqueeContent()}
-                    </div>
-                  </div>
+              <div className={`flex-1 w-1/2 border-[3px] overflow-hidden relative flex flex-col justify-center ${darkMode ? 'border-gray-300 bg-gray-900 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                 <div className="whitespace-nowrap inline-flex animate-marquee" style={{ animation: `marqueeLinear ${settings?.marqueeSpeed || 35}s linear infinite` }}>
+                   {renderMarqueeContent()}
+                 </div>
               </div>
             </div>
           </header>
 
-          <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative flex flex-col">
-            <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
-            
+          <main className="flex-1 overflow-hidden relative">
             {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} />}
-            {activeTab === 'add' && <div className="p-3 overflow-y-auto w-full"><AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} /></div>}
-            {activeTab === 'dashboard' && <div className="p-3 overflow-y-auto w-full"><DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} /></div>}
-            {activeTab === 'settings' && <div className="p-3 overflow-y-auto w-full"><SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} /></div>}
+            {activeTab === 'add' && <AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} />}
+            {activeTab === 'dashboard' && <DashboardTab items={items} darkMode={darkMode} activeCategories={activeCategories} />}
+            {activeTab === 'settings' && <SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} />}
           </main>
 
-          <nav className={`flex md:hidden flex-none border-t-[4px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
+          <nav className={`md:hidden flex-none h-16 border-t-[4px] flex z-20 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
             <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[4px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400') : ''}`}>
               <Library className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Coleção</span>
@@ -2761,6 +2761,8 @@ REGRAS RÍGIDAS:
           </nav>
         </div>
       </div>
+      
+      <input type="file" accept="image/*" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
     </div>
   );
 }
