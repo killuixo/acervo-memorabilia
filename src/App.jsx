@@ -871,20 +871,34 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       result = [...result].sort((a, b) => {
           let valA = '', valB = '';
           switch (sortBy) {
-              case 'title': valA = (a.title||'').trim(); valB = (b.title||'').trim(); break;
-              case 'author': valA = (a.author_developer||'').trim(); valB = (b.author_developer||'').trim(); break;
-              case 'type': valA = (a.type||'').trim(); valB = (b.type||'').trim(); break;
-              // 'year' and 'added' são tratados nos ifs abaixo
+              case 'title': 
+                  valA = (a.title||'').trim(); 
+                  valB = (b.title||'').trim(); 
+                  break;
+              case 'author': 
+                  valA = isVariousArtists(a.author_developer) ? (a.title||'').trim() : (a.author_developer||'').trim(); 
+                  valB = isVariousArtists(b.author_developer) ? (b.title||'').trim() : (b.author_developer||'').trim(); 
+                  break;
+              case 'year': 
+                  valA = parseInt(a.year) || 0; 
+                  valB = parseInt(b.year) || 0; 
+                  break;
+              case 'type': 
+                  valA = (a.type||'').trim(); 
+                  valB = (b.type||'').trim(); 
+                  break;
+              case 'added': default: 
+                  valA = a.id || ''; 
+                  valB = b.id || ''; 
+                  break;
           }
+          
           if (sortBy === 'year') {
-              const yA = parseInt(a.year) || 0;
-              const yB = parseInt(b.year) || 0;
-              return sortOrder === 'asc' ? yA - yB : yB - yA;
+              return sortOrder === 'asc' ? valA - valB : valB - valA;
           } else if (sortBy === 'added') {
-              valA = a.id || ''; valB = b.id || '';
               return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
           } else {
-              // Ordenação Alfabética Inteligente: numeric para números ("2" antes de "16"), base para normalizar acentos
+              // Ordenação Alfabética Inteligente (Numerais cronológicos e ignora acentos na posição)
               const cmp = String(valA).localeCompare(String(valB), 'pt-BR', { numeric: true, sensitivity: 'base' });
               return sortOrder === 'asc' ? cmp : -cmp;
           }
