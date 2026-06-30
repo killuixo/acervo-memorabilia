@@ -212,7 +212,7 @@ const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
 const isVariousArtists = name => {
   const n = String(name || '').toLowerCase().trim();
-  return ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => n.includes(k));
+  return ['various', 'vários', 'varios', 'variados', 'coleção', 'coleções', 'colecoes', 'collection', 'compilação', 'compilações'].some(k => n.includes(k));
 };
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
@@ -803,11 +803,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       }
       if (alphaFilter !== 'Todos') {
           result = result.filter(i => {
+              // O filtro alfabético respeita a ordenação atual. Se ordenado por Autor, filtra por Autor (exceto Various)
               let targetText = i.title;
               if (sortBy === 'author' && !isVariousArtists(i.author_developer)) {
                   targetText = i.author_developer;
               }
-              const cleanStr = getSortableName(targetText);
+              const cleanStr = (targetText || '').trim();
               
               if (alphaFilter === '#') {
                   return /^[^a-zA-Záéíóúâêôãõç]/i.test(cleanStr);
@@ -877,12 +878,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           let valA = '', valB = '';
           switch (sortBy) {
               case 'title': 
-                  valA = getSortableName(a.title); 
-                  valB = getSortableName(b.title); 
+                  valA = (a.title||'').trim(); 
+                  valB = (b.title||'').trim(); 
                   break;
               case 'author': 
-                  valA = isVariousArtists(a.author_developer) ? getSortableName(a.title) : getSortableName(a.author_developer); 
-                  valB = isVariousArtists(b.author_developer) ? getSortableName(b.title) : getSortableName(b.author_developer); 
+                  valA = isVariousArtists(a.author_developer) ? (a.title||'').trim() : (a.author_developer||'').trim(); 
+                  valB = isVariousArtists(b.author_developer) ? (b.title||'').trim() : (b.author_developer||'').trim(); 
                   break;
               case 'type': 
                   valA = (a.type||'').trim(); 
@@ -899,6 +900,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               valB = b.id || '';
               return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
           } else {
+              // Ordenação Alfabética Inteligente, normalizada, que posiciona números/símbolos corretamente antes do A
               const cmp = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase(), 'pt-BR', { numeric: true, sensitivity: 'base' });
               return sortOrder === 'asc' ? cmp : -cmp;
           }
@@ -906,6 +908,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
 
       return result;
   }, [baseFilteredItems, activeFilters, sortBy, sortOrder]);
+
 
   const handleItemPressStart = (item) => {
     isLongPress.current = false;
@@ -1116,9 +1119,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </MContainer>
 
           <div className="flex gap-2 flex-col sm:flex-row">
-            <button disabled={isSearchingCover} onClick={handleSearchCover} className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-pink-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-pink-100 border-black text-pink-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all ${isSearchingCover ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:translate-y-1 active:translate-x-1 active:shadow-none'}`}>
-              {isSearchingCover ? <RefreshIcon className="w-4 h-4 flex-shrink-0 animate-spin" /> : <ImageIcon className="w-4 h-4 flex-shrink-0" />} <span className="truncate">{isSearchingCover ? 'Buscando...' : 'Recuperar Capa'}</span>
-            </button>
             <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[4px] ${darkMode ? 'shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}>
               <ExternalLink className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Buscar na Web</span>
             </a>
@@ -1158,6 +1158,11 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           
           <div className="mt-8 mb-2 flex flex-row items-center justify-center gap-6">
             <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
+            <span className="opacity-20 text-[9px] font-black">|</span>
+            <button disabled={isSearchingCover} onClick={handleSearchCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
+                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
+                {isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
+            </button>
           </div>
         </div>
       </div>
@@ -1770,6 +1775,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     const vergonha = dashItems.filter(i => {
        const isDisc = (activeCategories['Discos'] || []).includes(i.type);
        const isVideo = (activeCategories['Vídeo'] || []).includes(i.type);
+       // Filmes (Vídeo) e Discos são contados como backlog/vergonha caso a nota seja zero (não assistidos/escutados)
        if (isDisc || isVideo) return (Number(i.rating) || 0) === 0;
        return i.status === 'Não Iniciado';
     }).length;
@@ -1851,6 +1857,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
      return { qtyAssistidos, percAssistidos, mediaNota, totalHoras, mediaMinutos, topDirector };
   }, [videoItems, hasVideoStats]);
+
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
@@ -1940,12 +1947,9 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
 
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false); 
-  const [showClearCoversConfirm, setShowClearCoversConfirm] = useState(false);
   const [importData, setImportData] = useState(null); 
   const [openSection, setOpenSection] = useState(null); 
   const [newSubclass, setNewSubclass] = useState({ parent: 'Livros', name: '', code: '' });
-  const [isBatchCoverLoading, setIsBatchCoverLoading] = useState(false);
-  const [batchCoverProgress, setBatchCoverProgress] = useState({ current: 0, total: 0 });
   
   const handleExportCSV = () => {
     if (items.length === 0) return;
@@ -2003,57 +2007,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     e.target.value = null;
   };
 
-  const handleBatchCoverSearch = async (mode) => {
-    if (items.length === 0) return;
-    
-    let targetItems = [];
-    if (mode === 'missing') {
-      targetItems = items.filter(i => !i.cover_url || i.cover_url.trim() === '');
-    } else if (mode === 'all') {
-      targetItems = [...items];
-    }
-    
-    if (targetItems.length === 0) {
-      onShowToast('success'); 
-      return;
-    }
-
-    setIsBatchCoverLoading(true);
-    setBatchCoverProgress({ current: 0, total: targetItems.length });
-    
-    let updatedItems = [...items];
-    
-    for (let i = 0; i < targetItems.length; i++) {
-       const currentTarget = targetItems[i];
-       setBatchCoverProgress({ current: i + 1, total: targetItems.length });
-       
-       try {
-           const newCover = await fetchCoverBySearch(currentTarget, settings, activeCategories);
-           if (newCover) {
-               updatedItems = updatedItems.map(item => item.id === currentTarget.id ? { ...item, cover_url: newCover } : item);
-               syncItemToSheets({ ...currentTarget, cover_url: newCover }, settings?.googleSheetsUrl);
-           }
-       } catch (e) {
-           console.warn("Erro capa:", currentTarget.title, e);
-       }
-       await new Promise(r => setTimeout(r, 1000));
-    }
-    
-    setItems(updatedItems);
-    setIsBatchCoverLoading(false);
-    playChipBeep('save');
-    onShowToast('success');
-  };
-
-  const clearAllCovers = () => {
-    const updated = items.map(i => ({ ...i, cover_url: '' }));
-    setItems(updated);
-    updated.forEach(i => { if (items.find(old => old.id === i.id)?.cover_url) syncItemToSheets({...i, cover_url: ''}, settings?.googleSheetsUrl); }); 
-    setShowClearCoversConfirm(false);
-    playChipBeep('save');
-    onShowToast('success');
-  };
-
   const handleAddSubclass = () => {
     if (!newSubclass.name || !newSubclass.code) { 
       playChipBeep('error'); 
@@ -2082,7 +2035,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative max-w-3xl mx-auto w-full">
       <MModal isOpen={showResetConfirm} title="Aviso Crítico" message="Apagar TODOS os itens do acervo físico?" onConfirm={() => { setItems([]); setShowResetConfirm(false); playChipBeep('save'); onShowToast('success'); }} onCancel={() => setShowResetConfirm(false)} darkMode={darkMode} confirmText="Apagar Tudo" />
       <MModal isOpen={!!importData} title="Importar CSV" message={`Substituir a coleção atual pelos ${importData ? importData.length : 0} itens novos?`} onConfirm={() => { if (importData) { setItems(importData); setImportData(null); playChipBeep('save'); onShowToast('success'); } }} onCancel={() => setImportData(null)} darkMode={darkMode} confirmText="Substituir" />
-      <MModal isOpen={showClearCoversConfirm} title="Aviso Crítico" message="Apagar TODAS as capas salvas do acervo?" onConfirm={clearAllCovers} onCancel={() => setShowClearCoversConfirm(false)} darkMode={darkMode} confirmText="Apagar Capas" />
       
       {pwa.isInstallable && !pwa.isInstalled && (
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-400 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-400"><Smartphone className="w-8 h-8 mb-2 text-cyan-600 dark:text-cyan-400" /><h3 className="font-black uppercase tracking-widest text-cyan-700 dark:text-cyan-300 text-lg mb-1">Instalar App</h3><MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="cyan" className="w-full py-4 text-sm font-black text-black">📲 Instalar Agora</MButton></MContainer>
@@ -2109,7 +2061,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
           </div>
         )}
       </MContainer>
-
+      
       <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
         <button onClick={() => toggleSection('arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ListIcon className="w-4 h-4" /> Gestão de Classes</span><span className="text-lg font-mono">{openSection === 'arquivologia' ? '−' : '+'}</span></button>
         {openSection === 'arquivologia' && (
@@ -2144,39 +2096,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               ))}
               </div>
             </div>
-          </div>
-        )}
-      </MContainer>
-
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
-        <button onClick={() => toggleSection('capas')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'capas' ? (darkMode ? 'border-b-[4px] border-gray-300' : 'border-b-[4px] border-black') : ''}`}><span className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Recuperação de Capas</span><span className="text-lg font-mono">{openSection === 'capas' ? '−' : '+'}</span></button>
-        {openSection === 'capas' && (
-          <div className="p-4 flex flex-col gap-4">
-            <p className="text-[10px] font-bold opacity-80 mb-2 leading-relaxed">
-              Busca automaticamente imagens de capa na web para os itens do seu acervo. É recomendado usar a recuperação apenas para itens faltantes para não sobrecarregar as APIs.
-            </p>
-            
-            {isBatchCoverLoading ? (
-               <div className={`p-4 border-[4px] flex flex-col items-center justify-center gap-3 ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-white'}`}>
-                 <RefreshIcon className="w-8 h-8 animate-spin text-cyan-500" />
-                 <span className="text-[10px] font-black uppercase tracking-widest text-center">Processando... {batchCoverProgress.current} de {batchCoverProgress.total}</span>
-                 <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1">
-                   <div className="h-full bg-cyan-500 transition-all duration-300" style={{ width: `${batchCoverProgress.total > 0 ? (batchCoverProgress.current / batchCoverProgress.total) * 100 : 0}%` }} />
-                 </div>
-               </div>
-            ) : (
-               <div className="flex flex-col gap-2">
-                 <MButton darkMode={darkMode} onClick={() => handleBatchCoverSearch('missing')} variant="cyan" className="py-3 text-[10px]">
-                   <ImageIcon className="w-4 h-4" /> Faltantes e Com Erros
-                 </MButton>
-                 <MButton darkMode={darkMode} onClick={() => handleBatchCoverSearch('all')} variant="amber" className="py-3 text-[10px]">
-                   <RefreshIcon className="w-4 h-4" /> Sobrescrever Todas
-                 </MButton>
-                 <button onClick={() => setShowClearCoversConfirm(true)} className={`mt-2 text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline self-center flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}>
-                   <Trash2 className="w-3 h-3" /> Apagar Todas as Capas
-                 </button>
-               </div>
-            )}
           </div>
         )}
       </MContainer>
@@ -2306,6 +2225,7 @@ REGRAS RÍGIDAS:
 3. O título deve ser o nome principal em destaque (ex: 'Lex Luthor').
 4. Retorne APENAS o JSON puro. Nenhuma palavra a mais.`;
 
+      // Atualizado para o Endpoint robusto mais recente da API Vision (gemini-2.5-flash)
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
