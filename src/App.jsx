@@ -1001,6 +1001,9 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     
     setLoadingWiki(true); 
     setWikiError('');
+    
+    const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
+
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { 
         method: 'POST', 
@@ -1008,7 +1011,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         body: JSON.stringify({ 
           contents: [{ 
             role: "user", 
-            parts: [{ text: `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sucinto, sem formatação ou introduções.` }] 
+            parts: [{ text: optimizedPrompt }] 
           }] 
         }) 
       });
@@ -1289,6 +1292,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
           </div>
       )}
 
+      {}
       <div className={`sticky top-0 z-20 flex flex-col gap-2 pb-2 pt-1 border-b-[4px] ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'} mb-3 px-1`}>
           
           <div className="flex gap-1 sm:gap-2 w-full">
@@ -1482,12 +1486,17 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   }, [addMode, isHtml5QrcodeLoaded]);
 
   const fetchMultiDatabaseParallel = async (barcode) => {
-    const cleanCode = barcode.replace(/[-\s]/g, "");
+    const cleanCode = barcode.replace(/[-\s]/g, "").toUpperCase();
     updateStatus('loading', 'Consultando bancos de dados simultaneamente...');
-    const isISBN = cleanCode.startsWith("978") || cleanCode.startsWith("979");
+    
+    // Melhoria na detecção de ISBN: aceita ISBN-13 (começa com 978/979) e ISBN-10 (10 dígitos)
+    const isISBN13 = cleanCode.length === 13 && (cleanCode.startsWith("978") || cleanCode.startsWith("979"));
+    const isISBN10 = cleanCode.length === 10 && /^\d{9}[\dX]$/.test(cleanCode);
+    const isBookCode = isISBN13 || isISBN10;
 
     const fetchers = [];
 
+    // --- 1. DISCOGS (Foco em Discos/Fitas) ---
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
       const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
@@ -1499,9 +1508,14 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       const fStr = (item.format || []).join(' ').toLowerCase();
       if (fStr.includes('vinyl') || fStr.includes('lp')) discType = 'Vinil'; 
       else if (fStr.includes('cassette')) discType = 'Fita Cassete';
-      return { title: titleParts.slice(1).join(' - ').trim() || item.title || '', author_developer: titleParts[0]?.trim() || '', year: item.year || '', publisher: item.label?.[0] || '', cover_url: item.cover_image || '', type: discType };
+      
+      let coverUrl = item.cover_image || '';
+      if (coverUrl.includes('spacer.gif')) coverUrl = '';
+
+      return { title: titleParts.slice(1).join(' - ').trim() || item.title || '', author_developer: titleParts[0]?.trim() || '', year: item.year || '', publisher: item.label?.[0] || '', cover_url: coverUrl, type: discType };
     };
 
+    // --- 2. MUSICBRAINZ (Foco em Música) ---
     const fetchMBrainz = async () => {
       const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
       const data = await res.json();
@@ -1512,9 +1526,17 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
          if (fStr.includes('vinyl') || fStr.includes('12"')) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete';
          if (m['track-count']) tc = `${m['track-count']}`;
       }
-      return { title: release.title || "", author_developer: release["artist-credit"]?.map(a=>a.name).join(", ") || "", publisher: release.label || release["label-info"]?.[0]?.label?.name || "", year: release.date?.substring(0,4) || "", type: fmt, pages_or_time: tc, cover_url: `https://coverartarchive.org/release/${release.id}/front` };
+      
+      let coverUrl = '';
+      try {
+          const caaRes = await fetchTimeout(`https://coverartarchive.org/release/${release.id}/front`, {}, 3000);
+          if (caaRes.ok) coverUrl = caaRes.url;
+      } catch (e) { console.warn("MusicBrainz cover falhou"); }
+
+      return { title: release.title || "", author_developer: release["artist-credit"]?.map(a=>a.name).join(", ") || "", publisher: release.label || release["label-info"]?.[0]?.label?.name || "", year: release.date?.substring(0,4) || "", type: fmt, pages_or_time: tc, cover_url: coverUrl };
     };
 
+    // --- 3. UPCITEMDB (Foco em Games, DVDs e Fallback Geral) ---
     const fetchUPC = async () => {
       const res = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
       const data = await res.json();
@@ -1522,31 +1544,45 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       const item = data.items[0]; const cat = String(item.category || "").toLowerCase(); const tit = String(item.title || "").toLowerCase();
       let fmt = 'Livro';
       if (cat.includes('music') || tit.includes(' cd') || tit.includes('album')) fmt = 'CD';
-      else if (cat.includes('video game') || cat.includes('nintendo') || cat.includes('playstation') || cat.includes('xbox')) fmt = 'PS4';
-      else if (cat.includes('dvd') || cat.includes('movie') || tit.includes('dvd')) fmt = 'DVD';
-      return { title: item.title || "", publisher: item.brand || item.publisher || "", cover_url: item.images?.[0] || "", type: fmt };
+      else if (cat.includes('video game') || cat.includes('nintendo') || cat.includes('playstation') || cat.includes('xbox') || tit.includes('ps4') || tit.includes('xbox')) fmt = 'PS4';
+      else if (cat.includes('dvd') || cat.includes('movie') || tit.includes('dvd') || cat.includes('blu-ray') || tit.includes('blu-ray')) fmt = 'DVD';
+      
+      return { title: item.title || "", publisher: item.brand || item.publisher || "", cover_url: item.images?.[0] || "", type: fmt, description: item.description || "" };
     };
 
+    // --- 4. GOOGLE BOOKS (Foco em Livros e HQs) ---
     const fetchGBooks = async () => {
       const res = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
       const data = await res.json();
       if (!data.items || data.items.length === 0) throw new Error("Not found");
       const info = data.items[0].volumeInfo;
       let fmt = 'Livro'; const pub = String(info.publisher || "").toLowerCase();
-      if (pub.includes('jbc') || pub.includes('conrad') || pub.includes('panini')) fmt = 'Quadrinho';
-      return { title: info.title || "", author_developer: info.authors?.join(", ") || "", publisher: info.publisher || "", year: info.publishedDate?.substring(0,4) || "", pages_or_time: info.pageCount?.toString() || "", cover_url: info.imageLinks?.thumbnail?.replace("http://", "https://") || "", description: info.description || "", type: fmt };
+      if (pub.includes('jbc') || pub.includes('conrad') || pub.includes('panini') || pub.includes('marvel') || pub.includes('dc comics')) fmt = 'Quadrinho';
+      
+      let coverUrl = "";
+      if (info.imageLinks?.thumbnail) {
+          coverUrl = info.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
+      }
+      return { title: info.title || "", author_developer: info.authors?.join(", ") || "", publisher: info.publisher || "", year: info.publishedDate?.substring(0,4) || "", pages_or_time: info.pageCount?.toString() || "", cover_url: coverUrl, description: info.description || "", type: fmt };
     };
 
+    // --- 5. OPEN LIBRARY (Foco em Livros - Secundário) ---
     const fetchOpenLib = async () => {
       const res = await fetchTimeout(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&jscmd=data&format=json`);
       const data = await res.json();
       const info = data[`ISBN:${cleanCode}`];
       if (!info) throw new Error("Not found");
-      return { title: info.title || '', author_developer: info.authors?.map(a => a.name).join(', ') || '', year: info.publish_date?.substring(0,4) || '', publisher: info.publishers?.map(p => p.name).join(', ') || '', pages_or_time: info.number_of_pages?.toString() || '', description: info.subtitle || '', cover_url: `https://covers.openlibrary.org/b/isbn/${cleanCode}-L.jpg`, type: 'Livro' };
+      
+      let coverUrl = "";
+      if (info.cover?.large) coverUrl = info.cover.large;
+      else if (info.cover?.medium) coverUrl = info.cover.medium;
+
+      return { title: info.title || '', author_developer: info.authors?.map(a => a.name).join(', ') || '', year: info.publish_date?.match(/\b(19|20)\d{2}\b/)?.[0] || info.publish_date?.substring(0,4) || '', publisher: info.publishers?.map(p => p.name).join(', ') || '', pages_or_time: info.number_of_pages?.toString() || '', description: info.subtitle || '', cover_url: coverUrl, type: 'Livro' };
     };
 
-    if (isISBN) { 
-      fetchers.push(fetchGBooks(), fetchOpenLib()); 
+    // Aplicação das regras de despacho para os requests simultâneos
+    if (isBookCode) { 
+      fetchers.push(fetchGBooks(), fetchOpenLib(), fetchUPC()); 
     } else { 
       fetchers.push(fetchMBrainz(), fetchUPC()); 
       if (settings?.discogsToken) fetchers.push(fetchDiscogs()); 
@@ -1874,6 +1910,7 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         </div>
       </MContainer>
 
+      {}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black'}><LibraryBig className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{totalDash}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div></MContainer>
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}><Ghost className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{stats.vergonha || 0}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Intocados / Backlog</div></MContainer>
