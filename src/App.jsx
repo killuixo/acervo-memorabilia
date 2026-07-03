@@ -1008,7 +1008,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
         body: JSON.stringify({ 
           contents: [{ 
             role: "user", 
-            parts: [{ text: `Aja como arquivista. Escreva 1 parágrafo fascinante (máx 4 linhas) sobre "${editedItem.title || ''}" (${editedItem.author_developer || ''}). Apenas o texto sem formatação.` }] 
+            parts: [{ text: `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sucinto, sem formatação ou introduções.` }] 
           }] 
         }) 
       });
