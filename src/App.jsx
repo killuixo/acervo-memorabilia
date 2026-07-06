@@ -1450,15 +1450,24 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         scannerInstance = new window.Html5Qrcode("reader-barcode");
         scannerRef.current = scannerInstance;
 
-        // Configuração de qrbox retangular e formatos de código de barras para otimizar detecção.
         scannerInstance.start({ facingMode: "environment" }, { 
-            fps: 10, 
-            qrbox: { width: 300, height: 100 },
+            fps: 15, 
+            qrbox: (videoWidth, videoHeight) => {
+                // Caixa responsiva: 85% da largura da tela (máx 350px) para não cortar códigos longos
+                const width = Math.min(videoWidth * 0.85, 350);
+                return { width: width, height: 120 };
+            },
+            experimentalFeatures: {
+                // O SEGREDO: Força o uso da API de hardware nativa do celular (muito mais rápida e imune a reflexos)
+                useBarCodeDetectorIfSupported: true
+            },
             formatsToSupport: [
               window.Html5QrcodeSupportedFormats.EAN_13,
               window.Html5QrcodeSupportedFormats.EAN_8,
               window.Html5QrcodeSupportedFormats.UPC_A,
-              window.Html5QrcodeSupportedFormats.UPC_E
+              window.Html5QrcodeSupportedFormats.UPC_E,
+              window.Html5QrcodeSupportedFormats.CODE_128,
+              window.Html5QrcodeSupportedFormats.CODE_39
             ]
         }, (decodedText) => {
             if (isProcessingScan.current) return;
