@@ -208,12 +208,23 @@ const parseCSVText = (rawText) => {
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
 };
 
-const normalizeWorkTitle = title => title ? String(title).toLowerCase().replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim() : '';
+const normalizeWorkTitle = title => {
+  if (!title) return '';
+  let t = String(title).toLowerCase().trim();
+  
+  // Regra de agregação: Agrupa todos os livros com subtítulos variados do Garfield em uma única obra
+  if (t.startsWith('garfield')) return 'garfield';
+  
+  return t.replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim();
+};
+
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
+
 const isVariousArtists = name => {
   const n = String(name || '').toLowerCase().trim();
   return ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => n.includes(k));
 };
+
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
@@ -445,6 +456,7 @@ const Library = p => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v1
 const PlusSquare = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
 const BarChart2 = p => <Icon {...p} path={<><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></>} />;
 const Settings = p => <Icon {...p} path={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" /></>} />;
+
 const Camera = p => <Icon {...p} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
 const Sun = p => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />;
 const Download = p => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
@@ -457,6 +469,7 @@ const ChevronDown = p => <Icon {...p} path={<path d="m6 9 6 6 6-6"/>} />;
 const ChevronUp = p => <Icon {...p} path={<path d="m18 15-6-6-6 6"/>} />;
 const Check = p => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
 const ScanLine = p => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
+
 const Clock = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></>} />;
 const Flame = p => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
 const Ghost = p => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
@@ -999,7 +1012,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     setLoadingWiki(true);
     setWikiError('');
 
-    const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). Você deve identificar se se trata de um Livro, Disco, Vídeo ou Game e seu texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião acadêmica, da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
+    const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
 
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
@@ -1197,14 +1210,12 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
       {isFilterMenuOpen && (
           <div className="fixed inset-0 z-[999] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
               <div className={`w-full sm:max-w-md max-h-[85vh] sm:h-[80vh] flex flex-col border-t-[4px] sm:border-[4px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[8px_8px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]'}`}>
-                  {/* Header Modal Filtro */}
                   <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <button onClick={() => setIsFilterMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
                       <span className="text-[12px] font-black uppercase tracking-widest">Filtros</span>
-                      <div className="w-7"/> {/* placeholder centering */}
+                      <div className="w-7"/>
                   </div>
 
-                  {/* Conteúdo Accordion */}
                   <div className="flex-1 overflow-y-auto scrollbar-hide">
                       {Object.entries(FILTER_OPTIONS).map(([category, options]) => {
                           const isOpen = expandedSections[category];
@@ -1246,7 +1257,6 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                       })}
                   </div>
 
-                  {/* Footer Modal Filtro */}
                   <div className={`p-4 border-t-[4px] flex gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <MButton onClick={clearFilters} variant="white" darkMode={darkMode} className="flex-1 py-4 text-[10px]">Limpar tudo</MButton>
                       <MButton onClick={applyFilters} variant="pink" darkMode={darkMode} className="flex-[2] py-4 text-[10px]">Aplicar</MButton>
@@ -1261,7 +1271,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                   <div className={`p-4 border-b-[4px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <button onClick={() => setIsSortMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button>
                       <span className="text-[12px] font-black uppercase tracking-widest">Ordenar</span>
-                      <div className="w-7"/> {/* placeholder */}
+                      <div className="w-7"/>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                       <div className="mb-6">
@@ -1451,16 +1461,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
         scannerRef.current = scannerInstance;
 
         scannerInstance.start({ facingMode: "environment" }, { 
-            fps: 15, 
-            qrbox: (videoWidth, videoHeight) => {
-                // Caixa responsiva: 85% da largura da tela (máx 350px) para não cortar códigos longos
-                const width = Math.min(videoWidth * 0.85, 350);
-                return { width: width, height: 120 };
+            fps: 10, 
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                const width = window.innerWidth > 400 ? 300 : viewfinderWidth * 0.85;
+                return { width: width, height: 150 };
             },
-            experimentalFeatures: {
-                // O SEGREDO: Força o uso da API de hardware nativa do celular (muito mais rápida e imune a reflexos)
-                useBarCodeDetectorIfSupported: true
-            },
+            useBarCodeDetectorIfSupported: true,
             formatsToSupport: [
               window.Html5QrcodeSupportedFormats.EAN_13,
               window.Html5QrcodeSupportedFormats.EAN_8,
@@ -1669,7 +1675,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
           {!isHtml5QrcodeLoaded && <div className="text-white font-black uppercase text-xs animate-pulse">Carregando Câmera...</div>}
           <div id="reader-barcode" className="w-full h-full object-cover absolute inset-0"></div>
           <div className="absolute inset-0 border-[10px] border-black/30 pointer-events-none z-10" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-40 border-[4px] border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] pointer-events-none flex flex-col items-center justify-center z-20"><span className="text-white text-[10px] uppercase font-black tracking-widest bg-black px-3 py-1 mt-24">Alinhe o Código</span></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[85%] max-w-[300px] h-[150px] border-[4px] border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] pointer-events-none flex flex-col items-center justify-center z-20"><span className="text-white text-[10px] uppercase font-black tracking-widest bg-black px-3 py-1 mt-24">Alinhe o Código</span></div>
         </MContainer>
       )}
 
