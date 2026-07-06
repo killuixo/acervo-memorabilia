@@ -999,7 +999,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
     setLoadingWiki(true);
     setWikiError('');
 
-    const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
+    const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). Você deve identificar se se trata de um Livro, Disco, Vídeo ou Game e seu texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião acadêmica, da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
 
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
