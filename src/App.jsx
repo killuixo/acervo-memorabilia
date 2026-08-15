@@ -212,6 +212,7 @@ const normalizeWorkTitle = title => {
   if (!title) return '';
   let t = String(title).toLowerCase().trim();
   
+  // Regra de agregação: Agrupa todos os livros com subtítulos variados do Garfield em uma única obra
   if (t.startsWith('garfield')) return 'garfield';
   
   return t.replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim();
@@ -243,6 +244,7 @@ const getMetricInfo = (itemType, activeCategories) => {
   return { label: 'Und', desc: 'Métrica' };
 };
 
+// UTILITÁRIO: Fetch com timeout para não travar loops longos
 const fetchTimeout = (url, options = {}, timeoutMs = 8000) => {
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
@@ -280,6 +282,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const isGame = (activeCategories['Games'] || []).includes(typeRaw);
   const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
 
+  // 1. Busca por Código de Barras (Mais precisa)
   if (barcodeRaw) {
     try {
       const upcRes = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
@@ -314,6 +317,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     }
   }
 
+  // 2. Busca rigorosa por Metadados
   if (isDisc) {
     if (settings?.discogsToken) {
       try {
@@ -342,6 +346,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       } catch(e) { console.warn("Discogs API err", e); }
     }
 
+    // Fallback MusicBrainz
     try {
       let mbQuery = `release:${qTitle}`;
       if (authorRaw) mbQuery += ` AND artist:${qAuthor}`;
@@ -1503,31 +1508,25 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   }, [addMode, isHtml5QrcodeLoaded]);
 
   const fetchMultiDatabaseParallel = async (barcode) => {
-    if (!barcode) return;
-    const rawCode = barcode.trim();
-    const cleanCode = rawCode.replace(/[-\s]/g, "").toUpperCase();
+    const cleanCode = barcode.replace(/[-\s]/g, "").toUpperCase();
     updateStatus('loading', 'Consultando bancos de dados simultaneamente...');
 
     const isISBN13 = cleanCode.length === 13 && (cleanCode.startsWith("978") || cleanCode.startsWith("979"));
     const isISBN10 = cleanCode.length === 10 && /^\d{9}[\dX]$/.test(cleanCode);
     const isBookCode = isISBN13 || isISBN10;
 
-    const isLikelyBarcode = (/^\d{8}$|^\d{12,13}$/.test(cleanCode)) && !/[A-Z\-]/i.test(rawCode);
-    const isLikelyCatno = !isLikelyBarcode;
-
     const fetchers = [];
 
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
-      const queryStr = isLikelyCatno ? `catno=${encodeURIComponent(rawCode)}` : `barcode=${cleanCode}`;
-      const res = await fetchTimeout(`https://api.discogs.com/database/search?${queryStr}&token=${settings.discogsToken}`);
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
       const data = await res.json();
       if (!data.results || data.results.length === 0) throw new Error("Not found");
       const item = data.results[0];
       const titleParts = item.title ? item.title.split(' - ') : [];
       let discType = 'CD';
       const fStr = (item.format || []).join(' ').toLowerCase();
-      if (fStr.includes('vinyl') || fStr.includes('lp') || isLikelyCatno) discType = 'Vinil';
+      if (fStr.includes('vinyl') || fStr.includes('lp')) discType = 'Vinil';
       else if (fStr.includes('cassette')) discType = 'Fita Cassete';
 
       let coverUrl = item.cover_image || '';
@@ -1537,14 +1536,13 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchMBrainz = async () => {
-      const queryVal = isLikelyCatno ? `catno:"${rawCode}"` : `barcode:${cleanCode}`;
-      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(queryVal)}&fmt=json&inc=media+labels`);
+      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
       const data = await res.json();
       if (!data.releases || data.releases.length === 0) throw new Error("Not found");
       const release = data.releases[0]; let fmt = 'CD'; let tc = '';
       if (release.media && release.media.length > 0) {
          const m = release.media[0]; const fStr = m.format?.toLowerCase() || '';
-         if (fStr.includes('vinyl') || fStr.includes('12"') || isLikelyCatno) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete';
+         if (fStr.includes('vinyl') || fStr.includes('12"')) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete';
          if (m['track-count']) tc = `${m['track-count']}`;
       }
 
@@ -1598,19 +1596,18 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       return { title: info.title || '', author_developer: info.authors?.map(a => a.name).join(', ') || '', year: info.publish_date?.match(/\b(19|20)\d{2}\b/)?.[0] || info.publish_date?.substring(0,4) || '', publisher: info.publishers?.map(p => p.name).join(', ') || '', pages_or_time: info.number_of_pages?.toString() || '', description: info.subtitle || '', cover_url: coverUrl, type: 'Livro' };
     };
 
-    if (isBookCode && !isLikelyCatno) {
+    if (isBookCode) {
       fetchers.push(fetchGBooks(), fetchOpenLib(), fetchUPC());
     } else {
-      fetchers.push(fetchMBrainz());
+      fetchers.push(fetchMBrainz(), fetchUPC());
       if (settings?.discogsToken) fetchers.push(fetchDiscogs());
-      if (!isLikelyCatno) fetchers.push(fetchUPC());
     }
 
     try {
       const foundItem = await Promise.any(fetchers);
       playChipBeep('success');
-      updateStatus('success', isLikelyCatno ? 'Matriz localizada pelo Catálogo!' : 'Encontrado com velocidade!');
-      setFormData(prev => ({ ...prev, ...foundItem, barcode: rawCode }));
+      updateStatus('success', 'Encontrado com velocidade!');
+      setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
     } catch (e) {
       playChipBeep('error');
       updateStatus('error', 'Item não localizado em nenhum banco de dados. Por favor, preencha manualmente.');
@@ -1690,15 +1687,6 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
               <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm outline-none font-black`}>
                 {Object.entries(activeCategories || {}).map(([cat, subs]) => (<optgroup label={`--- ${cat.toUpperCase()} ---`} key={cat}>{(Array.isArray(subs) ? subs : []).map(sub => <option key={sub} value={sub}>{sub}</option>)}</optgroup>))}
               </select>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-2 mb-2 w-full items-end">
-                <div className="flex-1 w-full">
-                    <MInput darkMode={darkMode} label="Código (Barras ou Catálogo da Gravadora)" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} placeholder="Ex: 789... ou SBRL 10.001" />
-                </div>
-                <MButton darkMode={darkMode} variant="pink" onClick={() => fetchMultiDatabaseParallel(formData.barcode)} disabled={!formData.barcode} className="w-full md:w-auto h-[42px] mb-3 px-6">
-                    <Search className="w-4 h-4"/> Autocompletar
-                </MButton>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2 w-full">
@@ -1919,12 +1907,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      return { qtyAssistidos, percAssistidos, mediaNota, totalHoras, mediaMinutos, topDirector };
   }, [videoItems, hasVideoStats]);
 
-  const totalDashPages = dashItems.filter(i => (activeCategories['Livros'] || []).includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
-  const totalDashReadPages = dashItems.filter(i => (activeCategories['Livros'] || []).includes(i.type) && i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
-  const dashReadPerc = totalDashPages > 0 ? ((totalDashReadPages / totalDashPages) * 100).toFixed(1) : 0;
-  const dashRated = dashItems.filter(i => (Number(i.rating) || 0) > 0);
-  const dashAvgRating = dashRated.length > 0 ? (dashRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / dashRated.length).toFixed(1) : 0;
-
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -1937,18 +1919,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todos">Status</option>{STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select>
           <select value={filterRating} onChange={e => setFilterRating(e.target.value)} className={`w-full p-2 border-[3px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todas">Notas</option>{[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Estrelas</option>)}</select>
         </div>
-      </MContainer>
-
-      <MContainer darkMode={darkMode} className="p-4 flex flex-col mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-         <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
-             <BarChart2 className="w-4 h-4" /> Estatísticas Gerais (Físico)
-         </div>
-         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Páginas Totais</span><span className="text-xl font-black">{totalDashPages}</span></div>
-            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Páginas Lidas</span><span className="text-xl font-black">{totalDashReadPages} <span className="text-[10px]">({dashReadPerc}%)</span></span></div>
-            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Itens Avaliados</span><span className="text-xl font-black">{dashRated.length}</span></div>
-            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Nota Média</span><span className="text-xl font-black">★ {dashAvgRating}</span></div>
-         </div>
       </MContainer>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -2515,6 +2485,59 @@ REGRAS RÍGIDAS:
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_theme', darkMode ? 'dark' : 'light'); }, [darkMode, initialLoadDone]);
 
+  const [rotatingStatIdx, setRotatingStatIdx] = useState(0);
+
+  const rotatingStats = useMemo(() => {
+    if (items.length === 0) return ["Acervo em Formação"];
+    const stats = [];
+    const tc = items.reduce((acc, i) => { acc[i.type || 'Outro'] = (acc[i.type || 'Outro'] || 0) + 1; return acc; }, {});
+
+    if (tc['Livro']) stats.push(`${tc['Livro']} Livros na Estante`);
+    if (tc['CD']) stats.push(`${tc['CD']} CDs Catalogados`);
+    if (tc['Vinil']) stats.push(`${tc['Vinil']} Vinis (LPs)`);
+    if (tc['Quadrinho']) stats.push(`${tc['Quadrinho']} HQs & Mangás`);
+    if (tc['DVD']) stats.push(`${tc['DVD']} Filmes (DVD)`);
+
+    const vy = items.filter(i => !isNaN(getValidYear(i.year)));
+    if (vy.length > 0) {
+      const o = vy.reduce((a, b) => getValidYear(a.year) < getValidYear(b.year) ? a : b);
+      const n = vy.reduce((a, b) => getValidYear(a.year) > getValidYear(b.year) ? a : b);
+      stats.push(`Relíquia: ${getValidYear(o.year)} (${String(o.title || '').substring(0,12)}...)`);
+      stats.push(`Recente: ${getValidYear(n.year)} (${String(n.title || '').substring(0,12)}...)`);
+    }
+
+    const vl = items.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)) && ((activeCategories['Livros']||[]).includes(i.type)));
+    if (vl.length > 0) {
+        const tp = {};
+        vl.forEach(i => {
+          const nm = normalizeWorkTitle(i.title);
+          if (!tp[nm]) tp[nm] = { t: 0, r: i.title };
+          tp[nm].t += parseInt(i.pages_or_time);
+        });
+        let mx = 0; let mObj = null;
+        for (const [n, d] of Object.entries(tp)) { if (d.t > mx) { mx = d.t; mObj = d; } }
+        if (mObj) stats.push(`Mais Longo: ${mx} Págs (${normalizeWorkTitle(mObj.r).toUpperCase().substring(0,10)}...)`);
+    }
+
+    const ac = items.reduce((acc, i) => {
+       if(i.author_developer) {
+          let ra = i.author_developer.trim();
+          if (isVariousArtists(ra)) return acc;
+          const na = getSortableName(ra).toLowerCase();
+          const nt = normalizeWorkTitle(i.title);
+          if (!acc[na]) acc[na] = { d: ra, t: new Set() };
+          acc[na].t.add(nt);
+       }
+       return acc;
+    }, {});
+
+    const sortedAuthorsStat = Object.entries(ac).map(([na, d]) => [d.d, d.t.size]).sort((a,b)=>b[1]-a[1]);
+    const ta = sortedAuthorsStat[0];
+    if (ta && ta[1] > 1) stats.push(`+ Freq: ${String(ta[0] || '').substring(0, 15)} (${ta[1]} Obras)`);
+
+    return stats.length > 0 ? stats : ["Sua Coleção Física"];
+  }, [items, activeCategories]);
+
   const hasSuggested = useRef(false);
   const [suggestion, setSuggestion] = useState(null);
 
@@ -2538,6 +2561,10 @@ REGRAS RÍGIDAS:
   };
 
   const totalItens = items.length;
+  const livros = items.filter(i => (activeCategories['Livros'] || []).includes(i.type));
+  const totalPagesCount = livros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const readPages = livros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const readPercentage = totalPagesCount > 0 ? ((readPages / totalPagesCount) * 100).toFixed(1) : 0;
 
   const catCounts = items.reduce((acc, i) => {
     let mainCat = 'Outros';
@@ -2715,8 +2742,15 @@ REGRAS RÍGIDAS:
               </div>
             </div>
 
-            <div className="flex flex-row mt-2 items-stretch h-[60px]">
-              <div className={`flex-1 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+            <div className="flex gap-2 flex-row mt-2 items-stretch h-[86px]">
+              <div className={`flex-1 w-1/2 flex flex-col p-1.5 border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest leading-tight ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                <div className="border-b-[2px] border-current pb-0.5 mb-0.5 flex justify-between opacity-80"><span className="truncate">Coleção Física</span><span className="ml-1 flex-shrink-0">{totalItens} UN</span></div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Adicionadas:</span><span className="ml-1 truncate">{totalPagesCount}</span></div>
+                <div className="flex justify-between truncate mb-0.5"><span className="truncate">Págs Lidas:</span><span className="ml-1 truncate">{readPages} ({readPercentage}%)</span></div>
+                <div className="flex justify-between text-amber-500 font-bold transition-opacity duration-500 cursor-pointer active:scale-95 mb-0.5" onClick={() => setRotatingStatIdx(prev => (prev + 1) % rotatingStats.length)}><span className="w-full truncate">{rotatingStats[rotatingStatIdx]}</span></div>
+                <div className="flex justify-between text-cyan-500 mt-auto pt-0.5 cursor-pointer active:scale-95" onClick={() => setRatingCatIdx(prev => (prev + 1) % ratingCategories.length)}><span className="truncate">Nota ({currentRatingCat}):</span><span className="ml-1">★ {dynamicAvgRating}</span></div>
+              </div>
+              <div className={`flex-1 w-1/2 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                  <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel de Status</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
                  <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
                     <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
