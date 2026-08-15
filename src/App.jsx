@@ -211,7 +211,9 @@ const parseCSVText = (rawText) => {
 const normalizeWorkTitle = title => {
   if (!title) return '';
   let t = String(title).toLowerCase().trim();
+  
   if (t.startsWith('garfield')) return 'garfield';
+  
   return t.replace(/(?:\s*[:-]\s*|\s+)(?:vol\.?|volume|livro|book|edição|ed\.?|pt\.?|part|parte|#)?\s*\d+(?:\.\d+)?$/i, '').trim();
 };
 
@@ -241,7 +243,6 @@ const getMetricInfo = (itemType, activeCategories) => {
   return { label: 'Und', desc: 'Métrica' };
 };
 
-// UTILITÁRIO: Fetch com timeout para não travar loops longos
 const fetchTimeout = (url, options = {}, timeoutMs = 8000) => {
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
@@ -279,7 +280,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const isGame = (activeCategories['Games'] || []).includes(typeRaw);
   const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
 
-  // 1. Busca por Código de Barras (Mais precisa)
   if (barcodeRaw) {
     try {
       const upcRes = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
@@ -314,7 +314,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
     }
   }
 
-  // 2. Busca rigorosa por Metadados
   if (isDisc) {
     if (settings?.discogsToken) {
       try {
@@ -452,6 +451,7 @@ const Library = p => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v1
 const PlusSquare = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
 const BarChart2 = p => <Icon {...p} path={<><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></>} />;
 const Settings = p => <Icon {...p} path={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" /></>} />;
+
 const Camera = p => <Icon {...p} path={<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>} />;
 const Sun = p => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />;
 const Download = p => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
@@ -479,7 +479,7 @@ const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2"
 const XIcon = p => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
 const Zap = p => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = p => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
-const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
+const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
 const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
 const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
@@ -1503,25 +1503,31 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   }, [addMode, isHtml5QrcodeLoaded]);
 
   const fetchMultiDatabaseParallel = async (barcode) => {
-    const cleanCode = barcode.replace(/[-\s]/g, "").toUpperCase();
+    if (!barcode) return;
+    const rawCode = barcode.trim();
+    const cleanCode = rawCode.replace(/[-\s]/g, "").toUpperCase();
     updateStatus('loading', 'Consultando bancos de dados simultaneamente...');
 
     const isISBN13 = cleanCode.length === 13 && (cleanCode.startsWith("978") || cleanCode.startsWith("979"));
     const isISBN10 = cleanCode.length === 10 && /^\d{9}[\dX]$/.test(cleanCode);
     const isBookCode = isISBN13 || isISBN10;
 
+    const isLikelyBarcode = (/^\d{8}$|^\d{12,13}$/.test(cleanCode)) && !/[A-Z\-]/i.test(rawCode);
+    const isLikelyCatno = !isLikelyBarcode;
+
     const fetchers = [];
 
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
-      const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
+      const queryStr = isLikelyCatno ? `catno=${encodeURIComponent(rawCode)}` : `barcode=${cleanCode}`;
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?${queryStr}&token=${settings.discogsToken}`);
       const data = await res.json();
       if (!data.results || data.results.length === 0) throw new Error("Not found");
       const item = data.results[0];
       const titleParts = item.title ? item.title.split(' - ') : [];
       let discType = 'CD';
       const fStr = (item.format || []).join(' ').toLowerCase();
-      if (fStr.includes('vinyl') || fStr.includes('lp')) discType = 'Vinil';
+      if (fStr.includes('vinyl') || fStr.includes('lp') || isLikelyCatno) discType = 'Vinil';
       else if (fStr.includes('cassette')) discType = 'Fita Cassete';
 
       let coverUrl = item.cover_image || '';
@@ -1531,13 +1537,14 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchMBrainz = async () => {
-      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
+      const queryVal = isLikelyCatno ? `catno:"${rawCode}"` : `barcode:${cleanCode}`;
+      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(queryVal)}&fmt=json&inc=media+labels`);
       const data = await res.json();
       if (!data.releases || data.releases.length === 0) throw new Error("Not found");
       const release = data.releases[0]; let fmt = 'CD'; let tc = '';
       if (release.media && release.media.length > 0) {
          const m = release.media[0]; const fStr = m.format?.toLowerCase() || '';
-         if (fStr.includes('vinyl') || fStr.includes('12"')) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete';
+         if (fStr.includes('vinyl') || fStr.includes('12"') || isLikelyCatno) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete';
          if (m['track-count']) tc = `${m['track-count']}`;
       }
 
@@ -1591,18 +1598,19 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       return { title: info.title || '', author_developer: info.authors?.map(a => a.name).join(', ') || '', year: info.publish_date?.match(/\b(19|20)\d{2}\b/)?.[0] || info.publish_date?.substring(0,4) || '', publisher: info.publishers?.map(p => p.name).join(', ') || '', pages_or_time: info.number_of_pages?.toString() || '', description: info.subtitle || '', cover_url: coverUrl, type: 'Livro' };
     };
 
-    if (isBookCode) {
+    if (isBookCode && !isLikelyCatno) {
       fetchers.push(fetchGBooks(), fetchOpenLib(), fetchUPC());
     } else {
-      fetchers.push(fetchMBrainz(), fetchUPC());
+      fetchers.push(fetchMBrainz());
       if (settings?.discogsToken) fetchers.push(fetchDiscogs());
+      if (!isLikelyCatno) fetchers.push(fetchUPC());
     }
 
     try {
       const foundItem = await Promise.any(fetchers);
       playChipBeep('success');
-      updateStatus('success', 'Encontrado com velocidade!');
-      setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
+      updateStatus('success', isLikelyCatno ? 'Matriz localizada pelo Catálogo!' : 'Encontrado com velocidade!');
+      setFormData(prev => ({ ...prev, ...foundItem, barcode: rawCode }));
     } catch (e) {
       playChipBeep('error');
       updateStatus('error', 'Item não localizado em nenhum banco de dados. Por favor, preencha manualmente.');
@@ -1682,6 +1690,15 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
               <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className={`w-full p-2 border-[4px] ${darkMode ? 'border-gray-300 shadow-[3px_3px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm outline-none font-black`}>
                 {Object.entries(activeCategories || {}).map(([cat, subs]) => (<optgroup label={`--- ${cat.toUpperCase()} ---`} key={cat}>{(Array.isArray(subs) ? subs : []).map(sub => <option key={sub} value={sub}>{sub}</option>)}</optgroup>))}
               </select>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-2 mb-2 w-full items-end">
+                <div className="flex-1 w-full">
+                    <MInput darkMode={darkMode} label="Código (Barras ou Catálogo da Gravadora)" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} placeholder="Ex: 789... ou SBRL 10.001" />
+                </div>
+                <MButton darkMode={darkMode} variant="pink" onClick={() => fetchMultiDatabaseParallel(formData.barcode)} disabled={!formData.barcode} className="w-full md:w-auto h-[42px] mb-3 px-6">
+                    <Search className="w-4 h-4"/> Autocompletar
+                </MButton>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2 w-full">
@@ -1829,19 +1846,6 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
     return { reliquia, epico, vergonha };
   }, [dashItems, totalDash, activeCategories]);
 
-  // Estatísticas Gerais (Movidas da Home para Otimização de Performance Mobile)
-  const generalStats = useMemo(() => {
-      const allLivros = dashItems.filter(i => (activeCategories['Livros'] || []).includes(i.type));
-      const totalPages = allLivros.reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
-      const read = allLivros.filter(i => i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
-      const readPerc = totalPages > 0 ? ((read / totalPages) * 100).toFixed(1) : 0;
-      
-      const rated = dashItems.filter(i => (Number(i.rating) || 0) > 0);
-      const avgRating = rated.length > 0 ? (rated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / rated.length).toFixed(1) : 0;
-
-      return { totalPages, read, readPerc, avgRating };
-  }, [dashItems, activeCategories]);
-
   const musicItems = dashItems.filter(i => (activeCategories['Discos'] || []).includes(i.type));
   const hasMusicStats = musicItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Discos');
 
@@ -1915,6 +1919,12 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
      return { qtyAssistidos, percAssistidos, mediaNota, totalHoras, mediaMinutos, topDirector };
   }, [videoItems, hasVideoStats]);
 
+  const totalDashPages = dashItems.filter(i => (activeCategories['Livros'] || []).includes(i.type)).reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const totalDashReadPages = dashItems.filter(i => (activeCategories['Livros'] || []).includes(i.type) && i.status === 'Concluído').reduce((acc, i) => acc + (parseInt(i.pages_or_time) || 0), 0);
+  const dashReadPerc = totalDashPages > 0 ? ((totalDashReadPages / totalDashPages) * 100).toFixed(1) : 0;
+  const dashRated = dashItems.filter(i => (Number(i.rating) || 0) > 0);
+  const dashAvgRating = dashRated.length > 0 ? (dashRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / dashRated.length).toFixed(1) : 0;
+
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
@@ -1929,18 +1939,20 @@ const DashboardTab = ({ items, darkMode, activeCategories }) => {
         </div>
       </MContainer>
 
-      {/* NOVO PAINEL DE ESTATÍSTICAS GERAIS MOVIDO PARA CÁ */}
-      <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}><BarChart2 className="w-4 h-4" /> Estatísticas Gerais da Coleção</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-           <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Total de Itens</span><span className="text-2xl font-black text-cyan-500">{totalDash} <span className="text-[10px] text-current">Obras</span></span></div>
-           <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Págs na Estante</span><span className="text-2xl font-black text-amber-500">{generalStats.totalPages} <span className="text-[10px] text-current">Páginas</span></span></div>
-           <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Páginas Lidas</span><span className="text-2xl font-black text-pink-500">{generalStats.read} <span className="text-[10px] text-current">({generalStats.readPerc}%)</span></span></div>
-           <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Nota Média</span><span className="text-2xl font-black text-amber-400">★ {generalStats.avgRating}</span></div>
-        </div>
+      <MContainer darkMode={darkMode} className="p-4 flex flex-col mb-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+         <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[4px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
+             <BarChart2 className="w-4 h-4" /> Estatísticas Gerais (Físico)
+         </div>
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Páginas Totais</span><span className="text-xl font-black">{totalDashPages}</span></div>
+            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Páginas Lidas</span><span className="text-xl font-black">{totalDashReadPages} <span className="text-[10px]">({dashReadPerc}%)</span></span></div>
+            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Itens Avaliados</span><span className="text-xl font-black">{dashRated.length}</span></div>
+            <div className="flex flex-col"><span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Nota Média</span><span className="text-xl font-black">★ {dashAvgRating}</span></div>
+         </div>
       </MContainer>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-400 text-black'}><LibraryBig className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{totalDash}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div></MContainer>
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}><Ghost className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{stats.vergonha || 0}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Intocados / Backlog</div></MContainer>
         {stats.reliquia && (
           <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-400 text-black'}><div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {getValidYear(stats.reliquia.year)}</div></div></MContainer>
@@ -2231,7 +2243,14 @@ export default function App() {
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
-  // Removidos os estados de cálculo redundantes que travavam renderizações desnecessárias
+  const [ratingCatIdx, setRatingCatIdx] = useState(0);
+  const ratingCategories = useMemo(() => ['Todas', ...Object.keys(activeCategories || {})], [activeCategories]);
+  const currentRatingCat = ratingCategories[ratingCatIdx % Math.max(1, ratingCategories.length)] || 'Todas';
+
+  const dynamicAvgRating = useMemo(() => {
+    const rated = items.filter(i => (Number(i.rating) || 0) !== 0 && (currentRatingCat === 'Todas' || (activeCategories[currentRatingCat] || []).includes(i.type)));
+    return rated.length > 0 ? (rated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / rated.length).toFixed(1) : 0;
+  }, [items, currentRatingCat, activeCategories]);
 
   const triggerGlobalAI = () => {
     setActiveTab('add');
@@ -2518,22 +2537,19 @@ REGRAS RÍGIDAS:
     }
   };
 
-  const { totalItens, catCounts, globalAvgRating } = useMemo(() => {
-    const totalItens = items.length;
-    const catCounts = items.reduce((acc, i) => {
-      let mainCat = 'Outros';
-      for (const [cat, subs] of Object.entries(activeCategories)) {
-        if ((subs || []).includes(i.type)) { mainCat = cat; break; }
-      }
-      acc[mainCat] = (acc[mainCat] || 0) + 1;
-      return acc;
-    }, {});
-    
-    const allRated = items.filter(i => (Number(i.rating) || 0) > 0);
-    const globalAvgRating = allRated.length > 0 ? (allRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / allRated.length).toFixed(1) : 0;
-    
-    return { totalItens, catCounts, globalAvgRating };
-  }, [items, activeCategories]);
+  const totalItens = items.length;
+
+  const catCounts = items.reduce((acc, i) => {
+    let mainCat = 'Outros';
+    for (const [cat, subs] of Object.entries(activeCategories)) {
+      if ((subs || []).includes(i.type)) { mainCat = cat; break; }
+    }
+    acc[mainCat] = (acc[mainCat] || 0) + 1;
+    return acc;
+  }, {});
+
+  const allRated = items.filter(i => (Number(i.rating) || 0) > 0);
+  const globalAvgRating = allRated.length > 0 ? (allRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / allRated.length).toFixed(1) : 0;
 
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
@@ -2699,9 +2715,8 @@ REGRAS RÍGIDAS:
               </div>
             </div>
 
-            {/* HEADER OTIMIZADO: Quadro removido. Apenas painel LED de menor altura */}
             <div className="flex flex-row mt-2 items-stretch h-[60px]">
-              <div className={`w-full flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+              <div className={`flex-1 flex flex-col border-[3px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                  <div className="px-1.5 py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel de Status</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
                  <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
                     <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
