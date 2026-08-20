@@ -208,18 +208,6 @@ const parseCSVText = (rawText) => {
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
 };
 
-const applyArtistAlias = (rawName, aliasesConfig) => {
-  if (!rawName || !aliasesConfig || !Array.isArray(aliasesConfig)) return rawName;
-  const trimmedRaw = rawName.trim();
-  const lowerRaw = trimmedRaw.toLowerCase();
-  for (let entry of aliasesConfig) {
-     if (entry.alias && entry.alias.toLowerCase() === lowerRaw) {
-        return entry.main;
-     }
-  }
-  return trimmedRaw;
-};
-
 const normalizeWorkTitle = title => {
   if (!title) return '';
   let t = String(title).toLowerCase().trim();
@@ -232,6 +220,13 @@ const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o
 const isVariousArtists = name => {
   const n = String(name || '').toLowerCase().trim();
   return ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => n.includes(k));
+};
+
+const applyArtistAlias = (name, aliases = []) => {
+  if (!name || !Array.isArray(aliases)) return name;
+  const n = name.trim().toLowerCase();
+  const found = aliases.find(a => a.alias.trim().toLowerCase() === n);
+  return found ? found.main : name.trim();
 };
 
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
@@ -283,7 +278,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 
   const qTitle = encodeURIComponent(titleRaw);
   const qAuthor = encodeURIComponent(authorRaw);
-  const qPub = encodeURIComponent(pubRaw);
 
   const isBook = (activeCategories['Livros'] || []).includes(typeRaw);
   const isDisc = (activeCategories['Discos'] || []).includes(typeRaw);
@@ -351,31 +345,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
         }
       } catch(e) { }
     }
-
-    try {
-      let mbQuery = `release:${qTitle}`;
-      if (authorRaw) mbQuery += ` AND artist:${qAuthor}`;
-      const mbRes = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(mbQuery)}&fmt=json`);
-      const mbData = await mbRes.json();
-
-      if (mbData.releases?.length > 0) {
-        let targetReleases = mbData.releases;
-        if (yearRaw) {
-          const exactYearReleases = targetReleases.filter(r => r.date && r.date.startsWith(yearRaw));
-          if (exactYearReleases.length > 0) targetReleases = exactYearReleases;
-        }
-        const maxAttempts = Math.min(targetReleases.length, 3);
-        for (let i = 0; i < maxAttempts; i++) {
-          const release = targetReleases[i];
-          try {
-            const caaRes = await fetchTimeout(`https://coverartarchive.org/release/${release.id}/front`, {}, 5000);
-            if (caaRes.ok) return caaRes.url;
-          } catch(e) {}
-        }
-      }
-    } catch(e) { }
   }
-
   else if (isBook) {
     try {
       let gbQuery = `intitle:"${titleRaw}"`;
@@ -402,7 +372,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       }
     } catch(e) { }
   }
-
   else if (isGame) {
     try {
       const gameQuery = `${titleRaw} ${typeRaw} game cover`;
@@ -422,22 +391,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       }
     } catch(e) { }
   }
-
-  else if (isVideo) {
-    try {
-      const itRes = await fetchTimeout(`https://itunes.apple.com/search?term=${qTitle}&media=movie&limit=10`);
-      const itData = await itRes.json();
-      if (itData.results?.length > 0) {
-        let bestMovie = itData.results[0];
-        if (yearRaw) {
-          const exact = itData.results.find(m => m.releaseDate?.startsWith(yearRaw));
-          if (exact) bestMovie = exact;
-        }
-        if (bestMovie?.artworkUrl100) return bestMovie.artworkUrl100.replace('100x100bb', '600x600bb');
-      }
-    } catch (e) {}
-  }
-
   return null;
 };
 
@@ -452,8 +405,8 @@ const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
     <g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
     <circle cx="50" cy="50" r="28" fill="#fbbf24" stroke="#fbbf24" strokeWidth="6" strokeDasharray="5 5" />
     <circle cx="50" cy="50" r="18" fill="none" stroke="#d97706" strokeWidth="3" strokeDasharray="3 5" opacity="0.8"/>
-    <g stroke="#22d3ee" strokeWidth="6" strokeLinecap="round"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g>
-    <g stroke="#ec4899" strokeWidth="7" strokeLinecap="round"><line x1="50" y1="18" x2="50" y2="22" /><line x1="50" y1="82" x2="50" y2="78" /><line x1="18" y1="50" x2="22" y2="50" /><line x1="82" y1="50" x2="78" y2="50" /><line x1="28" y1="28" x2="32" y2="32" /><line x1="72" y1="72" x2="68" y2="68" /><line x1="28" y1="72" x2="32" y2="68" /><line x1="72" y1="28" x2="68" y2="32" /></g></g>
+    <g stroke="#0891b2" strokeWidth="6" strokeLinecap="round"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g>
+    <g stroke="#db2777" strokeWidth="7" strokeLinecap="round"><line x1="50" y1="18" x2="50" y2="22" /><line x1="50" y1="82" x2="50" y2="78" /><line x1="18" y1="50" x2="22" y2="50" /><line x1="82" y1="50" x2="78" y2="50" /><line x1="28" y1="28" x2="32" y2="32" /><line x1="72" y1="72" x2="68" y2="68" /><line x1="28" y1="72" x2="32" y2="68" /><line x1="72" y1="28" x2="68" y2="32" /></g></g>
   </svg>
 );
 const Search = p => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
@@ -557,10 +510,10 @@ const usePWA = (iconUrl) => {
 };
 
 // ==========================================
-// COMPONENTES UI MONDRIAN (Estética Suavizada - 2px)
+// COMPONENTES UI MONDRIAN (Estética Rigorosa)
 // ==========================================
-const getChartColors = darkMode => darkMode ? ['#be185d', '#0e7490', '#d97706', '#9d174d', '#164e63', '#b45309'] : ['#db2777', '#0891b2', '#f59e0b', '#be185d', '#0e7490', '#d97706'];
-const getMondrianColor = (index, darkMode) => darkMode ? ['bg-pink-800', 'bg-cyan-800', 'bg-amber-700', 'bg-gray-800'][index % 4] : ['bg-pink-600', 'bg-cyan-600', 'bg-amber-500', 'bg-gray-100'][index % 4];
+const getChartColors = darkMode => darkMode ? ['#db2777', '#0891b2', '#d97706', '#9d174d', '#164e63', '#b45309'] : ['#db2777', '#0891b2', '#d97706', '#be185d', '#0e7490', '#b45309'];
+const getMondrianColor = (index, darkMode) => darkMode ? ['bg-pink-700', 'bg-cyan-700', 'bg-amber-700', 'bg-gray-800'][index % 4] : ['bg-pink-600', 'bg-cyan-600', 'bg-amber-600', 'bg-gray-200'][index % 4];
 
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${colorClass} ${className} transition-colors duration-300`}>
@@ -570,9 +523,9 @@ const MContainer = ({ children, className = '', colorClass = '', darkMode }) => 
 
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
   let bg = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
-  if (['pink', 'red'].includes(variant)) bg = darkMode ? 'bg-pink-800 text-white' : 'bg-pink-600 text-white';
-  if (['cyan', 'blue', 'green'].includes(variant)) bg = darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-600 text-white';
-  if (['amber', 'yellow', 'indigo'].includes(variant)) bg = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-500 text-white';
+  if (['pink', 'red'].includes(variant)) bg = darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white';
+  if (['cyan', 'blue', 'green'].includes(variant)) bg = darkMode ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-white';
+  if (['amber', 'yellow', 'indigo'].includes(variant)) bg = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white';
   if (variant === 'black') bg = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
   if (variant === 'light-cyan') bg = darkMode ? 'bg-cyan-900/50 text-cyan-200' : 'bg-cyan-100 text-cyan-900';
   if (variant === 'light-pink') bg = darkMode ? 'bg-pink-900/50 text-pink-200' : 'bg-pink-100 text-pink-900';
@@ -608,7 +561,7 @@ const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "
         onChange={onChange}
         onBlur={onBlur}
         placeholder={placeholder}
-        className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:border-cyan-600 dark:focus:border-cyan-400'} transition-colors`}
+        className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-cyan-100 dark:focus:bg-cyan-900'} transition-colors`}
       />
     )}
   </div>
@@ -740,6 +693,7 @@ const getPagesBucket = (pagesVal) => {
 // ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
+
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCategories }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
@@ -1119,7 +1073,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => (
-                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
+                    <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>
                   ))}
                 </div>
               </MContainer>
@@ -1165,14 +1119,14 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                 ) : (
                   <div className="flex flex-col items-center gap-2">
                     {wikiError && <div className="text-[9px] font-bold text-white bg-pink-600 p-2 border-[2px] border-black rounded shadow-sm text-center">{wikiError}</div>}
-                    <MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="pink" className="w-full text-[10px]">✨ Pesquisar sobre a Obra</MButton>
+                    <MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-pink-600 border-black dark:bg-pink-700 text-white">✨ Pesquisar sobre a Obra</MButton>
                   </div>
                 )}
               </div>
             )}
           </MContainer>
 
-          <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[2px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-800 border-gray-300 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-600 border-black text-white'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
+          <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[2px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-700 border-gray-300 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-600 border-black text-white'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>
             <Check className="w-5 h-5" /> Salvar Alterações
           </button>
 
@@ -1234,7 +1188,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
                                   >
                                       <div className="flex items-center gap-2">
                                           <span className="text-[11px] font-black uppercase tracking-widest">{category}</span>
-                                          {activeCount > 0 && <span className={`px-1.5 py-0.5 text-[8px] font-black rounded-sm ${darkMode ? 'bg-pink-800 text-white' : 'bg-pink-700 text-white'}`}>{activeCount}</span>}
+                                          {activeCount > 0 && <span className={`px-1.5 py-0.5 text-[8px] font-black rounded-sm ${darkMode ? 'bg-pink-800 text-white' : 'bg-pink-600 text-white'}`}>{activeCount}</span>}
                                       </div>
                                       {isOpen ? <ChevronUp className="w-4 h-4 opacity-50" /> : <ChevronDown className="w-4 h-4 opacity-50" />}
                                   </button>
@@ -1332,7 +1286,7 @@ const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCa
               >
                   <FilterIcon className="w-4 h-4" />
                   {countActiveFilters > 0 && (
-                      <div className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full border-[2px] flex items-center justify-center text-[8px] font-black ${darkMode ? 'bg-pink-600 border-gray-900 text-white' : 'bg-pink-700 border-white text-white'}`}>
+                      <div className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full border-[2px] flex items-center justify-center text-[8px] font-black ${darkMode ? 'bg-pink-700 border-gray-900 text-white' : 'bg-pink-600 border-white text-white'}`}>
                           {countActiveFilters}
                       </div>
                   )}
@@ -1448,6 +1402,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
            year: scannedAIData.year?.toString()||'',
            publisher: scannedAIData.publisher||'',
            description: scannedAIData.description||'',
+           barcode: scannedAIData.barcode||'',
            pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time,
            type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro'
         }));
@@ -1668,7 +1623,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       </div>
 
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-700 border-gray-300 text-white' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-800 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[4px_4px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-700 border-gray-300 text-white' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-700 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
           {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-sm animate-spin flex-shrink-0" />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
@@ -1713,13 +1668,14 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             </div>
 
             <MInput darkMode={darkMode} label="Descrição" multiline value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+            <MInput darkMode={darkMode} label="Código de Barras/Catálogo" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} />
             <MInput darkMode={darkMode} label="Anotações" multiline value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
 
             {isBookOrGame && (
               <div className="mb-4">
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
-                  {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-800 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
+                  {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
                 </div>
               </div>
             )}
@@ -1740,28 +1696,28 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 };
 
 const DashboardTab = ({ items, darkMode, activeCategories, settings }) => {
-  const [filterCat, setFilterCat] = useState('Todas');
-  const [filterSubtype, setFilterSubtype] = useState('Todos');
-  const [filterStatus, setFilterStatus] = useState('Todos');
-  const [filterRating, setFilterRating] = useState('Todas');
+  const [filterCat, setFilterCat] = useState([]);
+  const [filterStatus, setFilterStatus] = useState([]);
+  const [filterRating, setFilterRating] = useState([]);
 
   const dashItems = useMemo(() => {
     return items.filter(item => {
       let mCat = true, mStatus = true, mRating = true;
-      if (filterCat !== 'Todas') {
-        if (filterSubtype !== 'Todos') mCat = item.type === filterSubtype;
-        else mCat = (activeCategories[filterCat] || []).includes(item.type);
+      if (filterCat.length > 0) {
+         mCat = filterCat.some(cat => (activeCategories[cat] || []).includes(item.type));
       }
-      if (filterStatus !== 'Todos') {
+      if (filterStatus.length > 0) {
          const isDisc = (activeCategories['Discos'] || []).includes(item.type);
          const isVideo = (activeCategories['Vídeo'] || []).includes(item.type);
          if (isDisc || isVideo) mStatus = false;
-         else mStatus = item.status === filterStatus;
+         else mStatus = filterStatus.includes(item.status);
       }
-      if (filterRating !== 'Todas') mRating = item.rating === parseInt(filterRating);
+      if (filterRating.length > 0) {
+         mRating = filterRating.includes(String(item.rating || 0));
+      }
       return mCat && mStatus && mRating;
     });
-  }, [items, filterCat, filterSubtype, filterStatus, filterRating, activeCategories]);
+  }, [items, filterCat, filterStatus, filterRating, activeCategories]);
 
   const chartColors = getChartColors(darkMode);
   const catCounts = {}; const statusCounts = {};
@@ -1791,7 +1747,7 @@ const DashboardTab = ({ items, darkMode, activeCategories, settings }) => {
     if (i.author_developer) {
       const rawAuthor = i.author_developer.trim();
       if (isVariousArtists(rawAuthor)) return acc;
-
+      
       const mappedAuthor = applyArtistAlias(rawAuthor, settings?.artistAliases);
       let normAuthor = getSortableName(mappedAuthor).toLowerCase();
 
@@ -1842,7 +1798,7 @@ const DashboardTab = ({ items, darkMode, activeCategories, settings }) => {
   }, [dashItems, totalDash, activeCategories]);
 
   const musicItems = dashItems.filter(i => (activeCategories['Discos'] || []).includes(i.type));
-  const hasMusicStats = musicItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Discos');
+  const hasMusicStats = musicItems.length > 0 && (filterCat.length === 0 || filterCat.includes('Discos'));
 
   const musicStats = useMemo(() => {
      if (!hasMusicStats) return null;
@@ -1879,7 +1835,7 @@ const DashboardTab = ({ items, darkMode, activeCategories, settings }) => {
   }, [musicItems, hasMusicStats, settings?.artistAliases]);
 
   const videoItems = dashItems.filter(i => (activeCategories['Vídeo'] || []).includes(i.type));
-  const hasVideoStats = videoItems.length > 0 && (filterCat === 'Todas' || filterCat === 'Vídeo');
+  const hasVideoStats = videoItems.length > 0 && (filterCat.length === 0 || filterCat.includes('Vídeo'));
 
   const videoStats = useMemo(() => {
      if (!hasVideoStats) return null;
@@ -1919,25 +1875,58 @@ const DashboardTab = ({ items, darkMode, activeCategories, settings }) => {
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
       <MContainer darkMode={darkMode} className="p-3 sticky top-0 z-20 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-b-[2px] pb-1 mb-1 border-current"><FilterIcon className="w-4 h-4" /> Filtros Interativos</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
-          <select value={filterCat} onChange={e => { setFilterCat(e.target.value); setFilterSubtype('Todos'); }} className={`w-full p-2 border-[2px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} text-[9px] font-black uppercase outline-none cursor-pointer`}><option value="Todas">Tudo</option>{Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
-          {filterCat !== 'Todas' && activeCategories[filterCat] ? (
-            <select value={filterSubtype} onChange={e => setFilterSubtype(e.target.value)} className={`w-full p-2 border-[2px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-900 text-cyan-100' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 text-cyan-900'}`}><option value="Todos">Todos (Subtipo)</option>{activeCategories[filterCat].map(sub => <option key={sub} value={sub}>{sub}</option>)}</select>
-          ) : <select disabled className={`w-full p-2 border-[2px] text-[9px] font-black uppercase outline-none opacity-50 cursor-not-allowed ${darkMode ? 'border-gray-300 bg-gray-800 text-white' : 'border-black bg-gray-100 text-gray-500'}`}><option>Todos (Subtipo)</option></select>}
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={`w-full p-2 border-[2px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todos">Status</option>{STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select>
-          <select value={filterRating} onChange={e => setFilterRating(e.target.value)} className={`w-full p-2 border-[2px] text-[9px] font-black uppercase outline-none cursor-pointer ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}><option value="Todas">Notas</option>{[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} Estrelas</option>)}</select>
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-b-[3px] pb-1 mb-1 border-current"><FilterIcon className="w-4 h-4" /> Filtros Interativos (Múltiplos)</div>
+        <div className="flex flex-col gap-3 w-full">
+          <div className="flex flex-col gap-1">
+            <span className="text-[8px] font-black uppercase opacity-70">Categorias:</span>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(activeCategories || {}).map(cat => (
+                <label key={cat} className={`flex items-center gap-1 text-[9px] font-black uppercase cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <input type="checkbox" checked={filterCat.includes(cat)} onChange={(e) => {
+                    if (e.target.checked) setFilterCat([...filterCat, cat]);
+                    else setFilterCat(filterCat.filter(c => c !== cat));
+                  }} className="accent-cyan-600 w-3 h-3" /> {cat}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[8px] font-black uppercase opacity-70">Status (Livros/Games):</span>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map(opt => (
+                <label key={opt} className={`flex items-center gap-1 text-[9px] font-black uppercase cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <input type="checkbox" checked={filterStatus.includes(opt)} onChange={(e) => {
+                    if (e.target.checked) setFilterStatus([...filterStatus, opt]);
+                    else setFilterStatus(filterStatus.filter(s => s !== opt));
+                  }} className="accent-cyan-600 w-3 h-3" /> {opt}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[8px] font-black uppercase opacity-70">Notas:</span>
+            <div className="flex flex-wrap gap-2">
+              {[5, 4, 3, 2, 1].map(r => (
+                <label key={r} className={`flex items-center gap-1 text-[9px] font-black uppercase cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <input type="checkbox" checked={filterRating.includes(String(r))} onChange={(e) => {
+                    if (e.target.checked) setFilterRating([...filterRating, String(r)]);
+                    else setFilterRating(filterRating.filter(val => val !== String(r)));
+                  }} className="accent-cyan-600 w-3 h-3" /> {r} Estrelas
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       </MContainer>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-600 text-white'}><LibraryBig className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{totalDash}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div></MContainer>
+        <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-white'}><LibraryBig className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{totalDash}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Itens no Filtro</div></MContainer>
         <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center relative overflow-hidden h-28" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-200 text-black'}><Ghost className={`absolute -right-4 -bottom-4 w-20 h-20 opacity-20`} /><div className="text-5xl font-black z-10">{stats.vergonha || 0}</div><div className="text-[9px] font-black uppercase tracking-widest mt-1 z-10 text-center">Intocados / Backlog</div></MContainer>
         {stats.reliquia && (
-          <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-500 text-white'}><div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {getValidYear(stats.reliquia.year)}</div></div></MContainer>
+          <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white'}><div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {getValidYear(stats.reliquia.year)}</div></div></MContainer>
         )}
         {stats.epico && (
-          <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-pink-800 text-white' : 'bg-pink-600 text-white'}><div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.epico.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {getMetricInfo(stats.epico.type, activeCategories).label} Totais</div></div></MContainer>
+          <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white'}><div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div><div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(stats.epico.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">{stats.epico.pages_or_time} {getMetricInfo(stats.epico.type, activeCategories).label} Totais</div></div></MContainer>
         )}
       </div>
 
@@ -2154,7 +2143,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                   <input type="text" placeholder="Nome" value={newSubclass.name} onChange={e => setNewSubclass({...newSubclass, name: e.target.value})} className={`flex-1 p-2 border-[2px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
                   <input type="text" placeholder="Código" value={newSubclass.code} onChange={e => setNewSubclass({...newSubclass, code: e.target.value})} className={`w-24 p-2 border-[2px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
                 </div>
-                <MButton darkMode={darkMode} onClick={handleAddSubclass} variant="light-cyan" className="py-2 text-[10px]">Adicionar Subclasse</MButton>
+                <MButton darkMode={darkMode} variant="black" onClick={handleAddSubclass} className="py-2 text-[10px]">Adicionar Subclasse</MButton>
               </div>
             </div>
             <div className="mt-2">
@@ -2187,7 +2176,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
              <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Agrupar Variações</h4>
               <div className="flex flex-col gap-2">
                 <input type="text" placeholder="Nome Correto (Ex: Expresso Rural)" value={newAlias.main} onChange={e => setNewAlias({...newAlias, main: e.target.value})} className={`w-full p-2 border-[2px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
-                <input type="text" placeholder="Lido Pelo Sistema Como (Ex: Expresso)" value={newAlias.alias} onChange={e => setNewAlias({...newAlias, alias: e.target.value})} className={`w-full p-2 border-[2px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
+                <input type="text" placeholder="Lido Pelo Sist. Como (Ex: Expresso)" value={newAlias.alias} onChange={e => setNewAlias({...newAlias, alias: e.target.value})} className={`w-full p-2 border-[2px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
                 <MButton darkMode={darkMode} onClick={handleAddAlias} variant="black" className="py-2 text-[10px] mt-1">Salvar Variação</MButton>
               </div>
             </div>
@@ -2219,7 +2208,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
             <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><DiscIcon className="w-4 h-4"/> Discogs API</div><MInput darkMode={darkMode} label="Discogs Token" type="password" value={settings?.discogsToken || ''} onChange={e => setSettings({...settings, discogsToken: e.target.value})} /></div>
             <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Share className="w-4 h-4"/> Google Sheets</div><MInput darkMode={darkMode} label="Webhook URL" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} /></div>
             <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Headphones className="w-4 h-4"/> Last.FM</div><MInput darkMode={darkMode} label="Username" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} /><MInput darkMode={darkMode} label="API Key" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} /></div>
-            <MButton darkMode={darkMode} onClick={() => { playChipBeep('save'); onShowToast('success'); }} variant="light-pink" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
+            <MButton darkMode={darkMode} onClick={() => { playChipBeep('save'); onShowToast('success'); }} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
           </div>
         )}
       </MContainer>
@@ -2276,15 +2265,6 @@ export default function App() {
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
-  const [ratingCatIdx, setRatingCatIdx] = useState(0);
-  const ratingCategories = useMemo(() => ['Todas', ...Object.keys(activeCategories || {})], [activeCategories]);
-  const currentRatingCat = ratingCategories[ratingCatIdx % Math.max(1, ratingCategories.length)] || 'Todas';
-
-  const dynamicAvgRating = useMemo(() => {
-    const rated = items.filter(i => (Number(i.rating) || 0) !== 0 && (currentRatingCat === 'Todas' || (activeCategories[currentRatingCat] || []).includes(i.type)));
-    return rated.length > 0 ? (rated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / rated.length).toFixed(1) : 0;
-  }, [items, currentRatingCat, activeCategories]);
-
   const triggerGlobalAI = () => {
     setActiveTab('add');
     setAddMode('manual');
@@ -2311,30 +2291,29 @@ export default function App() {
     }
 
     setAiBoxState('loading');
-    setAiBoxMessage('Analisando imagem com IA...');
+    setAiBoxMessage('Analisando com IA...');
 
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
 
-      const promptInstructions = `Aja como um arquivista e bibliotecário especializado.
-Analise a imagem enviada. Pode ser uma capa de livro, quadrinho, encarte de CD/Vinil/Fita, caixa de DVD, capa de game ou FICHA CATALOGRÁFICA (expediente).
-Extraia os metadados com precisão e retorne EXCLUSIVAMENTE um JSON válido, sem crases de markdown.
+      const promptInstructions = `Aja como arquivista especializado. Seja extremamente rápido.
+Analise a imagem (capa, etiqueta de disco, ficha catalográfica). Retorne EXCLUSIVAMENTE um JSON válido.
 Formato exigido:
 {
   "type": "Escolha APENAS uma: ${allTypes.join(', ')}",
-  "title": "Título Principal da obra",
-  "author_developer": "Autor(es), Artista, Banda ou Desenvolvedora",
-  "year": "Ano de lançamento original ou da edição (formato YYYY, ex: 1990)",
-  "publisher": "Editora, Gravadora ou Produtora",
-  "pages_or_time": "Número de páginas (impressos), faixas (música) ou minutos (filmes)",
-  "description": "Breve sinopse identificada ou resumo da obra"
+  "title": "Título Principal",
+  "author_developer": "Autor(es) ou Artista",
+  "year": "Ano (formato YYYY)",
+  "publisher": "Editora ou Gravadora",
+  "pages_or_time": "Páginas, faixas ou minutos (apenas números)",
+  "barcode": "Código de barras OU Código de Catálogo da Gravadora impresso no selo (ex: 33.062)",
+  "description": "Texto descritivo ou sinopse literal. Deixe VAZIO se não houver sinopse clara na imagem."
 }
 
-REGRAS RÍGIDAS:
-1. Em gibis e revistas (como na imagem de expediente), procure informações miúdas como 'Editora Abril', 'Panini', etc. 
-2. Datas abreviadas como 'Julho/90' devem ser formatadas apenas como '1990'.
-3. O título deve ser o nome principal em destaque (ex: 'Lex Luthor').
-4. Retorne APENAS o JSON puro. Nenhuma palavra a mais.`;
+REGRAS:
+1. NÃO invente descrições. Se a imagem só tem títulos e créditos, description DEVE ser "".
+2. Para discos (vinil/CD), capture o código de catálogo da gravadora no campo barcode.
+3. Retorne APENAS o JSON puro.`;
 
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -2350,15 +2329,7 @@ REGRAS RÍGIDAS:
         })
       });
 
-      if (!res.ok) {
-          let errMsg = `Erro HTTP: ${res.status}`;
-          try {
-              const errData = await res.json();
-              if (errData.error && errData.error.message) errMsg = errData.error.message;
-          } catch(e) {}
-          throw new Error(errMsg);
-      }
-
+      if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
       const data = await res.json();
       let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Retorno vazio da IA.");
@@ -2373,30 +2344,12 @@ REGRAS RÍGIDAS:
       showToast('success');
 
     } catch (e) {
-      let errorMsg = e.message;
-      if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
-         errorMsg = "Cota gratuita da IA esgotada no momento. ⚠️\nUse o botão 'Barcode' (Código de Barras) para pesquisar bases de dados sem limite, ou preencha manualmente até a cota resetar.";
-      } else {
-         errorMsg = `Falha na IA: ${errorMsg}\nTente focar bem o texto do expediente ou use o modo Barcode.`;
-      }
       setAiBoxState('error');
-      setAiBoxMessage(errorMsg);
+      setAiBoxMessage(`Falha na IA. Tente modo manual ou Barcode.`);
       playChipBeep('error');
       showToast('error');
     }
   };
-
-  useEffect(() => {
-    if (window.Html5Qrcode) { setIsHtml5QrcodeLoaded(true); return; }
-    if (!document.getElementById('html5-qrcode')) {
-      const script = document.createElement('script');
-      script.id = 'html5-qrcode';
-      script.src = "https://unpkg.com/html5-qrcode/html5-qrcode.min.js";
-      script.async = true;
-      script.onload = () => setIsHtml5QrcodeLoaded(true);
-      document.head.appendChild(script);
-    }
-  }, []);
 
   const showToast = (type = 'success') => {
     setToast({ visible: true, type });
@@ -2438,6 +2391,16 @@ REGRAS RÍGIDAS:
       setIsFetchingCloud(false);
       setInitialLoadDone(true);
       setIsLoaded(true);
+    }
+
+    if (window.Html5Qrcode) { setIsHtml5QrcodeLoaded(true); }
+    else if (!document.getElementById('html5-qrcode')) {
+      const script = document.createElement('script');
+      script.id = 'html5-qrcode';
+      script.src = "https://unpkg.com/html5-qrcode/html5-qrcode.min.js";
+      script.async = true;
+      script.onload = () => setIsHtml5QrcodeLoaded(true);
+      document.head.appendChild(script);
     }
   }, []);
 
@@ -2593,10 +2556,10 @@ REGRAS RÍGIDAS:
   const renderKatamariSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} /></div>);
   const renderPacmanEnd = () => (
     <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
-      <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-500'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
-      <div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" />
-      <div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" />
-      <div className="w-1.5 h-1.5 bg-amber-200 rounded-full shadow-[0_0_3px_currentColor]" />
+      <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
+      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" />
+      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" />
+      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" />
       <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #fbbf24)` : 'none' }}>
         <path fill="#fbbf24" transform="scale(-1, 1) translate(-100, 0)">
           <animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" />
@@ -2620,7 +2583,7 @@ REGRAS RÍGIDAS:
     Object.keys(activeCategories).forEach((cat, index) => {
        const count = catCounts[cat] || 0;
        const perc = totalItens > 0 ? ((count / totalItens) * 100).toFixed(1) : 0;
-       const colors = ['text-pink-400', 'text-amber-400', 'text-cyan-400', 'text-green-400', 'text-purple-400'];
+       const colors = ['text-pink-500', 'text-amber-500', 'text-cyan-500'];
        statsArr.push(
          <span key={cat} className={`${colors[index % colors.length]} ${ledItemStyle}`}>
            {cat.toUpperCase()}: {count} ({perc}%)
@@ -2628,7 +2591,7 @@ REGRAS RÍGIDAS:
        );
     });
     
-    if (Number(globalAvgRating) > 0) statsArr.push(<span key="rating" className={`text-amber-400 ${ledItemStyle}`}>NOTA MÉDIA GLOBAL: {formatStars(globalAvgRating)}</span>);
+    if (Number(globalAvgRating) > 0) statsArr.push(<span key="rating" className={`text-amber-500 ${ledItemStyle}`}>NOTA MÉDIA GLOBAL: {formatStars(globalAvgRating)}</span>);
 
     return (
       <div className="flex items-center py-1" style={textShadowStyle}>
@@ -2660,8 +2623,8 @@ REGRAS RÍGIDAS:
        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
-          <KatamariIcon className="w-24 h-24 mb-6 z-10 text-cyan-400" glow={10} />
-          <p className="text-cyan-400 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
+          <KatamariIcon className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} />
+          <p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
        </div>
     );
   }
@@ -2672,7 +2635,7 @@ REGRAS RÍGIDAS:
          <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
          <div className="z-10 flex flex-col items-center justify-center gap-6 animate-in zoom-in duration-300">
-           <img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(219,39,119,0.8)]" />
+           <img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(236,72,153,0.8)]" />
            <h1 className="text-4xl text-pink-600 drop-shadow-[0_0_10px_currentColor] text-center leading-none uppercase tracking-tighter">Memorabilia</h1>
          </div>
       </div>
@@ -2689,15 +2652,15 @@ REGRAS RÍGIDAS:
             <span className="hidden lg:block text-xs font-black uppercase tracking-widest mt-1">Memorabilia</span>
           </div>
           <div className="flex-1 flex flex-col pt-4">
-            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-600 text-white border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-700 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent'}`}>
               <Library className="w-6 h-6" />
               <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Coleção</span>
             </button>
-            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white border-l-[4px] border-amber-400' : 'bg-amber-500 text-white border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white border-l-[4px] border-amber-400' : 'bg-amber-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent'}`}>
               <PlusSquare className="w-6 h-6" />
               <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
-            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white border-l-[4px] border-pink-400' : 'bg-pink-600 text-white border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}>
+            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white border-l-[4px] border-pink-400' : 'bg-pink-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent'}`}>
               <BarChart2 className="w-6 h-6" />
               <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Dashboard</span>
             </button>
@@ -2719,7 +2682,7 @@ REGRAS RÍGIDAS:
                 </h1>
                 <div className="flex flex-row gap-2 mt-2 w-full h-[38px] md:h-[42px]">
                   {settings?.lastfmUser ? (
-                    <div onMouseDown={handleLfmPressStart} onMouseUp={handleLfmPressEnd} onMouseLeave={handleLfmPressEnd} onTouchStart={handleLfmPressStart} onTouchEnd={handleLfmPressEnd} onClick={handleLfmClick} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[2px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-pink-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                    <div onMouseDown={handleLfmPressStart} onMouseUp={handleLfmPressEnd} onMouseLeave={handleLfmPressEnd} onTouchStart={handleLfmPressStart} onTouchEnd={handleLfmPressEnd} onClick={handleLfmClick} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[2px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-pink-800 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-pink-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                       <Headphones className={`w-3.5 h-3.5 flex-shrink-0 ${isPulsingLfm ? 'animate-pulse' : ''}`} /> 
                       <div className="flex flex-col truncate leading-none justify-center w-full">
                         <span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">{lfmLabelStr}</span>
@@ -2733,7 +2696,7 @@ REGRAS RÍGIDAS:
                     </div>
                   )}
                   {suggestion ? (
-                    <div role="button" tabIndex={0} title="Sortear outro disco" onContextMenu={e => e.preventDefault()} onTouchStart={handleSuggPressStart} onTouchEnd={handleSuggPressEnd} onMouseDown={handleSuggPressStart} onMouseUp={handleSuggPressEnd} onMouseLeave={handleSuggPressEnd} onClick={handleSuggClick} style={{ WebkitTouchCallout: 'none' }} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[2px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-cyan-900 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+                    <div role="button" tabIndex={0} title="Sortear outro disco" onContextMenu={e => e.preventDefault()} onTouchStart={handleSuggPressStart} onTouchEnd={handleSuggPressEnd} onMouseDown={handleSuggPressStart} onMouseUp={handleSuggPressEnd} onMouseLeave={handleSuggPressEnd} onClick={handleSuggClick} style={{ WebkitTouchCallout: 'none' }} className={`flex-1 w-1/2 min-w-0 p-1 px-1.5 border-[2px] flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-all overflow-hidden ${darkMode ? 'bg-cyan-800 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
                       <Sparkles className="w-3.5 h-3.5 flex-shrink-0" /> 
                       <div className="flex flex-col truncate leading-none justify-center w-full">
                         <span className="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80 truncate">Ouvir Hoje:</span>
@@ -2749,16 +2712,16 @@ REGRAS RÍGIDAS:
                 </div>
               </div>
               <div className="w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 flex items-center justify-center transition-all duration-300 relative ml-2 md:hidden">
-                {toast.visible ? (toast.type === 'error' ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-400 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />) : (<img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200 md:hidden" />)}
+                {toast.visible ? (toast.type === 'error' ? <XIcon className="text-pink-600 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-600 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />) : (<img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-full h-full object-contain animate-in zoom-in duration-200 md:hidden" />)}
               </div>
               <div className="hidden md:flex w-14 h-14 lg:w-16 lg:h-16 flex-shrink-0 items-center justify-center transition-all duration-300 relative ml-2">
-                 {toast.visible && (toast.type === 'error' ? <XIcon className="text-pink-500 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-400 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />)}
+                 {toast.visible && (toast.type === 'error' ? <XIcon className="text-pink-600 w-10 h-10 drop-shadow-md animate-in zoom-in duration-200" /> : <Check className="text-cyan-600 w-10 h-10 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-in zoom-in duration-200" />)}
               </div>
             </div>
 
             <div className="flex flex-row mt-2 items-stretch h-[40px] sm:h-[48px]">
               <div className={`flex-1 w-full flex flex-col border-[2px] text-[7px] sm:text-[8px] lg:text-[9px] font-black uppercase tracking-widest overflow-hidden relative ${darkMode ? 'border-gray-300 bg-black text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
-                 <div className="px-1.5 py-0.5 sm:py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel LED - Status da Coleção</span><span className="animate-pulse text-cyan-400 ml-1">REC</span></div>
+                 <div className="px-1.5 py-0.5 sm:py-1 border-b-[2px] border-gray-800 opacity-80 flex justify-between z-10 bg-black"><span className="truncate">Painel LED - Status da Coleção</span><span className="animate-pulse text-cyan-600 ml-1">REC</span></div>
                  <div className="flex-1 flex items-center overflow-hidden w-full relative led-board">
                     <div className="absolute whitespace-nowrap flex items-center" style={{ animation: `marqueeLinear ${speed}s linear infinite`, width: 'max-content' }}>
                       {renderMarqueeContent()} {renderMarqueeContent()}
@@ -2778,15 +2741,15 @@ REGRAS RÍGIDAS:
           </main>
 
           <nav className={`flex md:hidden flex-none border-t-[2px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
-            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-800 text-white' : 'bg-cyan-600 text-white') : ''}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-white') : ''}`}>
               <Library className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Coleção</span>
             </button>
-            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-500 text-white') : ''}`}>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white') : ''}`}>
               <PlusSquare className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
-            <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-800 text-white' : 'bg-pink-600 text-white') : ''}`}>
+            <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white') : ''}`}>
               <BarChart2 className="w-5 h-5 mb-1" />
               <span className="text-[7px] font-black uppercase tracking-widest">Geral</span>
             </button>
