@@ -557,9 +557,9 @@ const usePWA = (iconUrl) => {
 };
 
 // ==========================================
-// COMPONENTES UI MONDRIAN (Estética Suavizada)
+// COMPONENTES UI MONDRIAN (Estética Suavizada - 2px)
 // ==========================================
-const getChartColors = darkMode => darkMode ? ['#be185d', '#0e7490', '#d97706', '#9d174d', '#164e63', '#b45309'] : ['#db2777', '#0891b2', '#d97706', '#be185d', '#0e7490', '#b45309'];
+const getChartColors = darkMode => darkMode ? ['#be185d', '#0e7490', '#d97706', '#9d174d', '#164e63', '#b45309'] : ['#db2777', '#0891b2', '#f59e0b', '#be185d', '#0e7490', '#d97706'];
 const getMondrianColor = (index, darkMode) => darkMode ? ['bg-pink-800', 'bg-cyan-800', 'bg-amber-700', 'bg-gray-800'][index % 4] : ['bg-pink-600', 'bg-cyan-600', 'bg-amber-500', 'bg-gray-100'][index % 4];
 
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
@@ -740,7 +740,6 @@ const getPagesBucket = (pagesVal) => {
 // ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
-
 const LibraryTab = ({ items, setItems, darkMode, settings, onShowToast, activeCategories }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
@@ -2248,6 +2247,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   );
 };
 
+// ==========================================
+// COMPONENTE PRINCIPAL (APP)
+// ==========================================
 export default function App() {
   const [activeTab, setActiveTab] = useState('library');
   const [addMode, setAddMode] = useState('manual');
@@ -2634,6 +2636,12 @@ REGRAS RÍGIDAS:
       </div>
     );
   };
+
+  const suggPressTimer = useRef(null);
+  const isSuggLongPress = useRef(false);
+  const handleSuggPressStart = () => { isSuggLongPress.current = false; suggPressTimer.current = setTimeout(() => { isSuggLongPress.current = true; shuffleSuggestion(); }, 500); };
+  const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
+  const handleSuggClick = () => { if (!isSuggLongPress.current && suggestion) window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank'); };
 
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
