@@ -282,6 +282,7 @@ const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
 const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
+const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M14 21h-4"/><path d="M12 17v4"/><path d="m10 13 5-3-5-3v6z"/></>} />;
 
 // ==========================================
 // PWA ENGINE
@@ -341,7 +342,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
 };
 
 const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly = false }) => (
-  <div className="flex flex-col mb-3 w-full">
+  <div className="flex flex-col mb-3 w-full h-full">
     {label && <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>}
     {multiline ? (
       <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-amber-100 dark:focus:bg-amber-900'} transition-colors min-h-[80px] resize-none`} />
@@ -432,8 +433,6 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
   const [itemToDelete, setItemToDelete] = useState(null);
   const [contextMenuItem, setContextMenuItem] = useState(null);
   const [isSearchingCover, setIsSearchingCover] = useState(false);
-  const [loadingWiki, setLoadingWiki] = useState(false);
-  const [wikiError, setWikiError] = useState('');
   
   const itemsPerPage = 12;
 
@@ -508,24 +507,6 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
     }
   };
 
-  const fetchWikiInfo = async () => {
-    const apiKey = (settings?.geminiApiKey || "").trim();
-    if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
-    setLoadingWiki(true); setWikiError('');
-
-    const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
-
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: optimizedPrompt }] }] }) });
-      if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
-      const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
-    } catch (e) {
-      setWikiError("Erro na comunicação com a IA."); playChipBeep('error');
-    } finally { setLoadingWiki(false); }
-  };
-
   if (selectedItem && editedItem) {
     const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(editedItem.type);
     const isDiscItem = (activeCategories['Discos'] || []).includes(editedItem.type);
@@ -596,17 +577,6 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
             <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}><ExternalLink className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Buscar na Web</span></a>
             {isDiscItem && <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}><Headphones className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Spotify</span></a>}
           </div>
-
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
-            <div className={`flex justify-between items-center mb-3 border-b-[2px] pb-1 ${darkMode ? 'border-gray-300' : 'border-black'}`}><span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Sparkles className="w-4 h-4" /> Enciclopédia (IA)</span></div>
-            {editedItem.wiki_info ? (
-              <div><p className="text-xs font-bold leading-relaxed opacity-90 whitespace-pre-wrap text-justify mb-3 italic">"{editedItem.wiki_info}"</p><button onClick={fetchWikiInfo} className="text-[9px] font-black uppercase tracking-widest underline opacity-70 hover:opacity-100 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Gerar Nova Pesquisa</button></div>
-            ) : (
-             <div className="text-center py-2">
-                {loadingWiki ? (<div className="flex flex-col items-center"><Sparkles className="w-6 h-6 animate-pulse mb-2 text-pink-500" /><span className="text-[10px] font-black uppercase tracking-widest animate-pulse opacity-70">Consultando oráculo...</span></div>) : (<div className="flex flex-col items-center gap-2">{wikiError && <div className="text-[9px] font-bold text-white bg-pink-600 p-2 border-[2px] border-black rounded shadow-sm text-center">{wikiError}</div>}<MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-pink-600 border-black dark:bg-pink-700 text-white">✨ Pesquisar sobre a Obra</MButton></div>)}
-              </div>
-            )}
-          </MContainer>
 
           <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[2px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-700 border-gray-300 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-600 border-black text-white'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><Check className="w-5 h-5" /> Salvar Alterações</button>
 
@@ -843,7 +813,15 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             </div>
 
             <MInput darkMode={darkMode} label="Descrição" multiline value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-            <MInput darkMode={darkMode} label="Código de Barras/Catálogo" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} />
+            
+            <div className="flex gap-2 w-full">
+              <div className="flex-1">
+                <MInput darkMode={darkMode} label="Código de Barras/Catálogo" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} />
+              </div>
+              <div className="flex items-end mb-3">
+                <MButton darkMode={darkMode} variant="amber" onClick={(e) => { e.preventDefault(); if(formData.barcode) fetchMultiDatabaseParallel(formData.barcode); else { playChipBeep('error'); updateStatus('error', 'Digite um código primeiro.'); } }} className="h-[38px] px-3"><Search className="w-4 h-4"/> Buscar</MButton>
+              </div>
+            </div>
             
             <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-50 text-black'}>
               <MInput darkMode={darkMode} label="Anotações" multiline value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
