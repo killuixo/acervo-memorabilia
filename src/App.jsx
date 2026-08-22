@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 // ==========================================
 // CONFIGURAÇÕES DO APLICATIVO E ARQUIVOLOGIA
 // ==========================================
+/* STREAMING_CHUNK:Inicializando variáveis e configurações... */
 const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/acervo-memorabilia/main/icon-192.png";
 
 const DEFAULT_CATEGORIES = {
@@ -24,6 +25,7 @@ const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'
 // ==========================================
 // AUDIO ENGINE (CHIPTUNE 8-BIT)
 // ==========================================
+/* STREAMING_CHUNK:Configurando Audio Engine... */
 let audioCtx = null;
 const initAudio = () => {
   try {
@@ -76,6 +78,7 @@ const playChipBeep = (type) => {
 // ==========================================
 // FUNÇÕES UTILITÁRIAS
 // ==========================================
+/* STREAMING_CHUNK:Carregando utilitários do sistema... */
 let globalSequenceCache = null;
 
 const generateId = (itemsArray = []) => {
@@ -192,6 +195,7 @@ const fetchTimeout = (url, options = {}, timeoutMs = 8000) => {
   });
 };
 
+/* STREAMING_CHUNK:Carregando rotinas de buscas por imagens... */
 const fetchCoverBySearch = async (item, settings, activeCategories) => {
   const qTitle = encodeURIComponent(item.title ? item.title.trim() : '');
   const qAuthor = encodeURIComponent(item.author_developer ? item.author_developer.trim() : '');
@@ -240,16 +244,42 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 };
 
 // ==========================================
-// ÍCONES SVG NATIVOS
+// ÍCONES SVG NATIVOS E DISCO IRIDESCENTE
 // ==========================================
+/* STREAMING_CHUNK:Atualizando ícone para o formato de Disco Iridescente... */
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>;
-const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
-  <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
-    <g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
-    <circle cx="50" cy="50" r="28" fill="currentColor" stroke="currentColor" strokeWidth="6" strokeDasharray="5 5" />
-    <g stroke="#ffffff" strokeWidth="6" strokeLinecap="round" opacity="0.8"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g></g>
-  </svg>
-);
+
+const KatamariIcon = ({ className = "w-6 h-6", glow = 0, speed = 35 }) => {
+  const cycleDur = Math.max(3, speed / 4);
+  return (
+    <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
+      <defs>
+        <linearGradient id="cdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0891b2">
+            <animate attributeName="stop-color" values="#0891b2;#db2777;#d97706;#0891b2" dur={`${cycleDur}s`} repeatCount="indefinite" />
+          </stop>
+          <stop offset="50%" stopColor="#db2777">
+            <animate attributeName="stop-color" values="#db2777;#d97706;#0891b2;#db2777" dur={`${cycleDur}s`} repeatCount="indefinite" />
+          </stop>
+          <stop offset="100%" stopColor="#d97706">
+            <animate attributeName="stop-color" values="#d97706;#0891b2;#db2777;#d97706" dur={`${cycleDur}s`} repeatCount="indefinite" />
+          </stop>
+        </linearGradient>
+      </defs>
+      <g>
+        <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur={`${cycleDur}s`} repeatCount="indefinite" />
+        <circle cx="50" cy="50" r="45" fill="url(#cdGrad)" stroke="currentColor" strokeWidth="2" />
+        <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+        <circle cx="50" cy="50" r="20" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+      </g>
+      <circle cx="50" cy="50" r="14" stroke="currentColor" strokeWidth="2">
+        <animate attributeName="fill" values="#000000;#ffffff;#000000" dur={`${cycleDur}s`} repeatCount="indefinite" />
+      </circle>
+      <circle cx="50" cy="50" r="4" fill="#555" />
+    </svg>
+  );
+};
+
 const Search = p => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
 const Library = p => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></>} />;
 const PlusSquare = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
@@ -287,6 +317,7 @@ const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2"
 // ==========================================
 // PWA ENGINE
 // ==========================================
+/* STREAMING_CHUNK:Inicializando Web App e Workers... */
 const usePWA = (iconUrl) => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -342,7 +373,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
 };
 
 const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly = false }) => (
-  <div className="flex flex-col mb-3 w-full h-full">
+  <div className="flex flex-col mb-3 w-full">
     {label && <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>}
     {multiline ? (
       <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-amber-100 dark:focus:bg-amber-900'} transition-colors min-h-[80px] resize-none`} />
@@ -427,6 +458,7 @@ const syncDeleteToSheets = (deletedId, googleSheetsUrl) => {
 // ABAS DA APLICAÇÃO
 // ==========================================
 
+/* STREAMING_CHUNK:Renderizando Aba da Biblioteca... */
 const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode, settings, onShowToast, activeCategories, page, setPage }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
@@ -656,6 +688,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
   );
 };
 
+/* STREAMING_CHUNK:Atualizando Aba de Adição e Tratamento de Erros de APIs... */
 const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast, triggerGlobalAI, globalAiState, globalAiMessage, resetGlobalAi, scannedAIData, setScannedAIData, isHtml5QrcodeLoaded, activeCategories, activeClassCodes, allTypes }) => {
   const [scanBox, setScanBox] = useState({ state: 'idle', message: '' });
   const scannerRef = useRef(null); const isProcessingScan = useRef(false);
@@ -699,9 +732,18 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const isBookCode = (cleanCode.length === 13 && (cleanCode.startsWith("978") || cleanCode.startsWith("979"))) || (cleanCode.length === 10 && /^\d{9}[\dX]$/.test(cleanCode));
     const fetchers = [];
 
+    const handleDbError = (res, dbName) => {
+        if (res.status === 429) throw new Error(`Cota excedida (${dbName})`);
+        if (res.status === 403 || res.status === 401) throw new Error(`Sem permissão/token (${dbName})`);
+        if (res.status >= 500) throw new Error(`Servidor ocupado (${dbName})`);
+        if (!res.ok) throw new Error(`Erro ${res.status} (${dbName})`);
+    };
+
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
-      const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`); const data = await res.json();
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`);
+      handleDbError(res, 'Discogs');
+      const data = await res.json();
       if (!data.results || data.results.length === 0) throw new Error("Not found");
       const item = data.results[0]; const titleParts = item.title ? item.title.split(' - ') : [];
       let discType = 'CD'; const fStr = (item.format || []).join(' ').toLowerCase();
@@ -711,7 +753,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchMBrainz = async () => {
-      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`); const data = await res.json();
+      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`);
+      handleDbError(res, 'MBrainz');
+      const data = await res.json();
       if (!data.releases || data.releases.length === 0) throw new Error("Not found");
       const release = data.releases[0]; let fmt = 'CD'; let tc = '';
       if (release.media && release.media.length > 0) { const m = release.media[0]; const fStr = m.format?.toLowerCase() || ''; if (fStr.includes('vinyl') || fStr.includes('12"')) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete'; if (m['track-count']) tc = `${m['track-count']}`; }
@@ -720,7 +764,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchUPC = async () => {
-      const res = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`); const data = await res.json();
+      const res = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${cleanCode}`);
+      handleDbError(res, 'UPC');
+      const data = await res.json();
       if (!data.items || data.items.length === 0) throw new Error("Not found");
       const item = data.items[0]; const cat = String(item.category || "").toLowerCase(); const tit = String(item.title || "").toLowerCase(); let fmt = 'Livro';
       if (cat.includes('music') || tit.includes(' cd') || tit.includes('album')) fmt = 'CD'; else if (cat.includes('video game') || cat.includes('nintendo') || cat.includes('playstation') || cat.includes('xbox') || tit.includes('ps4') || tit.includes('xbox')) fmt = 'PS4'; else if (cat.includes('dvd') || cat.includes('movie') || tit.includes('dvd') || cat.includes('blu-ray') || tit.includes('blu-ray')) fmt = 'DVD';
@@ -728,7 +774,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchGBooks = async () => {
-      const res = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`); const data = await res.json();
+      const res = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanCode}`);
+      handleDbError(res, 'GBooks');
+      const data = await res.json();
       if (!data.items || data.items.length === 0) throw new Error("Not found");
       const info = data.items[0].volumeInfo; let fmt = 'Livro'; const pub = String(info.publisher || "").toLowerCase();
       if (pub.includes('jbc') || pub.includes('conrad') || pub.includes('panini') || pub.includes('marvel') || pub.includes('dc comics')) fmt = 'Quadrinho';
@@ -742,7 +790,20 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     try {
       const foundItem = await Promise.any(fetchers); playChipBeep('success'); updateStatus('success', 'Encontrado com velocidade!');
       setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
-    } catch (e) { playChipBeep('error'); updateStatus('error', 'Item não localizado nos bancos. Preencha manualmente.'); }
+    } catch (e) { 
+      playChipBeep('error'); 
+      if (e instanceof AggregateError) {
+         const realErrors = e.errors.filter(err => err.message !== "Not found" && err.message !== "No token");
+         if (realErrors.length > 0) {
+             const msgs = [...new Set(realErrors.map(err => err.message))].join(', ');
+             updateStatus('error', `Falha nas buscas: ${msgs}`);
+         } else {
+             updateStatus('error', 'Item não localizado nos bancos. Preencha manualmente.');
+         }
+      } else {
+         updateStatus('error', `Erro inesperado: ${e.message}`);
+      }
+    }
   };
 
   const handleSave = () => {
@@ -851,6 +912,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   );
 };
 
+/* STREAMING_CHUNK:Renderizando Aba de Dashboard e Analytics... */
 const DashboardTab = ({ items, filteredItems, darkMode, activeCategories }) => {
   const chartColors = getChartColors(darkMode);
   
@@ -950,6 +1012,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories }) => {
   );
 };
 
+/* STREAMING_CHUNK:Renderizando Aba de Configurações... */
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importData, setImportData] = useState(null);
@@ -959,9 +1022,9 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 
   const handleExportCSV = () => {
     if (items.length === 0) return;
-    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações', 'Wiki'];
+    const headers = ['ID', 'Código Arquivístico', 'Tipo', 'Título', 'Autor/Desenvolvedor', 'Ano', 'Editora/Gravadora', 'Status', 'Nota', 'Páginas/Tempo', 'Código de Barras', 'Descrição', 'URL da Capa', 'Localização', 'Anotações'];
     const escape = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
-    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes), escape(i.wiki_info)]);
+    const rows = items.map(i => [escape(i.id), escape(i.archive_code), escape(i.type), escape(i.title), escape(i.author_developer), escape(i.year), escape(i.publisher), escape(i.status), i.rating || 0, escape(i.pages_or_time), escape(i.barcode), escape(i.description), escape(i.cover_url), escape(i.location), escape(i.notes)]);
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), [headers.join(","), ...rows.map(r => r.join(","))].join("\n")], { type: 'text/csv;charset=utf-8;' }));
     link.download = `Memorabilia_Fisico_${new Date().toISOString().split('T')[0]}.csv`; link.click();
@@ -977,7 +1040,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         if (validRows[i].length === 1 && !validRows[i][0].trim()) continue;
         const item = {};
         headers.forEach((h, idx) => {
-          let key = h; if (h === 'ID') key = 'id'; else if (h === 'Código Arquivístico') key = 'archive_code'; else if (h === 'Tipo') key = 'title'; else if (h === 'Autor/Desenvolvedor') key = 'author_developer'; else if (h === 'Ano' || h === 'Data') key = 'year'; else if (h === 'Editora/Gravadora') key = 'publisher'; else if (h === 'Status') key = 'status'; else if (h === 'Nota') key = 'rating'; else if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time'; else if (h === 'Código de Barras') key = 'barcode'; else if (h === 'Descrição') key = 'description'; else if (h === 'URL da Capa' || h === 'Localização') key = 'location'; else if (h === 'Anotações') key = 'notes'; else if (h === 'Wiki') key = 'wiki_info';
+          let key = h; if (h === 'ID') key = 'id'; else if (h === 'Código Arquivístico') key = 'archive_code'; else if (h === 'Tipo') key = 'title'; else if (h === 'Autor/Desenvolvedor') key = 'author_developer'; else if (h === 'Ano' || h === 'Data') key = 'year'; else if (h === 'Editora/Gravadora') key = 'publisher'; else if (h === 'Status') key = 'status'; else if (h === 'Nota') key = 'rating'; else if (h === 'Páginas/Tempo' || h === 'Métrica' || h === 'Páginas') key = 'pages_or_time'; else if (h === 'Código de Barras') key = 'barcode'; else if (h === 'Descrição') key = 'description'; else if (h === 'URL da Capa' || h === 'Localização') key = 'location'; else if (h === 'Anotações') key = 'notes';
           item[key] = validRows[i][idx] ? validRows[i][idx].trim() : '';
         });
         if (item.id || item.title) { item.id = item.id || generateId(newItems); item.rating = parseInt(item.rating) || 0; newItems.push(item); }
@@ -1128,6 +1191,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
 // ==========================================
 // COMPONENTE PRINCIPAL (APP)
 // ==========================================
+/* STREAMING_CHUNK:Inicializando a Aplicação Global... */
 export default function App() {
   const [activeTab, setActiveTab] = useState('library');
   const [addMode, setAddMode] = useState('manual');
@@ -1243,6 +1307,7 @@ export default function App() {
     e.target.value = null;
   };
 
+  /* STREAMING_CHUNK:Processamento de Imagem com IA e Tratamento de Erros... */
   const processGlobalAIFile = async (file) => {
     const apiKey = (settings?.geminiApiKey || "").trim();
     if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente.'); playChipBeep('error'); return; }
@@ -1268,14 +1333,22 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json" } })
       });
 
-      if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+      if (!res.ok) {
+          if (res.status === 429) throw new Error("Cota da API excedida ou servidor ocupado (429).");
+          if (res.status === 400) throw new Error("Erro de leitura: formato de imagem inválido (400).");
+          if (res.status === 403) throw new Error("Chave API inválida ou sem permissão (403).");
+          if (res.status >= 500) throw new Error("Servidor da IA fora do ar (500+).");
+          throw new Error(`Erro HTTP desconhecido: ${res.status}`);
+      }
+      
       const data = await res.json(); let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Retorno vazio.");
-      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+      if (!text) throw new Error("Retorno da IA veio vazio.");
+      text = text.replace(/
+```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
 
       setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com sucesso da imagem!'); playChipBeep('save'); showToast('success');
     } catch (e) {
-      setAiBoxState('error'); setAiBoxMessage(`Falha na IA. Tente modo manual ou Barcode.`); playChipBeep('error'); showToast('error');
+      setAiBoxState('error'); setAiBoxMessage(`Falha IA: ${e.message}`); playChipBeep('error'); showToast('error');
     }
   };
 
@@ -1313,6 +1386,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
 
   const LFM_PERIODS = ['7day', '1month', '12month', 'overall']; const LFM_PERIOD_LABELS = ['7D', '1M', '1A', 'Geral']; const LFM_STATS = ['Última', 'Top Artista', 'Top Álbum', 'Top Faixa', 'Artistas Únicos', 'Faixas Escutadas'];
 
+  /* STREAMING_CHUNK:Configurando Integrações em Segundo Plano... */
   useEffect(() => {
     if (!settings?.lastfmUser || !settings?.lastfmApiKey || !isLoaded) return;
     const fetchRec = async () => { try { const data = await (await fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${settings.lastfmUser}&api_key=${settings.lastfmApiKey}&format=json&limit=1`)).json(); const t = data?.recenttracks?.track?.[0]; if (t) setLastFmTrack({ name: t.name, artist: t.artist['#text'] || t.artist?.name || 'Desconhecido', nowPlaying: t['@attr']?.nowplaying === 'true' }); } catch(e){} };
@@ -1372,12 +1446,13 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
   const handleLibClick = () => { if (!isLibLongPress.current) { setActiveTab('library'); } };
 
+  /* STREAMING_CHUNK:Finalizando Renderização e Painel de LED... */
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
-  const renderKatamariSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} /></div>);
+  const renderKatamariSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} speed={speed} /></div>);
   const renderPacmanEnd = () => (
     <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
@@ -1408,7 +1483,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
     return (
        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" /><KatamariIcon className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} /><p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" /><KatamariIcon className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} speed={35} /><p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
        </div>
     );
   }
