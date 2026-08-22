@@ -29,9 +29,7 @@ const initAudio = () => {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-  } catch (e) {
-    console.warn("Áudio não suportado", e);
-  }
+  } catch (e) {}
 };
 
 const playLydianSuccess = () => {
@@ -40,22 +38,16 @@ const playLydianSuccess = () => {
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = 'square';
-
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'square';
     const now = audioCtx.currentTime;
     const notes = [523.25, 587.33, 659.25, 739.99, 783.99, 880.00];
     const dur = 0.04;
-
     notes.forEach((freq, i) => osc.frequency.setValueAtTime(freq, now + i * dur));
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(0.04, now + 0.01);
     gain.gain.setValueAtTime(0.04, now + notes.length * dur - 0.02);
     gain.gain.linearRampToValueAtTime(0, now + notes.length * dur);
-
-    osc.start(now);
-    osc.stop(now + notes.length * dur);
+    osc.start(now); osc.stop(now + notes.length * dur);
   } catch (e) {}
 };
 
@@ -65,28 +57,18 @@ const playChipBeep = (type) => {
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    const now = audioCtx.currentTime;
-    const vol = 0.02;
-
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime; const vol = 0.02;
     if (type === 'save' || type === 'success') {
       osc.type = 'square';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.setValueAtTime(554.37, now + 0.05);
-      gain.gain.setValueAtTime(vol, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.1);
+      osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554.37, now + 0.05);
+      gain.gain.setValueAtTime(vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
     } else if (type === 'error') {
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.setValueAtTime(100, now + 0.1);
-      gain.gain.setValueAtTime(vol, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.2);
-      osc.start(now);
-      osc.stop(now + 0.2);
+      osc.frequency.setValueAtTime(150, now); osc.frequency.setValueAtTime(100, now + 0.1);
+      gain.gain.setValueAtTime(vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
     }
   } catch (e) {}
 };
@@ -99,7 +81,6 @@ let globalSequenceCache = null;
 const generateId = (itemsArray = []) => {
   const now = new Date();
   const timeBase = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}${String(now.getMilliseconds()).padStart(3, '0')}`;
-
   if (globalSequenceCache === null) {
     let maxSeq = 0;
     itemsArray.forEach(item => {
@@ -112,99 +93,57 @@ const generateId = (itemsArray = []) => {
   return `${timeBase}-${String(globalSequenceCache).padStart(4, '0')}`;
 };
 
-const parseItemIdToDate = (idStr) => {
-  if (!idStr) return new Date(0);
-  const parts = String(idStr).split('-');
-  if (parts.length < 2) return new Date(0);
-  const datePart = parts[0];
-  if (datePart.length !== 8) return new Date(0);
-
-  const y = parseInt(datePart.substring(0, 4), 10);
-  const m = parseInt(datePart.substring(4, 6), 10) - 1;
-  const d = parseInt(datePart.substring(6, 8), 10);
-  return new Date(y, m, d);
-};
-
 const reindexCollection = (currentItems) => {
-  const sorted = [...currentItems].sort((a, b) => {
-    const timeA = String(a.id || '').substring(0, 18);
-    const timeB = String(b.id || '').substring(0, 18);
-    return timeA.localeCompare(timeB);
-  });
-
-  const classCodeCounters = {};
-  let globalCounter = 1;
-
+  const sorted = [...currentItems].sort((a, b) => String(a.id || '').substring(0, 18).localeCompare(String(b.id || '').substring(0, 18)));
+  const classCodeCounters = {}; let globalCounter = 1;
   const reindexed = sorted.map(item => {
-    const idParts = String(item.id || '').split('-');
     let newId = item.id;
-    if (idParts.length >= 2) {
-      const timePrefix = idParts.slice(0, 2).join('-');
-      newId = `${timePrefix}-${String(globalCounter).padStart(4, '0')}`;
-    }
-
+    if (item.id?.includes('-')) newId = `${item.id.split('-').slice(0, 2).join('-')}-${String(globalCounter).padStart(4, '0')}`;
     let newArchiveCode = item.archive_code;
     if (item.archive_code) {
       const archParts = String(item.archive_code).split('-');
       if (archParts.length >= 3) {
-        const prefix = archParts[0];
         const classCode = archParts[1];
         classCodeCounters[classCode] = (classCodeCounters[classCode] || 0) + 1;
-        newArchiveCode = `${prefix}-${classCode}-${String(classCodeCounters[classCode]).padStart(4, '0')}`;
+        newArchiveCode = `${archParts[0]}-${classCode}-${String(classCodeCounters[classCode]).padStart(4, '0')}`;
       }
     }
-
     globalCounter++;
     return { ...item, id: newId, archive_code: newArchiveCode };
   });
-
   globalSequenceCache = globalCounter - 1;
   return reindexed;
 };
 
-const resizeImageForAPI = (file, maxWidth = 600) => {
+const resizeImageForAPI = (file, maxWidth = 800) => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+    const reader = new FileReader(); reader.readAsDataURL(file);
     reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target.result;
+      const img = new Image(); img.src = e.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = maxWidth;
-        canvas.height = img.height * (maxWidth / img.width);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.onerror = reject;
-    };
-    reader.onerror = reject;
+        canvas.width = maxWidth; canvas.height = img.height * (maxWidth / img.width);
+        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      }; img.onerror = reject;
+    }; reader.onerror = reject;
   });
 };
 
 const parseCSVText = (rawText) => {
   const text = rawText.replace(/^\uFEFF/, '');
   const rows = []; let row = []; let inQuotes = false; let val = '';
-
   for (let i = 0; i < text.length; i++) {
     let char = text[i]; let nextChar = text[i + 1];
-    if (char === '"' && inQuotes && nextChar === '"') {
-      val += '"'; i++;
-    } else if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      row.push(val); val = '';
-    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+    if (char === '"' && inQuotes && nextChar === '"') { val += '"'; i++; } 
+    else if (char === '"') { inQuotes = !inQuotes; } 
+    else if (char === ',' && !inQuotes) { row.push(val); val = ''; } 
+    else if ((char === '\n' || char === '\r') && !inQuotes) {
       if (char === '\r' && nextChar === '\n') i++;
       row.push(val); rows.push(row); row = []; val = '';
-    } else {
-      val += char;
-    }
+    } else { val += char; }
   }
-  if (val !== '' || row.length > 0) {
-    row.push(val); rows.push(row);
-  }
+  if (val !== '' || row.length > 0) { row.push(val); rows.push(row); }
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0].trim() !== ''));
 };
 
@@ -216,11 +155,8 @@ const normalizeWorkTitle = title => {
 };
 
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
-
-const isVariousArtists = name => {
-  const n = String(name || '').toLowerCase().trim();
-  return ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => n.includes(k));
-};
+const isVariousArtists = name => ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => String(name || '').toLowerCase().trim().includes(k));
+const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
 const applyArtistAlias = (name, aliases = []) => {
   if (!name || !Array.isArray(aliases)) return name;
@@ -228,8 +164,6 @@ const applyArtistAlias = (name, aliases = []) => {
   const found = aliases.find(a => a.alias.trim().toLowerCase() === n);
   return found ? found.main : name.trim();
 };
-
-const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
 
 const getExternalLinkInfo = (type, title, specificLink = '') => {
   if (specificLink?.trim().startsWith('http')) return { url: specificLink.trim(), isExact: true };
@@ -243,7 +177,7 @@ const getExternalLinkInfo = (type, title, specificLink = '') => {
 const getMetricInfo = (itemType, activeCategories) => {
   if ((activeCategories['Livros'] || []).includes(itemType)) return { label: 'Págs', desc: 'Páginas' };
   if ((activeCategories['Discos'] || []).includes(itemType)) return { label: 'Faixas', desc: 'Faixas' };
-  if ((activeCategories['Games'] || []).includes(itemType)) return { label: 'Horas/Unid', desc: 'Horas/Jogos' };
+  if ((activeCategories['Games'] || []).includes(itemType)) return { label: 'Horas', desc: 'Horas' };
   if ((activeCategories['Vídeo'] || []).includes(itemType)) return { label: 'Min', desc: 'Minutos' };
   return { label: 'Und', desc: 'Métrica' };
 };
@@ -251,11 +185,7 @@ const getMetricInfo = (itemType, activeCategories) => {
 const fetchTimeout = (url, options = {}, timeoutMs = 8000) => {
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-      reject(new Error("Timeout limite atingido da API externa"));
-    }, timeoutMs);
-
+    const timer = setTimeout(() => { controller.abort(); reject(new Error("Timeout")); }, timeoutMs);
     fetch(url, { ...options, signal: controller.signal })
       .then(response => { clearTimeout(timer); resolve(response); })
       .catch(err => { clearTimeout(timer); reject(err); });
@@ -263,97 +193,46 @@ const fetchTimeout = (url, options = {}, timeoutMs = 8000) => {
 };
 
 const fetchCoverBySearch = async (item, settings, activeCategories) => {
-  const titleRaw = item.title ? item.title.trim() : '';
-  const authorRaw = item.author_developer ? item.author_developer.trim() : '';
+  const qTitle = encodeURIComponent(item.title ? item.title.trim() : '');
+  const qAuthor = encodeURIComponent(item.author_developer ? item.author_developer.trim() : '');
   const typeRaw = item.type ? item.type.trim() : '';
-  const yearRaw = item.year ? String(item.year).trim() : '';
-  const pubRaw = item.publisher ? item.publisher.trim() : '';
   const barcodeRaw = item.barcode ? item.barcode.replace(/[-\s]/g, "") : '';
-
-  const qTitle = encodeURIComponent(titleRaw);
-  const qAuthor = encodeURIComponent(authorRaw);
-
   const isBook = (activeCategories['Livros'] || []).includes(typeRaw);
   const isDisc = (activeCategories['Discos'] || []).includes(typeRaw);
   const isGame = (activeCategories['Games'] || []).includes(typeRaw);
-  const isVideo = (activeCategories['Vídeo'] || []).includes(typeRaw);
 
   if (barcodeRaw) {
-    try {
-      const upcRes = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`);
-      const upcData = await upcRes.json();
-      if (upcData.items?.[0]?.images?.[0]) return upcData.items[0].images[0];
-    } catch(e) {}
-
+    try { const res = await fetchTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcodeRaw}`); const data = await res.json(); if (data.items?.[0]?.images?.[0]) return data.items[0].images[0]; } catch(e) {}
     if (isBook) {
-      try {
-        const gbRes = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcodeRaw}`);
-        const gbData = await gbRes.json();
-        if (gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) {
-          return gbData.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
-        }
-      } catch(e) {}
+      try { const res = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcodeRaw}`); const data = await res.json(); if (data.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) return data.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3"); } catch(e) {}
     }
-
     if (isDisc && settings?.discogsToken) {
-      try {
-        const dcRes = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${barcodeRaw}&token=${settings.discogsToken}`);
-        const dcData = await dcRes.json();
-        if (dcData.results?.[0]?.cover_image && !dcData.results[0].cover_image.includes('spacer.gif')) {
-          return dcData.results[0].cover_image;
-        }
-      } catch(e) {}
+      try { const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${barcodeRaw}&token=${settings.discogsToken}`); const data = await res.json(); if (data.results?.[0]?.cover_image && !data.results[0].cover_image.includes('spacer.gif')) return data.results[0].cover_image; } catch(e) {}
     }
   }
 
-  if (isDisc) {
-    if (settings?.discogsToken) {
-      try {
-        let formatQuery = '';
-        const tLower = typeRaw.toLowerCase();
-        if (tLower.includes('vinil') || tLower.includes('lp')) formatQuery = '&format=vinyl';
-        else if (tLower.includes('cd')) formatQuery = '&format=cd';
-        
-        let queryUrl = `https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`;
-        const dcRes = await fetchTimeout(queryUrl);
-        const dcData = await dcRes.json();
-
-        if (dcData.results?.length > 0) {
-          let bestMatch = dcData.results.find(r => (yearRaw && r.year === yearRaw));
-          if (!bestMatch) bestMatch = dcData.results[0];
-          if (bestMatch?.cover_image && !bestMatch.cover_image.includes('spacer.gif')) return bestMatch.cover_image;
-        }
-      } catch(e) {}
-    }
+  if (isDisc && settings?.discogsToken) {
+    try {
+      let formatQuery = typeRaw.toLowerCase().includes('vinil') ? '&format=vinyl' : typeRaw.toLowerCase().includes('cd') ? '&format=cd' : '';
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?release_title=${qTitle}&artist=${qAuthor}${formatQuery}&token=${settings.discogsToken}`);
+      const data = await res.json();
+      if (data.results?.[0]?.cover_image && !data.results[0].cover_image.includes('spacer.gif')) return data.results[0].cover_image;
+    } catch(e) {}
   } else if (isBook) {
     try {
-      let gbQuery = `intitle:"${titleRaw}"`;
-      if (authorRaw) gbQuery += `+inauthor:"${authorRaw}"`;
-
-      let gbRes = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(gbQuery)}&maxResults=5`);
-      let gbData = await gbRes.json();
-
-      if (gbData.items) {
-        let bestMatch = gbData.items.find(i => i.volumeInfo?.imageLinks?.thumbnail);
-        if (bestMatch?.volumeInfo?.imageLinks?.thumbnail) {
-          return bestMatch.volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
-        }
-      }
+      const res = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(`intitle:"${item.title}"+inauthor:"${item.author_developer}"`)}&maxResults=2`);
+      const data = await res.json();
+      if (data.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) return data.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3");
     } catch(e) {}
   } else if (isGame) {
     try {
-      const wikiRes = await fetchTimeout(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(`${titleRaw} ${typeRaw} game cover`)}&utf8=&format=json&origin=*`);
-      const wikiData = await wikiRes.json();
-
-      if (wikiData.query?.search?.length > 0) {
-        const title = wikiData.query.search[0].title;
-        const imgRes = await fetchTimeout(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
+      const res = await fetchTimeout(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(`${item.title} ${typeRaw} game cover`)}&utf8=&format=json&origin=*`);
+      const data = await res.json();
+      if (data.query?.search?.length > 0) {
+        const imgRes = await fetchTimeout(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(data.query.search[0].title)}&prop=pageimages&pithumbsize=800&format=json&origin=*`);
         const imgData = await imgRes.json();
         const pages = imgData.query?.pages;
-        if (pages) {
-          const pageId = Object.keys(pages)[0];
-          if (pages[pageId]?.thumbnail?.source) return pages[pageId].thumbnail.source;
-        }
+        if (pages && Object.values(pages)[0]?.thumbnail?.source) return Object.values(pages)[0].thumbnail.source;
       }
     } catch(e) {}
   }
@@ -361,17 +240,14 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 };
 
 // ==========================================
-// ÍCONES NATIVOS SVG
+// ÍCONES SVG NATIVOS
 // ==========================================
-const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => (
-  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>
-);
+const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>;
 const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
     <g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
-    <circle cx="50" cy="50" r="28" fill="#d97706" stroke="#d97706" strokeWidth="6" strokeDasharray="5 5" />
-    <g stroke="#0891b2" strokeWidth="6" strokeLinecap="round"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g>
-    <g stroke="#db2777" strokeWidth="7" strokeLinecap="round"><line x1="50" y1="18" x2="50" y2="22" /><line x1="50" y1="82" x2="50" y2="78" /><line x1="18" y1="50" x2="22" y2="50" /><line x1="82" y1="50" x2="78" y2="50" /><line x1="28" y1="28" x2="32" y2="32" /><line x1="72" y1="72" x2="68" y2="68" /><line x1="28" y1="72" x2="32" y2="68" /><line x1="72" y1="28" x2="68" y2="32" /></g></g>
+    <circle cx="50" cy="50" r="28" fill="currentColor" stroke="currentColor" strokeWidth="6" strokeDasharray="5 5" />
+    <g stroke="#ffffff" strokeWidth="6" strokeLinecap="round" opacity="0.8"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g></g>
   </svg>
 );
 const Search = p => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
@@ -390,24 +266,19 @@ const ChevronRight = p => <Icon {...p} path={<path d="m9 18 6-6-6-6"/>} />;
 const ChevronDown = p => <Icon {...p} path={<path d="m6 9 6 6 6-6"/>} />;
 const ChevronUp = p => <Icon {...p} path={<path d="m18 15-6-6-6 6"/>} />;
 const Check = p => <Icon {...p} path={<path d="M20 6 9 17l-5-5"/>} />;
-const ScanLine = p => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2-2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
-const Clock = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></>} />;
-const Flame = p => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>} />;
+const ScanLine = p => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>} />;
 const Ghost = p => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
 const LibraryBig = p => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = p => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
 const Sparkles = p => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
 const FilterIcon = p => <Icon {...p} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
-const Calendar = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />;
 const Smartphone = p => <Icon {...p} path={<><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></>} />;
 const DiscIcon = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></>} />;
-const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></>} />;
 const XIcon = p => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
 const Zap = p => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
 const ListIcon = p => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></>} />;
 const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
 const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
-const Music = p => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
 const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
@@ -420,42 +291,16 @@ const usePWA = (iconUrl) => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    const manifest = {
-      name: "Memorabilia",
-      short_name: "Memorabilia",
-      description: "Sua coleção física na palma da mão.",
-      start_url: ".",
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#000000",
-      icons: [
-        { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" },
-        { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }
-      ]
-    };
-
+    const manifest = { name: "Memorabilia", short_name: "Memorabilia", display: "standalone", background_color: "#ffffff", theme_color: "#000000", icons: [{ src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" }, { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }] };
     const manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
     let manifestLink = document.querySelector('link[rel="manifest"]');
-
-    if (!manifestLink) {
-      manifestLink = document.createElement('link');
-      manifestLink.rel = 'manifest';
-      document.head.appendChild(manifestLink);
-    }
+    if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
     manifestLink.href = manifestUrl;
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(new Blob([`self.addEventListener('fetch', (e) => {});`], { type: 'application/javascript' }))).catch(() => {});
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(URL.createObjectURL(new Blob([`self.addEventListener('fetch', (e) => {});`], { type: 'application/javascript' }))).catch(() => {});
-    }
-
-    const handlePrompt = (e) => {
-      e.preventDefault();
-      setInstallPrompt(e);
-    };
-
+    const handlePrompt = (e) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', handlePrompt);
     if (window.matchMedia('(display-mode: standalone)').matches) setIsInstalled(true);
-
     return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
   }, [iconUrl]);
 
@@ -463,21 +308,17 @@ const usePWA = (iconUrl) => {
     if (!installPrompt) return;
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setInstallPrompt(null);
-      setIsInstalled(true);
-    }
+    if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true); }
   };
-
   return { isInstallable: !!installPrompt, promptInstall, isInstalled };
 };
 
 // ==========================================
 // COMPONENTES UI MONDRIAN 
-// Estética Padronizada (Cyan, Pink, Amber)
+// Simplificado para 3 Cores Principais: Ciano, Pink, Amber
 // ==========================================
-const getChartColors = darkMode => darkMode ? ['#be185d', '#0e7490', '#b45309', '#9d174d', '#155e75', '#92400e'] : ['#db2777', '#0891b2', '#d97706', '#be185d', '#0e7490', '#b45309'];
-const getMondrianColor = (index, darkMode) => darkMode ? ['bg-pink-700', 'bg-cyan-700', 'bg-amber-700', 'bg-gray-800'][index % 4] : ['bg-pink-600', 'bg-cyan-600', 'bg-amber-600', 'bg-white'][index % 4];
+const getChartColors = darkMode => darkMode ? ['#0e7490', '#be185d', '#b45309', '#155e75', '#9d174d', '#92400e'] : ['#0891b2', '#db2777', '#d97706', '#06b6d4', '#ec4899', '#f59e0b'];
+const getMondrianColor = (index, darkMode) => darkMode ? ['bg-cyan-700', 'bg-pink-700', 'bg-amber-700'][index % 3] : ['bg-cyan-600', 'bg-pink-600', 'bg-amber-600'][index % 3];
 
 const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
   <div className={`border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${colorClass} ${className} transition-colors duration-300`}>
@@ -493,11 +334,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   if (variant === 'black') bg = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
 
   return (
-    <button
-      disabled={disabled}
-      onClick={onClick}
-      className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}
-    >
+    <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}>
       {icon} {children}
     </button>
   );
@@ -507,24 +344,9 @@ const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "
   <div className="flex flex-col mb-3 w-full">
     {label && <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>}
     {multiline ? (
-      <textarea
-        readOnly={readOnly}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-amber-100 dark:focus:bg-amber-900'} transition-colors min-h-[80px] resize-none`}
-      />
+      <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-amber-100 dark:focus:bg-amber-900'} transition-colors min-h-[80px] resize-none`} />
     ) : (
-      <input
-        readOnly={readOnly}
-        type={type}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-cyan-100 dark:focus:bg-cyan-900'} transition-colors`}
-      />
+      <input readOnly={readOnly} type={type} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-cyan-100 dark:focus:bg-cyan-900'} transition-colors`} />
     )}
   </div>
 );
@@ -544,7 +366,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[2px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</h3>
-        <p className="text-sm font-bold opacity-90 whitespace-pre-wrap">{message}</p>
+        <p className="text-sm font-bold opacity-90">{message}</p>
         <div className="flex gap-2 mt-4">
           <MButton darkMode={darkMode} variant="white" onClick={onCancel} className="flex-1">{cancelText}</MButton>
           <MButton darkMode={darkMode} variant="pink" onClick={onConfirm} className="flex-1">{confirmText}</MButton>
@@ -568,14 +390,7 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
   const total = data.reduce((acc, item) => acc + item.value, 0);
   if (total === 0) return null;
   let currentAngle = 0;
-
-  const grad = data.map(item => {
-    const p = (item.value / total) * 100;
-    const s = currentAngle;
-    const e = currentAngle + p;
-    currentAngle = e;
-    return `${item.colorHex} ${s}% ${e}%`;
-  }).join(', ');
+  const grad = data.map(item => { const p = (item.value / total) * 100; const s = currentAngle; const e = currentAngle + p; currentAngle = e; return `${item.colorHex} ${s}% ${e}%`; }).join(', ');
 
   return (
     <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
@@ -597,23 +412,13 @@ const MondrianDonutChart = ({ title, data, darkMode }) => {
 
 const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
   if (googleSheetsUrl) {
-    fetch(googleSheetsUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(itemToSync)
-    }).catch(e => console.error("Erro Google Sheets:", e));
+    fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(itemToSync) }).catch(e => console.error("Erro Google Sheets:", e));
   }
 };
 
 const syncDeleteToSheets = (deletedId, googleSheetsUrl) => {
   if (googleSheetsUrl) {
-    fetch(googleSheetsUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ _action: 'delete', id: deletedId })
-    }).catch(e => console.error("Erro Google Sheets:", e));
+    fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ _action: 'delete', id: deletedId }) }).catch(e => console.error("Erro Google Sheets:", e));
   }
 };
 
@@ -621,7 +426,7 @@ const syncDeleteToSheets = (deletedId, googleSheetsUrl) => {
 // ABAS DA APLICAÇÃO
 // ==========================================
 
-const LibraryTab = ({ items, setItems, filteredItems, darkMode, settings, onShowToast, activeCategories, page, setPage }) => {
+const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode, settings, onShowToast, activeCategories, page, setPage }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -631,6 +436,7 @@ const LibraryTab = ({ items, setItems, filteredItems, darkMode, settings, onShow
   const [wikiError, setWikiError] = useState('');
   
   const itemsPerPage = 12;
+
   const pressTimer = useRef(null);
   const isLongPress = useRef(false);
 
@@ -705,43 +511,18 @@ const LibraryTab = ({ items, setItems, filteredItems, darkMode, settings, onShow
   const fetchWikiInfo = async () => {
     const apiKey = (settings?.geminiApiKey || "").trim();
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
-
-    setLoadingWiki(true);
-    setWikiError('');
+    setLoadingWiki(true); setWikiError('');
 
     const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [{ text: optimizedPrompt }]
-          }]
-        })
-      });
-
-      if (!res.ok) {
-          let errMsg = `Erro HTTP: ${res.status}`;
-          try {
-              const errData = await res.json();
-              if (errData.error && errData.error.message) errMsg = errData.error.message;
-          } catch(e) {}
-          throw new Error(errMsg);
-      }
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: optimizedPrompt }] }] }) });
+      if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) { setEditedItem({...editedItem, wiki_info: text}); playChipBeep('save'); onShowToast('success'); }
     } catch (e) {
-      let errorMsg = e.message;
-      if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
-        errorMsg = "⚠️ Cota gratuita da IA esgotada no momento. Aguarde o reset da API.";
-      } else {
-        errorMsg = `Erro na comunicação com a IA: ${errorMsg}. \nTente novamente ou verifique a conexão.`;
-      }
-      setWikiError(errorMsg); playChipBeep('error');
+      setWikiError("Erro na comunicação com a IA."); playChipBeep('error');
     } finally { setLoadingWiki(false); }
   };
 
@@ -822,7 +603,7 @@ const LibraryTab = ({ items, setItems, filteredItems, darkMode, settings, onShow
               <div><p className="text-xs font-bold leading-relaxed opacity-90 whitespace-pre-wrap text-justify mb-3 italic">"{editedItem.wiki_info}"</p><button onClick={fetchWikiInfo} className="text-[9px] font-black uppercase tracking-widest underline opacity-70 hover:opacity-100 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Gerar Nova Pesquisa</button></div>
             ) : (
              <div className="text-center py-2">
-                {loadingWiki ? (<div className="flex flex-col items-center"><Sparkles className="w-6 h-6 animate-pulse mb-2 text-pink-500" /><span className="text-[10px] font-black uppercase tracking-widest animate-pulse opacity-70">Consultando oráculo...</span></div>) : (<div className="flex flex-col items-center gap-2">{wikiError && <div className="text-[9px] font-bold text-white bg-pink-600 p-2 border-[2px] border-black rounded shadow-sm text-center whitespace-pre-wrap">{wikiError}</div>}<MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-pink-600 border-black dark:bg-pink-700 text-white">✨ Pesquisar sobre a Obra</MButton></div>)}
+                {loadingWiki ? (<div className="flex flex-col items-center"><Sparkles className="w-6 h-6 animate-pulse mb-2 text-pink-500" /><span className="text-[10px] font-black uppercase tracking-widest animate-pulse opacity-70">Consultando oráculo...</span></div>) : (<div className="flex flex-col items-center gap-2">{wikiError && <div className="text-[9px] font-bold text-white bg-pink-600 p-2 border-[2px] border-black rounded shadow-sm text-center">{wikiError}</div>}<MButton onClick={fetchWikiInfo} darkMode={darkMode} variant="black" className="w-full text-[10px] bg-pink-600 border-black dark:bg-pink-700 text-white">✨ Pesquisar sobre a Obra</MButton></div>)}
               </div>
             )}
           </MContainer>
@@ -916,18 +697,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   useEffect(() => {
     if (scannedAIData) {
-       setFormData(prev => ({ 
-           ...prev, 
-           title: scannedAIData.title||'', 
-           author_developer: scannedAIData.author_developer||'', 
-           year: scannedAIData.year?.toString()||'', 
-           publisher: scannedAIData.publisher||'', 
-           description: scannedAIData.description||'', 
-           barcode: scannedAIData.barcode||'', 
-           pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, 
-           notes: scannedAIData.notes||prev.notes,
-           type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro' 
-       }));
+       setFormData(prev => ({ ...prev, title: scannedAIData.title||'', author_developer: scannedAIData.author_developer||'', year: scannedAIData.year?.toString()||'', publisher: scannedAIData.publisher||'', description: scannedAIData.description||'', barcode: scannedAIData.barcode||'', pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro' }));
        setScannedAIData(null);
     }
   }, [scannedAIData, setScannedAIData, allTypes]);
@@ -1103,117 +873,63 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   );
 };
 
-const DashboardTab = ({ filteredItems, darkMode, activeCategories, settings }) => {
+const DashboardTab = ({ items, filteredItems, darkMode, activeCategories }) => {
   const chartColors = getChartColors(darkMode);
   
-  // 1. Calcular Dados Globais para a Caixa Única de Auditoria
+  // 1. Calcular Dados Globais (Auditoria Unificada baseada nos filtros)
   const total = filteredItems.length;
   let concluidos = 0, backlog = 0;
-  
-  const metricStats = {
-     'Páginas': { sum: 0, count: 0, max: 0, maxName: '' },
-     'Faixas': { sum: 0, count: 0, max: 0, maxName: '' },
-     'Minutos': { sum: 0, count: 0, max: 0, maxName: '' },
-     'Horas/Unid': { sum: 0, count: 0, max: 0, maxName: '' }
-  };
+  const metrics = { 'Páginas': { sum: 0, count: 0, max: 0, maxName: '' }, 'Faixas': { sum: 0, count: 0, max: 0, maxName: '' }, 'Minutos': { sum: 0, count: 0, max: 0, maxName: '' }, 'Horas': { sum: 0, count: 0, max: 0, maxName: '' } };
 
   const catCounts = {}; const typeCounts = {}; const statusCounts = {}; const ratingCounts = {};
-  const byAuthor = {}; const byYear = {};
 
   filteredItems.forEach(i => {
+    // A. Concluidos e Backlog
     const isBookGame = (activeCategories['Livros']||[]).includes(i.type) || (activeCategories['Games']||[]).includes(i.type);
-    
-    // Concluídos / Backlog
     if (isBookGame) {
       if (i.status === 'Concluído') concluidos++; else if (i.status === 'Não Iniciado' || i.status === 'Na Fila') backlog++;
     } else {
       if ((Number(i.rating)||0) > 0) concluidos++; else backlog++;
     }
 
-    // Métricas (Páginas, Faixas, etc)
+    // B. Médias e Máximos
     const val = parseInt(i.pages_or_time) || 0;
     if (val > 0) {
-      const metricLabel = getMetricInfo(i.type, activeCategories).label;
-      if (metricStats[metricLabel]) {
-         metricStats[metricLabel].sum += val;
-         metricStats[metricLabel].count += 1;
-         if (val > metricStats[metricLabel].max) { 
-            metricStats[metricLabel].max = val; 
-            metricStats[metricLabel].maxName = i.title || ''; 
-         }
+      let label = 'Unidades';
+      if ((activeCategories['Livros']||[]).includes(i.type)) label = 'Páginas';
+      if ((activeCategories['Discos']||[]).includes(i.type)) label = 'Faixas';
+      if ((activeCategories['Vídeo']||[]).includes(i.type)) label = 'Minutos';
+      if ((activeCategories['Games']||[]).includes(i.type)) label = 'Horas';
+
+      if (metrics[label]) {
+         metrics[label].sum += val; metrics[label].count += 1;
+         if (val > metrics[label].max) { metrics[label].max = val; metrics[label].maxName = i.title || ''; }
       }
     }
 
-    // Gráficos de Rosca
+    // C. Dados para Gráficos
     let foundCat = 'Outros';
     for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(i.type)) { foundCat = cat; break; } }
     catCounts[foundCat] = (catCounts[foundCat] || 0) + 1;
     typeCounts[i.type || 'Sem Tipo'] = (typeCounts[i.type || 'Sem Tipo'] || 0) + 1;
     
     if (isBookGame) statusCounts[i.status || 'Não Iniciado'] = (statusCounts[i.status || 'Não Iniciado'] || 0) + 1;
-    else statusCounts[(Number(i.rating)||0)>0 ? 'Concluído (Visto/Ouvido)' : 'Não Iniciado'] = (statusCounts[(Number(i.rating)||0)>0 ? 'Concluído (Visto/Ouvido)' : 'Não Iniciado'] || 0) + 1;
+    else statusCounts[(Number(i.rating)||0)>0 ? 'Ouvido/Visto' : 'Não Iniciado'] = (statusCounts[(Number(i.rating)||0)>0 ? 'Ouvido/Visto' : 'Não Iniciado'] || 0) + 1;
 
     const rFloor = Math.floor(Number(i.rating) || 0);
     ratingCounts[rFloor] = (ratingCounts[rFloor] || 0) + 1;
-
-    // Autores e Ano (Gráficos Extras)
-    if (i.author_developer) {
-      const rawAuthor = i.author_developer.trim();
-      if (!isVariousArtists(rawAuthor)) {
-        const normTitle = normalizeWorkTitle(i.title);
-        let normAuthor = getSortableName(rawAuthor).toLowerCase();
-        // Aplica Alias se houver
-        if (settings?.artistAliases) normAuthor = applyArtistAlias(normAuthor, settings.artistAliases);
-        if (!byAuthor[normAuthor]) byAuthor[normAuthor] = { display: applyArtistAlias(rawAuthor, settings?.artistAliases) || rawAuthor, titles: new Set() };
-        byAuthor[normAuthor].titles.add(normTitle);
-      }
-    }
-
-    const y = getValidYear(i.year);
-    if (!isNaN(y) && y >= 1900 && y <= new Date().getFullYear() + 5) { byYear[y] = (byYear[y] || 0) + 1; }
   });
 
-  // Preparação de Dados p/ Gráficos
   const catChartData = Object.entries(catCounts).map(([label, value], idx) => ({ label, value, colorHex: chartColors[idx % chartColors.length] })).sort((a,b) => b.value - a.value);
   const typeChartData = Object.entries(typeCounts).map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 1) % chartColors.length] })).sort((a,b) => b.value - a.value);
   const statusChartData = Object.entries(statusCounts).map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 2) % chartColors.length] })).sort((a,b) => b.value - a.value);
-  const ratingChartData = [5,4,3,2,1,0].filter(r => ratingCounts[r]).map((r, idx) => ({ label: r===0 ? 'Sem Nota' : `${r} Estrela${r!==1?'s':''}`, value: ratingCounts[r], colorHex: chartColors[(idx + 3) % chartColors.length] }));
+  const ratingChartData = [5,4,3,2,1,0].filter(r => ratingCounts[r]).map((r, idx) => ({ label: `${r} Estrela${r!==1?'s':''}`, value: ratingCounts[r], colorHex: chartColors[(idx + 3) % chartColors.length] }));
 
   const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
 
-  const sortedAuthors = Object.entries(byAuthor).map(([key, data]) => [data.display, data.titles.size]).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const maxAuthor = sortedAuthors.length > 0 ? sortedAuthors[0][1] : 1;
-
-  const yearsKeys = Object.keys(byYear).sort();
-  const maxYearCount = yearsKeys.length > 0 ? Math.max(...Object.values(byYear)) : 1;
-
-  // Encontrar Reliquia e Epico dentre os filtrados
-  const statsExtras = useMemo(() => {
-    if (total === 0) return {};
-    const validYears = filteredItems.filter(i => !isNaN(getValidYear(i.year)));
-    const reliquia = validYears.length > 0 ? validYears.reduce((a, b) => getValidYear(a.year) < getValidYear(b.year) ? a : b) : null;
-
-    const validLengths = filteredItems.filter(i => i.pages_or_time && !isNaN(parseInt(i.pages_or_time)));
-    let epico = null;
-    if (validLengths.length > 0) {
-        const titleToPages = {};
-        validLengths.forEach(i => {
-            const normTitle = normalizeWorkTitle(i.title);
-            if (!titleToPages[normTitle]) titleToPages[normTitle] = { total: 0, sampleItem: i };
-            titleToPages[normTitle].total += parseInt(i.pages_or_time);
-        });
-        let maxPages = 0; let bestNorm = '';
-        for (const [norm, data] of Object.entries(titleToPages)) { if (data.total > maxPages) { maxPages = data.total; bestNorm = norm; } }
-        if (bestNorm) epico = { ...titleToPages[bestNorm].sampleItem, title: normalizeWorkTitle(titleToPages[bestNorm].sampleItem.title).toUpperCase(), pages_or_time: maxPages };
-    }
-    return { reliquia, epico };
-  }, [filteredItems]);
-
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
-      
-      {/* 1. CAIXA ÚNICA DE AUDITORIA */}
       <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}><BarChart2 className="w-4 h-4" /> Auditoria da Coleção (Filtro Atual)</div>
         <div className="grid grid-cols-3 gap-2 text-center border-b-[2px] pb-4 mb-4 border-gray-300 dark:border-gray-700">
@@ -1221,42 +937,22 @@ const DashboardTab = ({ filteredItems, darkMode, activeCategories, settings }) =
           <div><div className="text-3xl font-black text-cyan-600 dark:text-cyan-400">{concluidos}</div><div className="text-[8px] font-black uppercase tracking-widest opacity-70">Concluídos/Vistos</div></div>
           <div><div className="text-3xl font-black text-pink-600 dark:text-pink-400">{backlog}</div><div className="text-[8px] font-black uppercase tracking-widest opacity-70">Backlog/Fila</div></div>
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.keys(metricStats).map(label => {
-            if (metricStats[label].count === 0) return null;
+          {Object.keys(metrics).map(label => {
+            if (metrics[label].count === 0) return null;
             return (
                <div key={label} className={`p-3 border-[2px] ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
                  <div className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-2">{label}</div>
-                 <div className="flex justify-between items-end mb-1"><span className="text-[10px] font-bold">Média p/ Unid:</span><span className="text-lg font-black">{Math.round(metricStats[label].sum / metricStats[label].count)}</span></div>
-                 <div className="flex justify-between items-end"><span className="text-[10px] font-bold">Maior Registro:</span><span className="text-lg font-black truncate text-right ml-2" title={metricStats[label].maxName}>{metricStats[label].max} <span className="text-[8px]">({String(metricStats[label].maxName).substring(0,10)}...)</span></span></div>
+                 <div className="flex justify-between items-end mb-1"><span className="text-[10px] font-bold">Média p/ Unid:</span><span className="text-lg font-black">{Math.round(metrics[label].sum / metrics[label].count)}</span></div>
+                 <div className="flex justify-between items-end"><span className="text-[10px] font-bold">Maior Registro:</span><span className="text-lg font-black truncate text-right ml-2" title={metrics[label].maxName}>{metrics[label].max} <span className="text-[8px]">({String(metrics[label].maxName).substring(0,10)}...)</span></span></div>
                </div>
             )
           })}
         </div>
       </MContainer>
 
-      {total === 0 && <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest opacity-50">Nenhum dado para o filtro selecionado.</div>}
-
       {total > 0 && (
         <>
-          {/* GRÁFICOS RESTAURADOS DE DESTAQUES */}
-          <div className="grid grid-cols-2 gap-3">
-            {statsExtras.reliquia && (
-              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white'}>
-                <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">A Relíquia</div><Clock className="w-5 h-5 opacity-50" /></div>
-                <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(statsExtras.reliquia.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">Ano {getValidYear(statsExtras.reliquia.year)}</div></div>
-              </MContainer>
-            )}
-            {statsExtras.epico && (
-              <MContainer darkMode={darkMode} className="p-3 flex flex-col justify-between h-28 md:col-span-1" colorClass={darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white'}>
-                <div className="flex items-center justify-between mb-2"><div className="text-[9px] font-black uppercase tracking-widest leading-tight">O Épico</div><Flame className="w-5 h-5 opacity-50" /></div>
-                <div><div className="text-xs font-black leading-tight break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{String(statsExtras.epico.title || 'Sem Título')}</div><div className="text-[9px] font-bold mt-1">{statsExtras.epico.pages_or_time} {getMetricInfo(statsExtras.epico.type, activeCategories).label} Totais</div></div>
-              </MContainer>
-            )}
-          </div>
-
-          {/* 4 GRÁFICOS DE ROSCA */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
             {catChartData.length > 0 && <MondrianDonutChart title="Categorias" data={catChartData} darkMode={darkMode} />}
             {typeChartData.length > 0 && <MondrianDonutChart title="Formatos" data={typeChartData} darkMode={darkMode} />}
@@ -1264,43 +960,12 @@ const DashboardTab = ({ filteredItems, darkMode, activeCategories, settings }) =
             {ratingChartData.length > 0 && <MondrianDonutChart title="Notas" data={ratingChartData} darkMode={darkMode} />}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* FORMATOS POPULARES COM BARRA DE ROLAGEM */}
-            <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Formatos Populares (Todos)</div>
-               <div className="flex flex-col max-h-64 overflow-y-auto pr-2 scrollbar-hide">
-                  {sortedTypes.map(([type, count], index) => <MondrianHBar key={`type-${type}`} label={type} value={count} max={maxType} index={index} darkMode={darkMode} />)}
-               </div>
-            </MContainer>
-
-            {/* TOP AUTORES */}
-            <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-               <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Top 5 Autores / Estúdios</div>
-               <div className="flex flex-col">
-                  {sortedAuthors.map(([author, count], index) => <MondrianHBar key={`author-${index}`} label={String(author || 'Desconhecido')} value={count} max={maxAuthor} index={index + 1} darkMode={darkMode} />)}
-               </div>
-            </MContainer>
-          </div>
-
-          {/* LINHA DO TEMPO */}
-          {yearsKeys.length > 0 && (
-              <MContainer darkMode={darkMode} className="p-4 flex flex-col w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-                <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] pb-2 flex justify-between ${darkMode ? 'border-gray-300' : 'border-black'}`}><span>Linha do Tempo (Ano Orig.)</span><Calendar className="w-4 h-4" /></div>
-                <div className="flex items-end gap-1.5 h-32 pt-6 border-b-[2px] border-current overflow-x-auto scrollbar-hide">
-                  {yearsKeys.map((yearStr, idx) => {
-                    const count = byYear[yearStr]; const heightPerc = (count / maxYearCount) * 100;
-                    return (
-                      <div key={yearStr} className="flex-none w-8 h-full flex flex-col justify-end group">
-                        <div className={`w-full border-[2px] border-b-0 shadow-[-2px_0px_0px_rgba(0,0,0,0.2)] transition-all duration-1000 flex justify-center relative ${getMondrianColor(idx, darkMode)} ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ height: `${Math.max(5, heightPerc)}%` }}>
-                          <div className="text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-1">{count}</div>
-                        </div>
-                        <div className="text-center text-[7px] font-black mt-1 opacity-70 transform">{yearStr}</div>
-                     </div>
-                    );
-                  })}
-                </div>
-              </MContainer>
-            )}
+          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Formatos Populares (Todos)</div>
+             <div className="flex flex-col max-h-64 overflow-y-auto pr-2 scrollbar-hide">
+                {sortedTypes.map(([type, count], index) => <MondrianHBar key={`type-${type}`} label={type} value={count} max={maxType} index={index} darkMode={darkMode} />)}
+             </div>
+          </MContainer>
         </>
       )}
     </div>
@@ -1521,7 +1186,7 @@ export default function App() {
   const allTypes = Object.values(activeCategories).flat();
 
   // ---------------------------------------------------------
-  // LÓGICA DE FILTRAGEM GLOBAL (ACERVO E DASHBOARD COMPARTILHAM)
+  // LÓGICA DE FILTRAGEM GLOBAL
   // ---------------------------------------------------------
   const processedItems = useMemo(() => {
      let res = items;
@@ -1550,7 +1215,7 @@ export default function App() {
         res = res.filter(i => {
            const isDisc = (activeCategories['Discos'] || []).includes(i.type);
            const isVideo = (activeCategories['Vídeo'] || []).includes(i.type);
-           if (isDisc || isVideo) return globalFilters.Status.includes((Number(i.rating)||0)>0 ? 'Concluído (Visto/Ouvido)' : 'Não Iniciado');
+           if (isDisc || isVideo) return globalFilters.Status.includes((Number(i.rating)||0)>0 ? 'Concluído' : 'Não Iniciado');
            return globalFilters.Status.includes(i.status);
         });
      }
@@ -1594,8 +1259,6 @@ export default function App() {
 
   const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
 
-  const showToast = (type = 'success') => { setToast({ visible: true, type }); setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000); };
-
   const handleGlobalFileChange = (e) => {
     const file = e.target.files[0];
     if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); }
@@ -1604,78 +1267,41 @@ export default function App() {
 
   const processGlobalAIFile = async (file) => {
     const apiKey = (settings?.geminiApiKey || "").trim();
-    if (!apiKey) {
-      setAiBoxState('error');
-      setAiBoxMessage('Chave API ausente.');
-      playChipBeep('error');
-      return;
-    }
-
-    setAiBoxState('loading');
-    setAiBoxMessage('Analisando imagem com IA (Otimizado para Discos)...');
+    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente.'); playChipBeep('error'); return; }
+    setAiBoxState('loading'); setAiBoxMessage('Analisando com IA...');
 
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
-
-      // NOVO PROMPT: Otimizado, rápido, consome menos tokens e ataca direto
-      // no problema de extrair códigos de catálogo de gravadoras e discos promocionais.
-      const promptInstructions = `Extraia os dados da imagem de forma ágil e retorne APENAS um objeto JSON.
-Formato:
+      const promptInstructions = `Aja como arquivista especializado. Seja rápido.
+Analise a imagem (capa, etiqueta de disco, ficha catalográfica). Retorne EXCLUSIVAMENTE um JSON.
 {
-  "type": "Classifique como UM desta lista: ${allTypes.join(', ')}",
-  "title": "Título / Álbum",
-  "author_developer": "Autor / Artista / Desenvolvedora",
-  "year": "Ano (YYYY)",
-  "publisher": "Editora / Gravadora",
-  "pages_or_time": "Qtd de faixas (discos), páginas (livros) ou minutos. Apenas número",
-  "barcode": "Código de barras numérico OU Código de Catálogo da Gravadora (letras/números curtos, comum no selo do disco ou lombada)",
-  "notes": "Anotações importantes: 'Promocional', 'Amostra Grátis', autógrafos, etc. Senão, deixe vazio.",
-  "description": "Sinopse longa apenas se houver. Senão, vazio."
+  "type": "Escolha APENAS uma: ${allTypes.join(', ')}",
+  "title": "Título Principal",
+  "author_developer": "Autor(es) ou Artista",
+  "year": "Ano (formato YYYY)",
+  "publisher": "Editora ou Gravadora",
+  "pages_or_time": "Páginas, faixas ou minutos (apenas números)",
+  "barcode": "Código de barras OU Código de Catálogo da Gravadora impresso no selo (ex: 33.062)",
+  "description": "Texto descritivo. Deixe VAZIO se não houver texto explícito descrevendo a obra."
 }
-Regras:
-1. Retorne APENAS o JSON puro, sem crases de markdown (\`\`\`json).
-2. Para Discos/Vinil: busque o CÓDIGO DE CATÁLOGO (ex: 104.4005, XLD-123) no selo central e coloque em 'barcode'.
-3. Registre itens promocionais em 'notes'. Não invente dados ausentes na imagem.`;
+REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcode'. 3. APENAS JSON puro.`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: promptInstructions },
-              { inlineData: { mimeType: "image/jpeg", data: b64 } }
-            ]
-          }],
-          generationConfig: { responseMimeType: "application/json" }
-        })
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json" } })
       });
 
-      if (!res.ok) {
-          let errMsg = `Erro HTTP: ${res.status}`;
-          try {
-              const errData = await res.json();
-              if (errData.error && errData.error.message) errMsg = errData.error.message;
-          } catch(e) {}
-          throw new Error(errMsg);
-      }
-
-      const data = await res.json();
-      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Retorno vazio da IA.");
+      if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+      const data = await res.json(); let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Retorno vazio.");
       text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
 
       setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com sucesso da imagem!'); playChipBeep('save'); showToast('success');
     } catch (e) {
-      let errorMsg = e.message;
-      if (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.includes('exceeded')) {
-        errorMsg = "⚠️ Cota gratuita da IA (Gemini) esgotada no momento. Aguarde o reset da API.";
-      } else {
-        errorMsg = `Falha na IA: ${errorMsg}\nVerifique o enquadramento, se há muito brilho ou tente o modo Barcode.`;
-      }
-      setAiBoxState('error'); setAiBoxMessage(errorMsg); playChipBeep('error'); showToast('error');
+      setAiBoxState('error'); setAiBoxMessage(`Falha na IA. Tente modo manual ou Barcode.`); playChipBeep('error'); showToast('error');
     }
   };
+
+  const showToast = (type = 'success') => { setToast({ visible: true, type }); setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000); };
 
   useEffect(() => {
     let savedSettings = null;
@@ -1782,16 +1408,11 @@ Regras:
     </div>
   );
 
-  const formatStars = (ratingStr) => {
-     const val = Number(ratingStr); if (!val) return '0';
-     const full = Math.floor(val); const half = val % 1 >= 0.5 ? '½' : '';
-     return '★'.repeat(full) + half;
-  };
-
   const renderMarqueeContent = () => {
     const statsArr = [];
     statsArr.push(<span key="total" className={`text-white ${ledItemStyle}`}>ACERVO TOTAL: {items.length}</span>);
     
+    // Contagens globais (ignorando filtros) para o painel de LED
     const gCatCounts = items.reduce((acc, i) => { let mainCat = 'Outros'; for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(i.type)) { mainCat = cat; break; } } acc[mainCat] = (acc[mainCat] || 0) + 1; return acc; }, {});
     
     Object.keys(activeCategories).forEach((cat, index) => {
@@ -1800,8 +1421,7 @@ Regras:
        statsArr.push(<span key={cat} className={`${colors[index % colors.length]} ${ledItemStyle}`}>{cat.toUpperCase()}: {count} ({perc}%)</span>);
     });
     const globRated = items.filter(i => (Number(i.rating) || 0) > 0);
-    const avgRat = globRated.length > 0 ? (globRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / globRated.length).toFixed(1) : 0;
-    if (Number(avgRat) > 0) statsArr.push(<span key="rating" className={`text-amber-500 ${ledItemStyle}`}>NOTA MÉDIA GLOBAL: {formatStars(avgRat)}</span>);
+    if (globRated.length > 0) statsArr.push(<span key="rating" className={`text-amber-500 ${ledItemStyle}`}>NOTA MÉDIA GLOBAL: ★ {(globRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / globRated.length).toFixed(1)}</span>);
 
     return (<div className="flex items-center py-1" style={textShadowStyle}>{statsArr.map((stat, index) => ( <React.Fragment key={index}>{stat}{index < statsArr.length - 1 ? renderKatamariSeparator() : renderPacmanEnd()}</React.Fragment> ))}</div>);
   };
@@ -1835,6 +1455,7 @@ Regras:
               <div className={`w-full sm:max-w-md max-h-[85vh] sm:h-[80vh] flex flex-col border-t-[2px] sm:border-[2px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[6px_6px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[6px_6px_0px_rgba(0,0,0,1)]'}`}>
                   <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => setIsFilterMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Filtro Global</span><div className="w-7"/></div>
                   <div className="flex-1 overflow-y-auto scrollbar-hide">
+                    {/* CATEGORIAS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Categorias Principais</div>
                       <div className="flex flex-wrap gap-2">
@@ -1845,6 +1466,7 @@ Regras:
                         ))}
                       </div>
                     </div>
+                    {/* FORMATOS/SUBTIPOS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Formatos Específicos</div>
                       <div className="flex flex-wrap gap-2">
@@ -1855,6 +1477,7 @@ Regras:
                         ))}
                       </div>
                     </div>
+                    {/* STATUS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Status (Universal)</div>
                       <div className="flex flex-wrap gap-2">
@@ -1863,9 +1486,9 @@ Regras:
                             <input type="checkbox" className="hidden" checked={globalFilters.Status.includes(st)} onChange={() => handleGlobalCheckboxChange('Status', st)} /> {st}
                           </label>
                         ))}
-                        <label className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${globalFilters.Status.includes('Concluído (Visto/Ouvido)') ? (darkMode?'border-amber-400 bg-amber-900/30':'border-amber-600 bg-amber-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}><input type="checkbox" className="hidden" checked={globalFilters.Status.includes('Concluído (Visto/Ouvido)')} onChange={() => handleGlobalCheckboxChange('Status', 'Concluído (Visto/Ouvido)')} /> Concluído (Visto/Ouvido)</label>
                       </div>
                     </div>
+                    {/* NOTAS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Avaliação Inteira</div>
                       <div className="flex flex-wrap gap-2">
@@ -2024,9 +1647,9 @@ Regras:
           <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative flex flex-col">
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             
-            {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} filteredItems={processedItems} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} page={libraryPage} setPage={setLibraryPage} />}
+            {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} filteredItems={processedItems} setFilteredItems={()=>{}} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} page={libraryPage} setPage={setLibraryPage} />}
             {activeTab === 'add' && <div className="p-3 overflow-y-auto w-full"><AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} /></div>}
-            {activeTab === 'dashboard' && <div className="p-3 overflow-y-auto w-full"><DashboardTab filteredItems={processedItems} darkMode={darkMode} activeCategories={activeCategories} settings={settings} /></div>}
+            {activeTab === 'dashboard' && <div className="p-3 overflow-y-auto w-full"><DashboardTab items={items} filteredItems={processedItems} darkMode={darkMode} activeCategories={activeCategories} /></div>}
             {activeTab === 'settings' && <div className="p-3 overflow-y-auto w-full"><SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} /></div>}
           </main>
 
