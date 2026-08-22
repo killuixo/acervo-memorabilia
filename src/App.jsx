@@ -162,7 +162,7 @@ const reindexCollection = (currentItems) => {
   return reindexed;
 };
 
-const resizeImageForAPI = (file, maxWidth = 800) => {
+const resizeImageForAPI = (file, maxWidth = 600) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -175,7 +175,7 @@ const resizeImageForAPI = (file, maxWidth = 800) => {
         canvas.height = img.height * (maxWidth / img.width);
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
       };
       img.onerror = reject;
     };
@@ -705,16 +705,31 @@ const LibraryTab = ({ items, setItems, filteredItems, darkMode, settings, onShow
   const fetchWikiInfo = async () => {
     const apiKey = (settings?.geminiApiKey || "").trim();
     if (!apiKey) { setWikiError("Chave API ausente."); playChipBeep('error'); return; }
-    setLoadingWiki(true); setWikiError('');
+
+    setLoadingWiki(true);
+    setWikiError('');
 
     const optimizedPrompt = `Escreva um resumo enciclopédico, objetivo e neutro (sem elogios ou adjetivos subjetivos) sobre a obra "${editedItem.title || ''}" (Autor/Desenvolvedor: ${editedItem.author_developer || ''}). O texto deve ser um parágrafo contínuo abordando obrigatoriamente: 1. Nomes dos autores, criadores e designers originais; 2. Detalhes sobre a produção original e lançamento; 3. Informações sobre a trilha sonora (se aplicável); 4. O consenso da opinião da crítica especializada e a recepção do público/jogadores. Retorne apenas o texto direto, sem formatação ou introduções.`;
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: optimizedPrompt }] }] }) });
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [{ text: optimizedPrompt }]
+          }]
+        })
+      });
+
       if (!res.ok) {
-         let errMsg = `Erro HTTP: ${res.status}`;
-         try { const errData = await res.json(); if (errData.error?.message) errMsg = errData.error.message; } catch(e) {}
-         throw new Error(errMsg);
+          let errMsg = `Erro HTTP: ${res.status}`;
+          try {
+              const errData = await res.json();
+              if (errData.error && errData.error.message) errMsg = errData.error.message;
+          } catch(e) {}
+          throw new Error(errMsg);
       }
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -1578,35 +1593,65 @@ export default function App() {
 
   const processGlobalAIFile = async (file) => {
     const apiKey = (settings?.geminiApiKey || "").trim();
-    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente.'); playChipBeep('error'); return; }
-    setAiBoxState('loading'); setAiBoxMessage('Analisando com IA...');
+    if (!apiKey) {
+      setAiBoxState('error');
+      setAiBoxMessage('Chave API ausente.');
+      playChipBeep('error');
+      return;
+    }
+
+    setAiBoxState('loading');
+    setAiBoxMessage('Analisando imagem com IA (Otimizado)...');
 
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
-      const promptInstructions = `Aja como arquivista especializado. Seja rápido.
-Analise a imagem (capa, etiqueta de disco, ficha catalográfica). Retorne EXCLUSIVAMENTE um JSON válido.
+
+      const promptInstructions = `Aja como arquivista e bibliotecário especializado. Seja rápido e preciso.
+Analise a imagem enviada. Pode ser uma capa de livro, quadrinho, encarte de CD/Vinil/Fita, caixa de DVD, capa de game ou FICHA CATALOGRÁFICA.
+Retorne EXCLUSIVAMENTE um JSON válido, sem crases de markdown.
+Formato exigido:
 {
   "type": "Escolha APENAS uma: ${allTypes.join(', ')}",
-  "title": "Título Principal",
-  "author_developer": "Autor(es) ou Artista",
-  "year": "Ano (formato YYYY)",
-  "publisher": "Editora ou Gravadora",
-  "pages_or_time": "Páginas, faixas ou minutos (apenas números)",
-  "barcode": "Código de barras OU Código de Catálogo da Gravadora impresso no selo (ex: 33.062)",
-  "description": "Texto descritivo. Deixe VAZIO se não houver texto explícito descrevendo a obra."
+  "title": "Título Principal da obra",
+  "author_developer": "Autor(es), Artista, Banda ou Desenvolvedora",
+  "year": "Ano de lançamento (YYYY)",
+  "publisher": "Editora, Gravadora ou Produtora",
+  "pages_or_time": "Número de páginas (impressos), faixas (música) ou minutos (filmes). Apenas números.",
+  "barcode": "Código de barras OU Código de Catálogo da Gravadora (ex: código alfanumérico impresso no selo central do Vinil, encartes de CD ou lombada do DVD)",
+  "description": "Texto descritivo EXATO presente na capa. Deixe VAZIO se não houver texto descritivo explicito. NÃO crie resumos genéricos nem deduções."
 }
-REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo de LPs no 'barcode'. 3. APENAS JSON puro.`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json" } })
+REGRAS RÍGIDAS:
+1. Em discos de vinil, foque no selo central (label) para extrair o código de catálogo da gravadora e o insira em "barcode".
+2. Não invente ou alucine informações ("description" VAZIO se não houver texto impresso).
+3. Datas abreviadas como 'Julho/90' devem ser '1990'.
+4. Retorne APENAS o JSON.`;
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: promptInstructions },
+              { inlineData: { mimeType: "image/jpeg", data: b64 } }
+            ]
+          }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
       });
 
       if (!res.ok) {
-         let errMsg = `Erro HTTP: ${res.status}`;
-         try { const errData = await res.json(); if (errData.error?.message) errMsg = errData.error.message; } catch(e) {}
-         throw new Error(errMsg);
+          let errMsg = `Erro HTTP: ${res.status}`;
+          try {
+              const errData = await res.json();
+              if (errData.error && errData.error.message) errMsg = errData.error.message;
+          } catch(e) {}
+          throw new Error(errMsg);
       }
-      const data = await res.json(); let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      const data = await res.json();
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Retorno vazio da IA.");
       text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
 
