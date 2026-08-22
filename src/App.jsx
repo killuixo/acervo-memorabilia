@@ -157,7 +157,6 @@ const normalizeWorkTitle = title => {
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
 const isVariousArtists = name => ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => String(name || '').toLowerCase().trim().includes(k));
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
-
 const applyArtistAlias = (name, aliases = []) => {
   if (!name || !Array.isArray(aliases)) return name;
   const n = name.trim().toLowerCase();
@@ -844,13 +843,10 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
             <MInput darkMode={darkMode} label="Descrição" multiline value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
             <MInput darkMode={darkMode} label="Código de Barras/Catálogo" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} />
-            
-            <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-50 text-black'}>
-              <MInput darkMode={darkMode} label="Anotações" multiline value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
-            </MContainer>
+            <MInput darkMode={darkMode} label="Anotações" multiline value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
 
             {isBookOrGame && (
-              <div className="mb-4 mt-2">
+              <div className="mb-4">
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
@@ -874,9 +870,10 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 };
 
 const DashboardTab = ({ items, filteredItems, darkMode, activeCategories }) => {
+  
   const chartColors = getChartColors(darkMode);
   
-  // 1. Calcular Dados Globais (Auditoria Unificada baseada nos filtros)
+  // 1. Calcular Dados Globais (Auditoria Unificada)
   const total = filteredItems.length;
   let concluidos = 0, backlog = 0;
   const metrics = { 'Páginas': { sum: 0, count: 0, max: 0, maxName: '' }, 'Faixas': { sum: 0, count: 0, max: 0, maxName: '' }, 'Minutos': { sum: 0, count: 0, max: 0, maxName: '' }, 'Horas': { sum: 0, count: 0, max: 0, maxName: '' } };
@@ -1172,7 +1169,7 @@ export default function App() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
-  const [libraryPage, setLibraryPage] = useState(0); 
+  const [libraryPage, setLibraryPage] = useState(0); // Controle de pág unificado para quando voltar para a aba
 
   const pwa = usePWA(LINK_DO_ICONE_NO_GITHUB);
   const globalFileInputRef = useRef(null);
@@ -1258,12 +1255,6 @@ export default function App() {
   const clearGlobalFilters = () => { setGlobalFilters({ Categorias: [], Subtipos: [], Status: [], Notas: [] }); setLibraryPage(0); };
 
   const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
-
-  const handleGlobalFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) { setActiveTab('add'); setAddMode('manual'); processGlobalAIFile(file); }
-    e.target.value = null;
-  };
 
   const processGlobalAIFile = async (file) => {
     const apiKey = (settings?.geminiApiKey || "").trim();
@@ -1390,7 +1381,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
   const handleAddClick = () => { if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
 
   const libPressTimer = useRef(null); const isLibLongPress = useRef(false);
-  const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setActiveTab('library'); }, 500); };
+  const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setLibraryResetKey(k => k + 1); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
   const handleLibClick = () => { if (!isLibLongPress.current) { setActiveTab('library'); } };
 
@@ -1412,7 +1403,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
     const statsArr = [];
     statsArr.push(<span key="total" className={`text-white ${ledItemStyle}`}>ACERVO TOTAL: {items.length}</span>);
     
-    // Contagens globais (ignorando filtros) para o painel de LED
+    // Contagens independentes de filtro (LED é global)
     const gCatCounts = items.reduce((acc, i) => { let mainCat = 'Outros'; for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(i.type)) { mainCat = cat; break; } } acc[mainCat] = (acc[mainCat] || 0) + 1; return acc; }, {});
     
     Object.keys(activeCategories).forEach((cat, index) => {
@@ -1449,7 +1440,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; } .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } @keyframes titleColorCycle { 0%, 100% { color: #db2777; } 33% { color: #0891b2; } 66% { color: #d97706; } } `}</style>
       
-      {/* MENUS GLOBAIS DE FILTRO E ORDENAÇÃO */}
+      {/* MENUS GLOBAIS DE FILTRO */}
       {isFilterMenuOpen && (
           <div className="fixed inset-0 z-[999] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
               <div className={`w-full sm:max-w-md max-h-[85vh] sm:h-[80vh] flex flex-col border-t-[2px] sm:border-[2px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[6px_6px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[6px_6px_0px_rgba(0,0,0,1)]'}`}>
@@ -1539,8 +1530,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
       )}
 
       <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-        
-        {/* NAVEGAÇÃO LATERAL (Desktop) */}
+        {/* NAVEGAÇÃO LATERAL */}
         <nav className={`hidden md:flex flex-col w-20 lg:w-48 flex-none border-r-[2px] z-20 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
           <div className="p-4 border-b-[2px] border-current flex items-center justify-center lg:justify-start gap-2 h-20">
             <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-8 h-8 object-contain" /><span className="hidden lg:block text-xs font-black uppercase tracking-widest mt-1">Memorabilia</span>
@@ -1564,7 +1554,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
         </nav>
 
         <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-          {/* HEADER (Topo Geral) */}
+          {/* HEADER TOPO GERAL */}
           <header className={`flex-none p-3 lg:p-4 border-b-[2px] z-20 flex flex-col gap-2 ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
             <div className="flex justify-between items-start">
               <div className="flex flex-col flex-1 pr-2 w-full overflow-hidden">
@@ -1643,17 +1633,15 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
             )}
           </header>
 
-          {/* ROTEAMENTO DE ABAS */}
           <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative flex flex-col">
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             
-            {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} filteredItems={processedItems} setFilteredItems={()=>{}} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} page={libraryPage} setPage={setLibraryPage} />}
+            {activeTab === 'library' && <LibraryTab key={libraryResetKey} items={items} setItems={setItems} filteredItems={processedItems} setFilteredItems={()=>{}} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} page={libraryPage} setPage={setLibraryPage} />}
             {activeTab === 'add' && <div className="p-3 overflow-y-auto w-full"><AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} /></div>}
             {activeTab === 'dashboard' && <div className="p-3 overflow-y-auto w-full"><DashboardTab items={items} filteredItems={processedItems} darkMode={darkMode} activeCategories={activeCategories} /></div>}
             {activeTab === 'settings' && <div className="p-3 overflow-y-auto w-full"><SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} /></div>}
           </main>
 
-          {/* NAV MOBILE */}
           <nav className={`flex md:hidden flex-none border-t-[2px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
             <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-white') : ''}`}>
               <Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span>
