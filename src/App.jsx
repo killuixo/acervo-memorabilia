@@ -348,8 +348,8 @@ const usePWA = (iconUrl) => {
 // COMPONENTES UI MONDRIAN 
 // Simplificado para 3 Cores Principais: Ciano, Pink, Amber
 // ==========================================
-const getChartColors = darkMode => darkMode ? ['#0e7490', '#be185d', '#b45309', '#155e75', '#9d174d', '#92400e'] : ['#0891b2', '#db2777', '#d97706', '#06b6d4', '#ec4899', '#f59e0b'];
-const getMondrianColor = (index, darkMode) => darkMode ? ['bg-cyan-700', 'bg-pink-700', 'bg-amber-700'][index % 3] : ['bg-cyan-600', 'bg-pink-600', 'bg-amber-600'][index % 3];
+const getChartColors = darkMode => darkMode ? ['#0891b2', '#db2777', '#f59e0b', '#06b6d4', '#ec4899', '#d97706'] : ['#0891b2', '#db2777', '#d97706', '#06b6d4', '#ec4899', '#f59e0b'];
+const getMondrianColor = (index, darkMode) => darkMode ? ['bg-cyan-600', 'bg-pink-600', 'bg-amber-500'][index % 3] : ['bg-cyan-600', 'bg-pink-600', 'bg-amber-600'][index % 3];
 const getMondrianColorHex = (index, darkMode) => getChartColors(darkMode)[index % 3];
 
 const MContainer = ({ children, className = '', colorClass = '', darkMode, onClick }) => (
@@ -360,9 +360,9 @@ const MContainer = ({ children, className = '', colorClass = '', darkMode, onCli
 
 const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false, title }) => {
   let bg = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
-  if (variant === 'pink') bg = darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white';
-  if (variant === 'cyan') bg = darkMode ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-white';
-  if (variant === 'amber') bg = darkMode ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white';
+  if (variant === 'pink') bg = darkMode ? 'bg-pink-600 text-white' : 'bg-pink-600 text-white';
+  if (variant === 'cyan') bg = darkMode ? 'bg-cyan-600 text-white' : 'bg-cyan-600 text-white';
+  if (variant === 'amber') bg = darkMode ? 'bg-amber-500 text-black' : 'bg-amber-600 text-white';
   if (variant === 'black') bg = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
 
   return (
@@ -602,7 +602,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
             <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className={`p-2 border-[2px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><ChevronLeft className="w-5 h-5" /></button>
             <div className="font-black uppercase tracking-widest text-[10px] truncate">Detalhes</div>
           </div>
-          <button onClick={saveModifications} className={`px-4 py-2 border-[2px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-700 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-cyan-600 text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>Salvar</button>
+          <button onClick={saveModifications} className={`px-4 py-2 border-[2px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-600 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-cyan-600 text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>Salvar</button>
         </MContainer>
 
         <div className="flex-1 overflow-y-auto px-1 flex flex-col gap-2.5 pb-10 scrollbar-hide">
@@ -633,7 +633,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
               <MContainer darkMode={darkMode} className="flex-1 p-2" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status</label>
                 <div className="flex gap-2 flex-wrap">
-                  {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
+                  {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
                 </div>
               </MContainer>
             )}
@@ -648,7 +648,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
           <MInput label="Descrição" multiline value={editedItem.description || ''} onChange={e => setEditedItem({...editedItem, description: e.target.value})} darkMode={darkMode} />
           <MInput label="Código de Barras/Catálogo" value={editedItem.barcode || ''} onChange={e => setEditedItem({...editedItem, barcode: e.target.value})} darkMode={darkMode} />
           
-          <MContainer darkMode={darkMode} className="p-2" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-50 text-black'}>
+          <MContainer darkMode={darkMode} className="p-2" colorClass={darkMode ? 'bg-gray-800 border-amber-500/50 text-white' : 'bg-amber-50 text-black'}>
             <MInput label="Anotações" multiline value={editedItem.notes || ''} onChange={e => setEditedItem({...editedItem, notes: e.target.value})} darkMode={darkMode} />
           </MContainer>
 
@@ -657,7 +657,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
             {isDiscItem && <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}><Headphones className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Spotify</span></a>}
           </div>
 
-          <button onClick={saveModifications} className={`w-full mt-2 py-3 border-[2px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-700 border-gray-300 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-600 border-black text-white'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><Check className="w-5 h-5" /> Salvar Alterações</button>
+          <button onClick={saveModifications} className={`w-full mt-2 py-3 border-[2px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-600 border-gray-300 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-600 border-black text-white'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><Check className="w-5 h-5" /> Salvar Alterações</button>
 
           <div className="mt-4 mb-2 flex flex-row items-center justify-center gap-6">
             <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
@@ -704,7 +704,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
                       <div className="text-sm font-black leading-tight break-words whitespace-normal mb-1">{item.title || 'S/ Título'}</div>
                       <div className="text-[10px] font-bold opacity-80 uppercase tracking-wide break-words whitespace-normal">{item.author_developer || '--'}</div>
                     </div>
-                    <div className="mt-3 flex items-end">{[...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(item.type) ? <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-300 bg-cyan-900 text-cyan-300' : 'border-black bg-amber-500 text-white'} font-black uppercase tracking-widest w-max`}>{item.status || '--'}</div> : <div />}</div>
+                    <div className="mt-3 flex items-end">{[...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(item.type) ? <div className={`text-[8px] px-2 py-1 border-[2px] ${darkMode ? 'border-gray-300 bg-cyan-800 text-cyan-300' : 'border-black bg-amber-500 text-white'} font-black uppercase tracking-widest w-max`}>{item.status || '--'}</div> : <div />}</div>
                  </div>
                  <div className={`w-24 sm:w-28 flex-shrink-0 flex flex-col items-center justify-between border-l-[2px] pl-2 py-0.5 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                     <div className={`w-full ${(activeCategories['Discos'] || []).includes(item.type) ? 'aspect-square' : 'border-[2px] aspect-[3/4]'} ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-black'} flex items-center justify-center overflow-hidden mb-2 shadow-[2px_2px_0px_currentColor]`}>
@@ -849,7 +849,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       </div>
 
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-700 border-gray-300 text-white' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-700 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-500 border-gray-300 text-black' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
           {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-sm animate-spin flex-shrink-0" />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
@@ -904,7 +904,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
               </div>
             </div>
             
-            <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-50 text-black'}>
+            <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-gray-800 border-amber-500/50 text-white' : 'bg-amber-50 text-black'}>
               <MInput darkMode={darkMode} label="Anotações" multiline value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
             </MContainer>
 
@@ -912,7 +912,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
               <div className="mb-4 mt-2">
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-1 block ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>Status Atual</label>
                 <div className="flex gap-2 flex-wrap">
-                  {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
+                  {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setFormData({...formData, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${formData.status === opt ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
                 </div>
               </div>
             )}
@@ -993,8 +993,8 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
             if ((statusWeights[itemStatus] || 0) > (statusWeights[currentStatus] || 0)) {
                existing.status = itemStatus;
             }
-            // Manter ano mais antigo se for uma coleção (opcional, vamos manter)
-            const yrCur = parseInt(existing.year); const yrNew = parseInt(item.year);
+            // Manter ano mais antigo se for uma coleção
+            const yrCur = getValidYear(existing.year); const yrNew = getValidYear(item.year);
             if (!isNaN(yrCur) && !isNaN(yrNew) && yrNew < yrCur) existing.year = item.year;
         }
     });
@@ -1002,7 +1002,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
     const groupedWorks = Array.from(groupedMap.values());
 
     const data = {
-       total_works: groupedWorks.length, // Usamos a contagem de obras agrupadas
+       total_works: groupedWorks.length,
        total_raw: filteredItems.length,
        concluidos: 0, backlog: 0,
        catCounts: {}, typeCounts: {}, statusCounts: {}, ratingCounts: {},
@@ -1044,13 +1044,13 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
       if (rInt > 0) { data.ratedCount++; data.sumRatings += rInt; }
 
       // Tempo
-      const yr = parseInt(i.year);
+      const yr = getValidYear(i.year);
       if (!isNaN(yr)) {
          data.years[yr] = (data.years[yr] || 0) + 1;
          const dec = Math.floor(yr / 10) * 10;
          data.decades[dec] = (data.decades[dec] || 0) + 1;
-         if (!data.oldest || yr < parseInt(data.oldest.year)) data.oldest = i;
-         if (!data.newest || yr > parseInt(data.newest.year)) data.newest = i;
+         if (!data.oldest || yr < getValidYear(data.oldest.year)) data.oldest = i;
+         if (!data.newest || yr > getValidYear(data.newest.year)) data.newest = i;
       } else {
          data.completeness.missingYears++;
       }
@@ -1059,7 +1059,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
       const auth = applyArtistAlias(i.author_developer, settings?.artistAliases) || 'Desconhecido';
       const pub = i.publisher?.trim() || 'Desconhecida';
       
-      // Ignorar Various Artists no ranking, mas computar o resto
+      // Ignorar Various Artists no ranking
       if (!isVariousArtists(auth)) {
          if (!data.authors[auth]) data.authors[auth] = { count: 0, sumRating: 0, ratedCount: 0, concluidos: 0, backlog: 0, items: [] };
          data.authors[auth].count++; data.authors[auth].items.push(i);
@@ -1073,7 +1073,6 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
       if (analyticalStatus === 'Concluído') data.publishers[pub].concluidos++; else data.publishers[pub].backlog++;
 
       // Dimensões / Métricas
-      // Usa a métrica agregada para obras agrupadas
       const val = i.aggregated_metric;
       if (val > 0) {
          let label = 'Unidades';
@@ -1084,7 +1083,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
          }
       }
 
-      // Qualidade (Completude) baseado nos raw fields of the group representative
+      // Qualidade (Completude)
       const expectedFields = ['title', 'author_developer', 'year', 'publisher', 'type', 'barcode', 'cover_url', 'pages_or_time'];
       data.completeness.totalFields += expectedFields.length;
       expectedFields.forEach(f => { if (i[f] && String(i[f]).trim() !== '') data.completeness.filledFields++; });
@@ -1127,7 +1126,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
     const catCounts = {}; const yearCounts = {};
     items.forEach(i => {
        const cat = getCategoryOf(i.type); catCounts[cat] = (catCounts[cat] || 0) + 1;
-       const yr = parseInt(i.year); if(!isNaN(yr)) yearCounts[Math.floor(yr/10)*10] = (yearCounts[Math.floor(yr/10)*10] || 0) + 1;
+       const yr = getValidYear(i.year); if(!isNaN(yr)) yearCounts[Math.floor(yr/10)*10] = (yearCounts[Math.floor(yr/10)*10] || 0) + 1;
     });
 
     return (
@@ -1143,16 +1142,16 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
             <MetricCard label="Backlog" value={entityData.backlog} darkMode={darkMode} />
          </div>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MContainer darkMode={darkMode} className="p-4 flex flex-col gap-2">
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
                <span className="text-[10px] font-black uppercase tracking-widest border-b-[2px] border-current pb-1 mb-2">Composição</span>
                {Object.entries(catCounts).map(([cat, count], i) => <MondrianHBar key={cat} label={cat} value={count} max={entityData.count} index={i} darkMode={darkMode} />)}
             </MContainer>
-            <MContainer darkMode={darkMode} className="p-4 flex flex-col gap-2">
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col gap-2" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
                <span className="text-[10px] font-black uppercase tracking-widest border-b-[2px] border-current pb-1 mb-2">Décadas</span>
                {Object.entries(yearCounts).sort((a,b)=>a[0]-b[0]).map(([dec, count], i) => <MondrianHBar key={dec} label={`${dec}s`} value={count} max={Math.max(...Object.values(yearCounts))} index={i+1} darkMode={darkMode} />)}
             </MContainer>
          </div>
-         <MContainer darkMode={darkMode} className="p-0 overflow-hidden">
+         <MContainer darkMode={darkMode} className="p-0 overflow-hidden" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
             <div className={`p-3 border-b-[2px] ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'} text-[10px] font-black uppercase tracking-widest`}>Obras Associadas ({items.length})</div>
             <div className="max-h-64 overflow-y-auto scrollbar-hide">
               <table className="w-full text-left text-[9px] font-bold uppercase tracking-widest">
@@ -1202,26 +1201,26 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                </div>
             </MContainer>
             
-            {/* GRÁFICOS DE LINHA DO TEMPO */}
+            {/* GRÁFICOS DE LINHA DO TEMPO - CORRIGIDOS COM ALTURA MÁXIMA E FLEX 100% */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <MContainer darkMode={darkMode} className="p-4 flex-1" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+              <MContainer darkMode={darkMode} className="p-4 flex-1 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
                  <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Décadas)</div>
-                 <div className="flex items-end gap-1 h-32 mt-4 overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1">
+                 <div className="flex items-end gap-1 h-32 mt-auto overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1 relative">
                     {sortedDecades.map(([dec, count], i) => (
-                      <div key={dec} className="flex flex-col items-center flex-1 min-w-[30px] group cursor-help">
+                      <div key={dec} className="flex flex-col justify-end items-center flex-1 min-w-[30px] group cursor-help h-full">
                          <div className="text-[8px] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-1">{count}</div>
-                         <div className={`w-full transition-all duration-500 ${getMondrianColor(i, darkMode)} border-[2px] ${darkMode?'border-gray-300':'border-black'} hover:opacity-80`} style={{ height: `${(count / maxDecade) * 100}%` }}></div>
-                         <div className="text-[7px] font-black mt-1 opacity-70 -rotate-45 translate-y-2">{dec}s</div>
+                         <div className={`w-full transition-all duration-500 ${getMondrianColor(i, darkMode)} border-[2px] ${darkMode?'border-gray-300':'border-black'} hover:opacity-80`} style={{ height: `${Math.max(2, (count / maxDecade) * 100)}%` }}></div>
+                         <div className="text-[7px] font-black mt-1 opacity-70 -rotate-45 translate-y-2">{String(dec).slice(-2)}s</div>
                       </div>
                     ))}
                  </div>
               </MContainer>
-              <MContainer darkMode={darkMode} className="p-4 flex-1" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+              <MContainer darkMode={darkMode} className="p-4 flex-1 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
                  <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Anos)</div>
-                 <div className="flex items-end gap-0.5 h-32 mt-4 overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1">
+                 <div className="flex items-end gap-0.5 h-32 mt-auto overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1 relative">
                     {sortedYears.map(([yr, count], i) => (
-                      <div key={yr} className="flex flex-col items-center flex-1 min-w-[12px] group cursor-help">
-                         <div className={`w-full transition-all duration-500 bg-pink-500 border-x border-t ${darkMode?'border-gray-800':'border-gray-200'} hover:opacity-80`} style={{ height: `${(count / maxYear) * 100}%` }} title={`${yr}: ${count}`}></div>
+                      <div key={yr} className="flex flex-col justify-end items-center flex-1 min-w-[12px] group cursor-help h-full">
+                         <div className={`w-full transition-all duration-500 bg-pink-500 border-x border-t ${darkMode?'border-gray-800':'border-gray-200'} hover:opacity-80`} style={{ height: `${Math.max(1, (count / maxYear) * 100)}%` }} title={`${yr}: ${count}`}></div>
                       </div>
                     ))}
                  </div>
@@ -1371,7 +1370,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
        {!selectedEntity && (
          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-4 border-b-[2px] border-transparent flex-shrink-0">
            {tabs.map(t => (
-             <button key={t.id} onClick={() => setActiveSubTab(t.id)} className={`px-4 py-2 border-[2px] text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${activeSubTab === t.id ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white' : 'bg-white border-gray-300 text-gray-600 hover:text-black')}`}>{t.label}</button>
+             <button key={t.id} onClick={() => setActiveSubTab(t.id)} className={`px-4 py-2 border-[2px] text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${activeSubTab === t.id ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white' : 'bg-white border-gray-300 text-gray-600 hover:text-black')}`}>{t.label}</button>
            ))}
          </div>
        )}
@@ -1461,17 +1460,16 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         <MContainer darkMode={darkMode} className="p-4 mb-4 flex flex-col items-center justify-center text-center animate-pulse border-cyan-600 bg-cyan-100 dark:bg-cyan-900" colorClass="border-cyan-600"><Smartphone className="w-8 h-8 mb-2 text-cyan-600 dark:text-cyan-400" /><h3 className="font-black uppercase tracking-widest text-cyan-800 dark:text-cyan-300 text-lg mb-1">Instalar App</h3><MButton darkMode={darkMode} onClick={pwa.promptInstall} variant="cyan" className="w-full py-4 text-sm font-black text-white">📲 Instalar Agora</MButton></MContainer>
       )}
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-50 text-black'}>
         <button onClick={() => toggleSection('aparencia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'aparencia' ? (darkMode ? 'border-b-[2px] border-gray-300' : 'border-b-[2px] border-black') : ''}`}><span className="flex items-center gap-2"><Sun className="w-4 h-4" /> Aparência & Interface</span><span className="text-lg font-mono">{openSection === 'aparencia' ? '−' : '+'}</span></button>
         {openSection === 'aparencia' && (
           <div className="p-4 flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <span className="text-[10px] font-black uppercase tracking-widest">Tema Visual</span>
-              <button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[2px] font-black uppercase tracking-widest text-[10px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-gray-200 text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{darkMode ? 'Modo Claro' : 'Modo Escuro'}</button>
+              <button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[2px] font-black uppercase tracking-widest text-[10px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-900 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-gray-200 text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{darkMode ? 'Modo Claro' : 'Modo Escuro'}</button>
             </div>
             
-            {/* NOVO TOGGLE DE EFEITOS SONOROS */}
-            <div className={`border-t-[2px] ${darkMode ? 'border-amber-900' : 'border-amber-200'} pt-3`}>
+            <div className={`border-t-[2px] ${darkMode ? 'border-gray-700' : 'border-gray-200'} pt-3`}>
                <div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center justify-between">
                    <span className="flex items-center gap-2"><MonitorPlay className="w-4 h-4"/> Efeitos Sonoros</span>
                    <button onClick={() => { 
@@ -1480,26 +1478,26 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                        globalSoundEnabled = val;
                        if(val) { setTimeout(() => playChipBeep('click'), 50); }
                        onShowToast('success');
-                   }} className={`w-10 h-5 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'} flex items-center p-0.5 transition-colors ${settings?.soundEnabled !== false ? (darkMode ? 'bg-cyan-600' : 'bg-cyan-500') : (darkMode ? 'bg-gray-700' : 'bg-gray-300')}`}>
+                   }} className={`w-10 h-5 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'} flex items-center p-0.5 transition-colors ${settings?.soundEnabled !== false ? 'bg-cyan-500' : (darkMode ? 'bg-gray-700' : 'bg-gray-300')}`}>
                        <div className={`w-3 h-3 ${darkMode ? 'bg-white border-gray-300' : 'bg-black border-black'} border-[2px] transform transition-transform ${settings?.soundEnabled !== false ? 'translate-x-5' : 'translate-x-0'}`} />
                    </button>
                </div>
             </div>
 
-            <div className={`border-t-[2px] ${darkMode ? 'border-amber-900' : 'border-amber-200'} pt-3 flex flex-col gap-5`}>
+            <div className={`border-t-[2px] ${darkMode ? 'border-gray-700' : 'border-gray-200'} pt-3 flex flex-col gap-5`}>
                <div><div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><MonitorPlay className="w-4 h-4"/> Velocidade LED</div><input type="range" min="10" max="150" step="1" value={160 - (Number(settings?.marqueeSpeed) || 35)} onChange={e => setSettings({...settings, marqueeSpeed: 160 - parseInt(e.target.value)})} onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }} onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-full h-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} style={{ accentColor: '#0891b2' }} /></div>
-               <div><div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Sun className="w-4 h-4"/> Brilho LED</div><input type="range" min="0" max="100" step="5" value={Number(settings?.marqueeBrightness) ?? 50} onChange={e => setSettings({...settings, marqueeBrightness: parseInt(e.target.value)})} onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }} onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-full h-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} style={{ accentColor: '#d97706' }} /></div>
+               <div><div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Sun className="w-4 h-4"/> Brilho LED</div><input type="range" min="0" max="100" step="5" value={Number(settings?.marqueeBrightness) ?? 50} onChange={e => setSettings({...settings, marqueeBrightness: parseInt(e.target.value)})} onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }} onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-full h-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} style={{ accentColor: '#f59e0b' }} /></div>
             </div>
           </div>
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-cyan-900/20 text-white' : 'bg-cyan-50 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-50 text-black'}>
         <button onClick={() => toggleSection('arquivologia')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'arquivologia' ? (darkMode ? 'border-b-[2px] border-gray-300' : 'border-b-[2px] border-black') : ''}`}><span className="flex items-center gap-2"><ListIcon className="w-4 h-4" /> Gestão de Classes</span><span className="text-lg font-mono">{openSection === 'arquivologia' ? '−' : '+'}</span></button>
         {openSection === 'arquivologia' && (
           <div className="p-4 flex flex-col gap-4">
             <MInput darkMode={darkMode} label="Prefixo do Acervo" value={settings?.archivePrefix || ''} onChange={e => setSettings({...settings, archivePrefix: e.target.value.toUpperCase()})} onBlur={() => { playChipBeep('save'); onShowToast('success'); }} placeholder="Ex: MBU" />
-            <div className={`p-3 border-[2px] ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
+            <div className={`p-3 border-[2px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-gray-100'}`}>
              <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Nova Subclasse</h4>
               <div className="flex flex-col gap-2">
                 <select value={newSubclass.parent} onChange={e => setNewSubclass({...newSubclass, parent: e.target.value})} className={`w-full p-2 border-[2px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`}>{Object.keys(activeCategories || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
@@ -1529,11 +1527,11 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-amber-900/20 text-white' : 'bg-amber-50 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-50 text-black'}>
         <button onClick={() => toggleSection('equivalencias')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'equivalencias' ? (darkMode ? 'border-b-[2px] border-gray-300' : 'border-b-[2px] border-black') : ''}`}><span className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Equivalências (Artistas)</span><span className="text-lg font-mono">{openSection === 'equivalencias' ? '−' : '+'}</span></button>
         {openSection === 'equivalencias' && (
           <div className="p-4 flex flex-col gap-4">
-            <div className={`p-3 border-[2px] ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'}`}>
+            <div className={`p-3 border-[2px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-gray-100'}`}>
              <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 border-b-[2px] border-current pb-1">Agrupar Variações</h4>
               <div className="flex flex-col gap-2">
                 <input type="text" placeholder="Nome Correto (Ex: Expresso Rural)" value={newAlias.main} onChange={e => setNewAlias({...newAlias, main: e.target.value})} className={`w-full p-2 border-[2px] font-sans text-xs font-bold outline-none ${darkMode ? 'border-gray-300 bg-gray-700 text-white' : 'border-black bg-white text-black'}`} />
@@ -1546,7 +1544,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                 <h4 className="text-[10px] font-black uppercase tracking-widest mb-3">Variações Ativas</h4>
                 <div className="flex flex-col gap-2">
                   {settings.artistAliases.map((a, idx) => (
-                    <div key={idx} className={`flex items-center justify-between p-2 border-[2px] ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'}`}>
+                    <div key={idx} className={`flex items-center justify-between p-2 border-[2px] ${darkMode ? 'border-gray-600 bg-gray-900' : 'border-gray-300 bg-white'}`}>
                       <div className="flex flex-col"><span className="text-[9px] font-black uppercase tracking-widest opacity-60">Lido como: {a.alias}</span><span className="text-[11px] font-bold">Corrigido p/: {a.main}</span></div>
                       <button onClick={() => handleRemoveAlias(idx)} className="p-2 text-pink-600 hover:text-pink-800 transition-colors"><Trash2 className="w-4 h-4" /></button>
                     </div>
@@ -1558,25 +1556,25 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-50 text-black'}>
         <button onClick={() => toggleSection('integracoes')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'integracoes' ? (darkMode ? 'border-b-[2px] border-gray-300' : 'border-b-[2px] border-black') : ''}`}><span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Integrações & APIs</span><span className="text-lg font-mono">{openSection === 'integracoes' ? '−' : '+'}</span></button>
         {openSection === 'integracoes' && (
           <div className="p-4 flex flex-col gap-6">
-            <div className="flex flex-col gap-2"><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Camera className="w-4 h-4"/> Gemini API (Scan IA)</div><MInput darkMode={darkMode} type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} /></div>
-            <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><DiscIcon className="w-4 h-4"/> Discogs API</div><MInput darkMode={darkMode} type="password" value={settings?.discogsToken || ''} onChange={e => setSettings({...settings, discogsToken: e.target.value})} /></div>
-            <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Share className="w-4 h-4"/> Google Sheets</div><MInput darkMode={darkMode} label="Webhook URL" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} /></div>
-            <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-pink-900' : 'border-pink-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}><Headphones className="w-4 h-4"/> Last.FM</div><MInput darkMode={darkMode} label="Username" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} /><MInput darkMode={darkMode} label="API Key" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} /></div>
+            <div className="flex flex-col gap-2"><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}><Camera className="w-4 h-4"/> Gemini API (Scan IA)</div><MInput darkMode={darkMode} type="password" value={settings?.geminiApiKey || ''} onChange={e => setSettings({...settings, geminiApiKey: e.target.value})} /></div>
+            <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}><DiscIcon className="w-4 h-4"/> Discogs API</div><MInput darkMode={darkMode} type="password" value={settings?.discogsToken || ''} onChange={e => setSettings({...settings, discogsToken: e.target.value})} /></div>
+            <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}><Share className="w-4 h-4"/> Google Sheets</div><MInput darkMode={darkMode} label="Webhook URL" value={settings?.googleSheetsUrl || ''} onChange={e => setSettings({...settings, googleSheetsUrl: e.target.value})} /></div>
+            <div className={`border-t-[2px] pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-col gap-2`}><div className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}><Headphones className="w-4 h-4"/> Last.FM</div><MInput darkMode={darkMode} label="Username" value={settings?.lastfmUser || ''} onChange={e => setSettings({...settings, lastfmUser: e.target.value})} /><MInput darkMode={darkMode} label="API Key" type="password" value={settings?.lastfmApiKey || ''} onChange={e => setSettings({...settings, lastfmApiKey: e.target.value})} /></div>
             <MButton darkMode={darkMode} onClick={() => { playChipBeep('save'); onShowToast('success'); }} variant="black" className="w-full mt-2 text-[10px]"><Check className="w-4 h-4" /> Salvar APIs</MButton>
           </div>
         )}
       </MContainer>
 
-      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-pink-900/20 text-white' : 'bg-pink-50 text-black'}>
+      <MContainer darkMode={darkMode} className="mb-4" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-50 text-black'}>
         <button onClick={() => toggleSection('backup')} className={`w-full p-4 flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${openSection === 'backup' ? (darkMode ? 'border-b-[2px] border-gray-300' : 'border-b-[2px] border-black') : ''}`}><span className="flex items-center gap-2"><Download className="w-4 h-4" /> Backup Local</span><span className="text-lg font-mono">{openSection === 'backup' ? '−' : '+'}</span></button>
         {openSection === 'backup' && (
           <div className="p-4 flex gap-2 flex-col sm:flex-row">
-            <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[2px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
-            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[2px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-pink-900/50 text-pink-200' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
+            <button onClick={handleExportCSV} className={`flex-1 flex items-center justify-center gap-2 p-3 text-[10px] font-black uppercase tracking-widest border-[2px] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-900 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'}`}><Download className="w-4 h-4 flex-shrink-0" /> Exportar</button>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 font-sans text-[10px] font-black uppercase tracking-widest border-[2px] cursor-pointer active:translate-y-1 active:translate-x-1 active:shadow-none transition-all ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-900 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-pink-100 text-pink-900'} `}><Upload className="w-4 h-4 flex-shrink-0" /> Importar<input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} /></label>
           </div>
         )}
       </MContainer>
@@ -1862,8 +1860,8 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
   const renderPacmanEnd = () => (
     <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
-      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" />
-      <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #fbbf24)` : 'none' }}><path fill="#fbbf24" transform="scale(-1, 1) translate(-100, 0)"><animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" /></path></svg>
+      <div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_3px_currentColor]" />
+      <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #f59e0b)` : 'none' }}><path fill="#f59e0b" transform="scale(-1, 1) translate(-100, 0)"><animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" /></path></svg>
     </div>
   );
 
@@ -2012,13 +2010,13 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
             <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-8 h-8 object-contain" /><span className="hidden lg:block text-xs font-black uppercase tracking-widest mt-1">Memorabilia</span>
           </div>
           <div className="flex-1 flex flex-col pt-4">
-            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-700 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-600 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
               <Library className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Coleção</span>
             </button>
-            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white border-l-[4px] border-amber-400' : 'bg-amber-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-500 text-black border-l-[4px] border-amber-400' : 'bg-amber-500 border-l-[4px] border-black text-black') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
               <PlusSquare className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
-            <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white border-l-[4px] border-pink-400' : 'bg-pink-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+            <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-600 text-white border-l-[4px] border-pink-400' : 'bg-pink-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
               <BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Dashboard</span>
             </button>
             <div className="mt-auto mb-4">
@@ -2095,7 +2093,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
                   </div>
                   <button onClick={() => { playChipBeep('click'); setIsFilterMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Filtros Globais">
                       <FilterIcon className="w-4 h-4" />
-                      {activeFiltersCount > 0 && (<div className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full border-[2px] flex items-center justify-center text-[8px] font-black ${darkMode ? 'bg-pink-700 border-gray-900 text-white' : 'bg-pink-600 border-white text-white'}`}>{activeFiltersCount}</div>)}
+                      {activeFiltersCount > 0 && (<div className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full border-[2px] flex items-center justify-center text-[8px] font-black ${darkMode ? 'bg-pink-600 border-gray-900 text-white' : 'bg-pink-600 border-white text-white'}`}>{activeFiltersCount}</div>)}
                   </button>
                   <button onClick={() => { playChipBeep('click'); setIsSortMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Ordenação Global">
                       {sortOrder === 'asc' ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
@@ -2121,13 +2119,13 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
 
           {/* NAV MOBILE */}
           <nav className={`flex md:hidden flex-none border-t-[2px] z-20 h-16 relative ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}>
-            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-white') : ''}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-600 text-white' : 'bg-cyan-600 text-white') : ''}`}>
               <Library className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Coleção</span>
             </button>
-            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white') : ''}`}>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-500 text-black' : 'bg-amber-500 text-black') : ''}`}>
               <PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
-            <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white') : ''}`}>
+            <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-600 text-white' : 'bg-pink-600 text-white') : ''}`}>
               <BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Dashboard</span>
             </button>
             <button onClick={() => { playChipBeep('click'); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-black') : ''}`}>
