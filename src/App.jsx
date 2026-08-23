@@ -246,7 +246,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 };
 
 // ==========================================
-// ÍCONES SVG NATIVOS
+// ÍCONES SVG NATIVOS E SPINNER
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>;
 
@@ -317,8 +317,6 @@ const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
 const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
 const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M14 21h-4"/><path d="M12 17v4"/><path d="m10 13 5-3-5-3v6z"/></>} />;
-const InfoIcon = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
-const MenuIcon = p => <Icon {...p} path={<><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></>} />;
 
 // ==========================================
 // PWA ENGINE
@@ -460,7 +458,6 @@ const MondrianDonutChart = ({ title, data, darkMode, onSliceClick }) => {
     <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-between h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
       <div className={`text-[10px] font-black uppercase tracking-widest mb-4 w-full border-b-[2px] pb-2 text-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</div>
       
-      {/* Visual representation - pure CSS conic gradient */}
       <div className="relative w-32 h-32 flex-shrink-0 mb-4 group cursor-pointer" onClick={() => onSliceClick && onSliceClick(null)} title="Limpar filtro deste gráfico">
         <div className={`absolute inset-0 rounded-full border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} transition-transform group-active:scale-95`} style={{ background: `conic-gradient(${grad})` }}></div>
         <div className={`absolute inset-0 m-auto w-14 h-14 rounded-full border-[2px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'} flex items-center justify-center group-active:scale-95 transition-transform`}>
@@ -494,7 +491,6 @@ const MetricCard = ({ label, value, subtext, darkMode, highlight = false, icon, 
   </div>
 );
 
-
 const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
   if (googleSheetsUrl) {
     fetch(googleSheetsUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(itemToSync) }).catch(e => console.error("Erro Google Sheets:", e));
@@ -510,7 +506,6 @@ const syncDeleteToSheets = (deletedId, googleSheetsUrl) => {
 // ==========================================
 // ABAS DA APLICAÇÃO
 // ==========================================
-
 const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode, settings, onShowToast, activeCategories, page, setPage }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [editedItem, setEditedItem] = useState(null);
@@ -547,11 +542,16 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
   };
 
   const saveModifications = () => {
-    setItems(items.map(i => i.id === editedItem.id ? editedItem : i));
-    setSelectedItem(editedItem);
+    // Treat Backlog / Não Iniciado as the same when saving manually
+    let statusToSave = editedItem.status;
+    if (statusToSave === 'Backlog') statusToSave = 'Não Iniciado';
+
+    const itemToSave = { ...editedItem, status: statusToSave };
+    setItems(items.map(i => i.id === itemToSave.id ? itemToSave : i));
+    setSelectedItem(itemToSave);
     playChipBeep('save');
     onShowToast('success');
-    syncItemToSheets(editedItem, settings?.googleSheetsUrl);
+    syncItemToSheets(itemToSave, settings?.googleSheetsUrl);
   };
 
   const handleSearchCover = async () => {
@@ -831,6 +831,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
+    
+    // Treat Backlog as Não Iniciado conceptually, but user can only pick the basic 4 in the form
     const classCode = activeClassCodes[formData.type] || '000'; const prefix = settings?.archivePrefix ? settings.archivePrefix.trim().toUpperCase() : 'MBU'; let maxSeq = 0;
     items.forEach(item => { if(item.archive_code) { const parts = String(item.archive_code).split('-'); if (parts.length >= 3 && parts[1] === classCode) { const seqNum = parseInt(parts[2], 10); if(!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum; } } });
     const sequence = String(maxSeq + 1).padStart(4, '0'); const newItem = { ...formData, id: generateId(items), archive_code: `${prefix}-${classCode}-${sequence}` };
@@ -947,7 +949,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   // Funções de filtro global ao clicar em gráficos
   const applyFilter = (group, val) => {
      setGlobalFilters(prev => {
-        const cur = prev[group];
+        const cur = prev[group] || [];
         if (!cur.includes(val)) return { ...prev, [group]: [...cur, val] };
         return prev;
      });
@@ -962,11 +964,51 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   };
 
   // =====================================
-  // DADOS ANALÍTICOS (PROCESSAMENTO)
+  // AGRUPAMENTO DE VOLUMES E CÁLCULO
   // =====================================
   const analytics = useMemo(() => {
+    // 1. Agrupar volumes em uma única "Obra"
+    const groupedMap = new Map();
+    filteredItems.forEach(item => {
+        const normTitle = normalizeWorkTitle(item.title);
+        const normTitleKey = normTitle.toLowerCase();
+        const author = applyArtistAlias(item.author_developer, settings?.artistAliases) || '';
+        const key = `${normTitleKey}|${author.toLowerCase()}|${item.type}`;
+
+        if (!groupedMap.has(key)) {
+            groupedMap.set(key, {
+                ...item,
+                title: normTitle || item.title,
+                original_title: item.title,
+                volumeCount: 1,
+                aggregated_metric: parseInt(item.pages_or_time) || 0,
+                isGroup: false
+            });
+        } else {
+            const existing = groupedMap.get(key);
+            existing.volumeCount += 1;
+            existing.isGroup = true;
+            existing.aggregated_metric += (parseInt(item.pages_or_time) || 0);
+            existing.rating = Math.max(existing.rating || 0, item.rating || 0); // Considera a melhor nota
+            
+            // Lógica de Status: Pega o mais avançado
+            const statusWeights = {'Concluído':4, 'Em Andamento':3, 'Na Fila':2, 'Não Iniciado':1, 'Backlog':1};
+            const currentStatus = existing.status || 'Não Iniciado';
+            const itemStatus = item.status || 'Não Iniciado';
+            if ((statusWeights[itemStatus] || 0) > (statusWeights[currentStatus] || 0)) {
+               existing.status = itemStatus;
+            }
+            // Manter ano mais antigo se for uma coleção (opcional, vamos manter)
+            const yrCur = parseInt(existing.year); const yrNew = parseInt(item.year);
+            if (!isNaN(yrCur) && !isNaN(yrNew) && yrNew < yrCur) existing.year = item.year;
+        }
+    });
+
+    const groupedWorks = Array.from(groupedMap.values());
+
     const data = {
-       total: filteredItems.length,
+       total_works: groupedWorks.length, // Usamos a contagem de obras agrupadas
+       total_raw: filteredItems.length,
        concluidos: 0, backlog: 0,
        catCounts: {}, typeCounts: {}, statusCounts: {}, ratingCounts: {},
        authors: {}, publishers: {}, decades: {}, years: {},
@@ -981,21 +1023,23 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
        completeness: { totalFields: 0, filledFields: 0, missingCovers: 0, missingYears: 0, missingBarcodes: 0 }
     };
 
-    filteredItems.forEach(i => {
+    groupedWorks.forEach(i => {
       // Categoria e Suporte
       const cat = getCategoryOf(i.type);
       data.catCounts[cat] = (data.catCounts[cat] || 0) + 1;
       data.typeCounts[i.type || 'Sem Tipo'] = (data.typeCounts[i.type || 'Sem Tipo'] || 0) + 1;
 
-      // Status Analítico (Concluído vs Backlog)
+      // Status Analítico (Unificando Backlog e Não Iniciado)
       const isBookGame = ['Livros', 'Games'].includes(cat);
-      let analyticalStatus = 'Não Iniciado';
+      let analyticalStatus = 'Backlog / Não Iniciado';
       if (isBookGame) {
          if (i.status === 'Concluído') { data.concluidos++; analyticalStatus = 'Concluído'; }
-         else { data.backlog++; analyticalStatus = i.status || 'Não Iniciado'; }
+         else if (i.status === 'Em Andamento') { data.backlog++; analyticalStatus = 'Em Andamento'; }
+         else if (i.status === 'Na Fila') { data.backlog++; analyticalStatus = 'Na Fila'; }
+         else { data.backlog++; analyticalStatus = 'Backlog / Não Iniciado'; } // Não Iniciado vira Backlog
       } else { // Audiovisual usa nota
          if ((Number(i.rating)||0) > 0) { data.concluidos++; analyticalStatus = 'Concluído'; }
-         else { data.backlog++; analyticalStatus = 'Backlog'; }
+         else { data.backlog++; analyticalStatus = 'Backlog / Não Iniciado'; }
       }
       data.statusCounts[analyticalStatus] = (data.statusCounts[analyticalStatus] || 0) + 1;
 
@@ -1017,13 +1061,16 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
       }
 
       // Atores (Autores / Editoras)
-      const auth = isVariousArtists(i.author_developer) ? 'Vários' : applyArtistAlias(i.author_developer, settings?.artistAliases) || 'Desconhecido';
+      const auth = applyArtistAlias(i.author_developer, settings?.artistAliases) || 'Desconhecido';
       const pub = i.publisher?.trim() || 'Desconhecida';
       
-      if (!data.authors[auth]) data.authors[auth] = { count: 0, sumRating: 0, ratedCount: 0, concluidos: 0, backlog: 0, items: [] };
-      data.authors[auth].count++; data.authors[auth].items.push(i);
-      if (rInt > 0) { data.authors[auth].sumRating += rInt; data.authors[auth].ratedCount++; }
-      if (analyticalStatus === 'Concluído') data.authors[auth].concluidos++; else data.authors[auth].backlog++;
+      // Ignorar Various Artists no ranking, mas computar o resto
+      if (!isVariousArtists(auth)) {
+         if (!data.authors[auth]) data.authors[auth] = { count: 0, sumRating: 0, ratedCount: 0, concluidos: 0, backlog: 0, items: [] };
+         data.authors[auth].count++; data.authors[auth].items.push(i);
+         if (rInt > 0) { data.authors[auth].sumRating += rInt; data.authors[auth].ratedCount++; }
+         if (analyticalStatus === 'Concluído') data.authors[auth].concluidos++; else data.authors[auth].backlog++;
+      }
 
       if (!data.publishers[pub]) data.publishers[pub] = { count: 0, sumRating: 0, ratedCount: 0, concluidos: 0, backlog: 0, items: [] };
       data.publishers[pub].count++; data.publishers[pub].items.push(i);
@@ -1031,17 +1078,18 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
       if (analyticalStatus === 'Concluído') data.publishers[pub].concluidos++; else data.publishers[pub].backlog++;
 
       // Dimensões / Métricas
-      const val = parseInt(i.pages_or_time) || 0;
+      // Usa a métrica agregada para obras agrupadas
+      const val = i.aggregated_metric;
       if (val > 0) {
          let label = 'Unidades';
          if (cat === 'Livros') label = 'Páginas'; else if (cat === 'Discos') label = 'Faixas'; else if (cat === 'Vídeo') label = 'Minutos'; else if (cat === 'Games') label = 'Horas';
          if (data.metrics[label]) {
             data.metrics[label].sum += val; data.metrics[label].count += 1;
-            if (val > data.metrics[label].max) { data.metrics[label].max = val; data.metrics[label].maxName = i.title || ''; }
+            if (val > data.metrics[label].max) { data.metrics[label].max = val; data.metrics[label].maxName = `${i.title}${i.isGroup? ' (Coleção)':''}`; }
          }
       }
 
-      // Qualidade (Completude)
+      // Qualidade (Completude) baseado nos raw fields of the group representative
       const expectedFields = ['title', 'author_developer', 'year', 'publisher', 'type', 'barcode', 'cover_url', 'pages_or_time'];
       data.completeness.totalFields += expectedFields.length;
       expectedFields.forEach(f => { if (i[f] && String(i[f]).trim() !== '') data.completeness.filledFields++; });
@@ -1059,8 +1107,11 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   const sortedRatings = [5,4,3,2,1,0].filter(r => analytics.ratingCounts[r]).map((r, i) => ({ label: r===0?'Sem Nota':`${r}★`, value: analytics.ratingCounts[r], colorHex: getMondrianColorHex(i+1, darkMode) }));
   
   const sortedDecades = Object.entries(analytics.decades).sort((a, b) => a[0] - b[0]);
+  const sortedYears = Object.entries(analytics.years).sort((a, b) => a[0] - b[0]);
+  
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
   const maxDecade = sortedDecades.length > 0 ? Math.max(...sortedDecades.map(d => d[1])) : 1;
+  const maxYear = sortedYears.length > 0 ? Math.max(...sortedYears.map(y => y[1])) : 1;
 
   const topAuthors = Object.entries(analytics.authors).filter(([n]) => n !== 'Desconhecido').sort((a,b) => b[1].count - a[1].count).slice(0, 20);
   const topPublishers = Object.entries(analytics.publishers).filter(([n]) => n !== 'Desconhecida').sort((a,b) => b[1].count - a[1].count).slice(0, 20);
@@ -1115,7 +1166,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                     {items.sort((a,b)=>(parseInt(b.year)||0)-(parseInt(a.year)||0)).map(i => (
                        <tr key={i.id} className={`border-b border-current opacity-80 hover:opacity-100 ${darkMode ? 'hover:bg-cyan-900/30' : 'hover:bg-cyan-50'}`}>
                           <td className="p-2 w-12">{i.year || '--'}</td>
-                          <td className="p-2 truncate max-w-[120px]">{i.title}</td>
+                          <td className="p-2 truncate max-w-[120px]">{i.title} {i.isGroup ? `(x${i.volumeCount})` : ''}</td>
                           <td className="p-2">{i.type}</td>
                           <td className="p-2">{i.rating>0?`${i.rating}★`:'--'}</td>
                        </tr>
@@ -1131,9 +1182,9 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   const renderVisaoGeral = () => (
     <div className="flex flex-col gap-4 animate-in fade-in duration-300">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-         <MetricCard label="Total Acervo" value={analytics.total} darkMode={darkMode} icon={<Library className="w-4 h-4"/>} />
+         <MetricCard label="Obras Únicas" value={analytics.total_works} darkMode={darkMode} icon={<Library className="w-4 h-4"/>} title="Volumes agrupados contam como 1" />
          <MetricCard label="Concluídos" value={analytics.concluidos} darkMode={darkMode} highlight={true} icon={<Check className="w-4 h-4"/>} />
-         <MetricCard label="Backlog (Fila)" value={analytics.backlog} darkMode={darkMode} subtext={`${((analytics.backlog/Math.max(1,analytics.total))*100).toFixed(0)}% do acervo`} icon={<RefreshIcon className="w-4 h-4"/>} />
+         <MetricCard label="Backlog (Fila)" value={analytics.backlog} darkMode={darkMode} subtext={`${((analytics.backlog/Math.max(1,analytics.total_works))*100).toFixed(0)}% do acervo`} icon={<RefreshIcon className="w-4 h-4"/>} />
          <MetricCard label="Nota Média" value={analytics.ratedCount > 0 ? (analytics.sumRatings / analytics.ratedCount).toFixed(1) : 'N/A'} darkMode={darkMode} icon={<Star className="w-4 h-4 text-amber-500 fill-amber-500"/>} />
       </div>
 
@@ -1142,9 +1193,9 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
             <MondrianDonutChart title="Divisão Categórica" data={sortedCats} darkMode={darkMode} onSliceClick={(val) => applyFilter('Categorias', val)} />
             <MContainer darkMode={darkMode} className="p-4 flex flex-col h-full" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
                <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Status (Consumo)</div>
-               <MondrianStackedBar data={sortedStatus} total={analytics.total} darkMode={darkMode} />
+               <MondrianStackedBar data={sortedStatus} total={analytics.total_works} darkMode={darkMode} />
                <div className="mt-4 flex-1 flex flex-col gap-2 justify-end">
-                  {sortedStatus.map((s,i) => <MondrianHBar key={s.label} label={s.label} value={s.value} max={analytics.total} index={i+2} darkMode={darkMode} onClick={() => applyFilter('Status', s.label)} />)}
+                  {sortedStatus.map((s,i) => <MondrianHBar key={s.label} label={s.label} value={s.value} max={analytics.total_works} index={i+2} darkMode={darkMode} onClick={() => applyFilter('Status', s.label)} />)}
                </div>
             </MContainer>
          </div>
@@ -1155,18 +1206,32 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                   {sortedTypes.map(([type, count], index) => <MondrianHBar key={`type-${type}`} label={type} value={count} max={maxType} index={index} darkMode={darkMode} onClick={() => applyFilter('Subtipos', type)} />)}
                </div>
             </MContainer>
-            <MContainer darkMode={darkMode} className="p-4 flex-1" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-               <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2 flex justify-between"><span>Linha do Tempo (Décadas)</span><span className="opacity-50">Anos de Lançamento</span></div>
-               <div className="flex items-end gap-1 h-32 mt-4 overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1">
-                  {sortedDecades.map(([dec, count], i) => (
-                    <div key={dec} className="flex flex-col items-center flex-1 min-w-[30px] group cursor-help">
-                       <div className="text-[8px] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-1">{count}</div>
-                       <div className={`w-full transition-all duration-500 ${getMondrianColor(i, darkMode)} border-[2px] ${darkMode?'border-gray-300':'border-black'} hover:opacity-80`} style={{ height: `${(count / maxDecade) * 100}%` }}></div>
-                       <div className="text-[7px] font-black mt-1 opacity-70 -rotate-45 translate-y-2">{dec}s</div>
-                    </div>
-                  ))}
-               </div>
-            </MContainer>
+            
+            {/* GRÁFICOS DE LINHA DO TEMPO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MContainer darkMode={darkMode} className="p-4 flex-1" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+                 <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Décadas)</div>
+                 <div className="flex items-end gap-1 h-32 mt-4 overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1">
+                    {sortedDecades.map(([dec, count], i) => (
+                      <div key={dec} className="flex flex-col items-center flex-1 min-w-[30px] group cursor-help">
+                         <div className="text-[8px] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-1">{count}</div>
+                         <div className={`w-full transition-all duration-500 ${getMondrianColor(i, darkMode)} border-[2px] ${darkMode?'border-gray-300':'border-black'} hover:opacity-80`} style={{ height: `${(count / maxDecade) * 100}%` }}></div>
+                         <div className="text-[7px] font-black mt-1 opacity-70 -rotate-45 translate-y-2">{dec}s</div>
+                      </div>
+                    ))}
+                 </div>
+              </MContainer>
+              <MContainer darkMode={darkMode} className="p-4 flex-1" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+                 <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Anos)</div>
+                 <div className="flex items-end gap-0.5 h-32 mt-4 overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1">
+                    {sortedYears.map(([yr, count], i) => (
+                      <div key={yr} className="flex flex-col items-center flex-1 min-w-[12px] group cursor-help">
+                         <div className={`w-full transition-all duration-500 bg-pink-500 border-x border-t ${darkMode?'border-gray-800':'border-gray-200'} hover:opacity-80`} style={{ height: `${(count / maxYear) * 100}%` }} title={`${yr}: ${count}`}></div>
+                      </div>
+                    ))}
+                 </div>
+              </MContainer>
+            </div>
          </div>
       </div>
     </div>
@@ -1182,7 +1247,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
       <div className="flex flex-col gap-4 animate-in fade-in duration-300">
          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
             <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2 flex justify-between items-center">
-              <span>{title} (Por Volume)</span>
+              <span>{title} (Por Volume de Obras)</span>
               <span className="opacity-50 text-[8px]">Clique para abrir a Ficha Analítica</span>
             </div>
             {list.length === 0 ? <div className="opacity-50 text-xs font-bold py-10 text-center">Nenhum dado com o filtro atual.</div> : (
@@ -1191,7 +1256,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                     <div key={name} className={`flex flex-col p-2 border-[2px] border-transparent hover:border-current cursor-pointer transition-all active:scale-[0.98] ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={() => setSelectedEntity({ type: typeLabel, name })}>
                        <div className="flex justify-between items-end mb-1">
                           <span className="text-[10px] font-black uppercase tracking-widest truncate flex-1">{name}</span>
-                          <span className="text-[12px] font-black text-cyan-600 dark:text-cyan-400 ml-2">{data.count}</span>
+                          <span className={`text-[12px] font-black ml-2 ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>{data.count}</span>
                        </div>
                        <div className="w-full h-2 flex border-[2px] border-current opacity-80 overflow-hidden">
                           <div className={`h-full ${darkMode ? 'bg-cyan-400' : 'bg-cyan-600'}`} style={{width:`${(data.count/maxVal)*100}%`}}></div>
@@ -1219,7 +1284,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                   <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[2px] border-current pb-1 ${darkMode?'text-amber-400':'text-amber-600'}`}>Métrica: {label}</div>
                   <div className="grid grid-cols-2 gap-2 mb-3">
                      <div className={`p-2 border-[2px] ${darkMode?'bg-gray-800 border-gray-700':'bg-gray-50 border-gray-200'}`}><div className="text-[8px] font-bold uppercase opacity-60">Total Acumulado</div><div className="text-xl font-black">{metricInfo.sum.toLocaleString('pt-BR')}</div></div>
-                     <div className={`p-2 border-[2px] ${darkMode?'bg-gray-800 border-gray-700':'bg-gray-50 border-gray-200'}`}><div className="text-[8px] font-bold uppercase opacity-60">Média por Item</div><div className="text-xl font-black">{Math.round(metricInfo.sum/metricInfo.count)}</div></div>
+                     <div className={`p-2 border-[2px] ${darkMode?'bg-gray-800 border-gray-700':'bg-gray-50 border-gray-200'}`}><div className="text-[8px] font-bold uppercase opacity-60">Média por Obra</div><div className="text-xl font-black">{Math.round(metricInfo.sum/metricInfo.count)}</div></div>
                   </div>
                   <div className={`p-2 border-[2px] ${darkMode?'border-gray-600':'border-black'} flex justify-between items-center`}>
                      <div className="flex flex-col overflow-hidden pr-2">
@@ -1254,9 +1319,9 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                    </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                   <MondrianHBar label="Sem Capa" value={comp.missingCovers} max={analytics.total} index={1} darkMode={darkMode} />
-                   <MondrianHBar label="Sem Código (Barcode)" value={comp.missingBarcodes} max={analytics.total} index={2} darkMode={darkMode} />
-                   <MondrianHBar label="Sem Ano" value={comp.missingYears} max={analytics.total} index={3} darkMode={darkMode} />
+                   <MondrianHBar label="Sem Capa" value={comp.missingCovers} max={analytics.total_raw} index={1} darkMode={darkMode} />
+                   <MondrianHBar label="Sem Código (Barcode)" value={comp.missingBarcodes} max={analytics.total_raw} index={2} darkMode={darkMode} />
+                   <MondrianHBar label="Sem Ano" value={comp.missingYears} max={analytics.total_raw} index={3} darkMode={darkMode} />
                 </div>
              </MContainer>
 
@@ -1273,11 +1338,11 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                    </div>
                    <div className={`p-2 border-[2px] ${darkMode?'border-gray-700 bg-gray-800':'border-gray-200 bg-gray-50'} flex justify-between items-center`}>
                       <span className="text-[8px] font-black uppercase opacity-60">Categoria Dominante</span>
-                      <span className="text-[10px] font-black">{sortedCats.length > 0 ? `${sortedCats[0].label} (${((sortedCats[0].value/analytics.total)*100).toFixed(0)}%)` : '--'}</span>
+                      <span className="text-[10px] font-black">{sortedCats.length > 0 ? `${sortedCats[0].label} (${((sortedCats[0].value/analytics.total_works)*100).toFixed(0)}%)` : '--'}</span>
                    </div>
                    <div className={`p-2 border-[2px] ${darkMode?'border-gray-700 bg-gray-800':'border-gray-200 bg-gray-50'} flex justify-between items-center`}>
                       <span className="text-[8px] font-black uppercase opacity-60">Suporte Dominante</span>
-                      <span className="text-[10px] font-black">{sortedTypes.length > 0 ? `${sortedTypes[0][0]} (${((sortedTypes[0][1]/analytics.total)*100).toFixed(0)}%)` : '--'}</span>
+                      <span className="text-[10px] font-black">{sortedTypes.length > 0 ? `${sortedTypes[0][0]} (${((sortedTypes[0][1]/analytics.total_works)*100).toFixed(0)}%)` : '--'}</span>
                    </div>
                 </div>
              </MContainer>
@@ -1318,7 +1383,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
 
        {/* ÁREA DE CONTEÚDO SCROLLÁVEL */}
        <div className="flex-1 overflow-y-auto scrollbar-hide pr-1 pb-10">
-          {analytics.total === 0 ? (
+          {analytics.total_raw === 0 ? (
              <div className="flex flex-col items-center justify-center h-64 opacity-50"><Ghost className="w-12 h-12 mb-4" /><span className="text-sm font-black uppercase tracking-widest">Nenhum dado analítico.</span><span className="text-[10px] font-bold mt-2">Remova os filtros ou adicione itens.</span></div>
           ) : selectedEntity ? (
              renderFicha()
@@ -1512,7 +1577,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   );
 };
 
-
 // ==========================================
 // COMPONENTE PRINCIPAL (APP)
 // ==========================================
@@ -1581,8 +1645,15 @@ export default function App() {
         res = res.filter(i => {
            const isDisc = (activeCategories['Discos'] || []).includes(i.type);
            const isVideo = (activeCategories['Vídeo'] || []).includes(i.type);
-           if (isDisc || isVideo) return globalFilters.Status.includes((Number(i.rating)||0)>0 ? 'Concluído' : 'Não Iniciado');
-           return globalFilters.Status.includes(i.status);
+           if (isDisc || isVideo) {
+              const st = (Number(i.rating)||0)>0 ? 'Concluído' : 'Não Iniciado';
+              // If filter asks for Backlog/Não Iniciado, accept 'Não Iniciado'
+              if (globalFilters.Status.includes('Backlog / Não Iniciado') && st === 'Não Iniciado') return true;
+              return globalFilters.Status.includes(st);
+           }
+           const stText = i.status === 'Backlog' ? 'Não Iniciado' : (i.status || 'Não Iniciado');
+           if (globalFilters.Status.includes('Backlog / Não Iniciado') && stText === 'Não Iniciado') return true;
+           return globalFilters.Status.includes(stText);
         });
      }
      if (globalFilters.Notas && globalFilters.Notas.length > 0) res = res.filter(i => globalFilters.Notas.includes(Math.floor(Number(i.rating)||0)));
@@ -1856,7 +1927,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Status (Universal)</div>
                       <div className="flex flex-wrap gap-2">
-                        {STATUS_OPTIONS.map(st => {
+                        {['Backlog / Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'].map(st => {
                           const isActive = globalFilters.Status && globalFilters.Status.includes(st);
                           return (
                           <label key={st} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-amber-400 bg-amber-900/30':'border-amber-600 bg-amber-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
@@ -1932,7 +2003,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
               <PlusSquare className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
             <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white border-l-[4px] border-pink-400' : 'bg-pink-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-              <BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Análises (BI)</span>
+              <BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Dashboard</span>
             </button>
             <div className="mt-auto mb-4">
               <button onClick={() => { playChipBeep('click'); setActiveTab('settings'); }} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white border-l-[4px] border-gray-400' : 'bg-gray-200 border-l-[4px] border-black') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
@@ -2041,7 +2112,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
               <PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
             <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white') : ''}`}>
-              <BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">BI</span>
+              <BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Dashboard</span>
             </button>
             <button onClick={() => { playChipBeep('click'); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-black') : ''}`}>
               <Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span>
