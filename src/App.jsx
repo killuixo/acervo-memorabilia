@@ -69,6 +69,11 @@ const playChipBeep = (type) => {
       osc.frequency.setValueAtTime(150, now); osc.frequency.setValueAtTime(100, now + 0.1);
       gain.gain.setValueAtTime(vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'click') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(800, now);
+      gain.gain.setValueAtTime(0.01, now); gain.gain.linearRampToValueAtTime(0, now + 0.05);
+      osc.start(now); osc.stop(now + 0.05);
     }
   } catch (e) {}
 };
@@ -157,6 +162,7 @@ const normalizeWorkTitle = title => {
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
 const isVariousArtists = name => ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => String(name || '').toLowerCase().trim().includes(k));
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
+const getDecade = year => year && !isNaN(year) ? Math.floor(year / 10) * 10 : null;
 
 const applyArtistAlias = (name, aliases = []) => {
   if (!name || !Array.isArray(aliases)) return name;
@@ -244,7 +250,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>;
 
-// O NOVO DISCO SPINNER QUE SUBSTITUI A KATAMARI
+// O NOVO DISCO SPINNER QUE SUBSTITUI A KATAMARI (Sem sulcos, giro anti-horário)
 const DiscoSpinner = ({ className = "w-6 h-6", glow = 0, speed = 3 }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
     <defs>
@@ -311,6 +317,8 @@ const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y
 const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
 const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
 const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M14 21h-4"/><path d="M12 17v4"/><path d="m10 13 5-3-5-3v6z"/></>} />;
+const InfoIcon = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} />;
+const MenuIcon = p => <Icon {...p} path={<><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></>} />;
 
 // ==========================================
 // PWA ENGINE
@@ -348,14 +356,15 @@ const usePWA = (iconUrl) => {
 // ==========================================
 const getChartColors = darkMode => darkMode ? ['#0e7490', '#be185d', '#b45309', '#155e75', '#9d174d', '#92400e'] : ['#0891b2', '#db2777', '#d97706', '#06b6d4', '#ec4899', '#f59e0b'];
 const getMondrianColor = (index, darkMode) => darkMode ? ['bg-cyan-700', 'bg-pink-700', 'bg-amber-700'][index % 3] : ['bg-cyan-600', 'bg-pink-600', 'bg-amber-600'][index % 3];
+const getMondrianColorHex = (index, darkMode) => getChartColors(darkMode)[index % 3];
 
-const MContainer = ({ children, className = '', colorClass = '', darkMode }) => (
-  <div className={`border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${colorClass} ${className} transition-colors duration-300`}>
+const MContainer = ({ children, className = '', colorClass = '', darkMode, onClick }) => (
+  <div onClick={onClick} className={`border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${colorClass} ${className} transition-colors duration-300`}>
     {children}
   </div>
 );
 
-const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false }) => {
+const MButton = ({ onClick, children, className = '', variant = 'primary', icon, darkMode, disabled = false, title }) => {
   let bg = darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black';
   if (variant === 'pink') bg = darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white';
   if (variant === 'cyan') bg = darkMode ? 'bg-cyan-700 text-white' : 'bg-cyan-600 text-white';
@@ -363,7 +372,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   if (variant === 'black') bg = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
 
   return (
-    <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}>
+    <button title={title} disabled={disabled} onClick={(e) => { playChipBeep('click'); onClick && onClick(e); }} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}>
       {icon} {children}
     </button>
   );
@@ -393,7 +402,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+      <MContainer darkMode={darkMode} className="w-full max-w-sm p-6 flex flex-col gap-4 animate-in zoom-in duration-200" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
         <h3 className={`font-black uppercase tracking-widest text-lg leading-tight border-b-[2px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</h3>
         <p className="text-sm font-bold opacity-90">{message}</p>
         <div className="flex gap-2 mt-4">
@@ -405,39 +414,86 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
   );
 };
 
-const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v }) => (
-  <div className="flex items-center gap-2 w-full mb-2">
-    <div className="w-16 text-[9px] font-black uppercase tracking-widest truncate" title={label}>{label}</div>
-    <div className={`flex-1 h-5 border-[2px] ${darkMode ? 'bg-gray-800 border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-gray-200 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} flex relative overflow-hidden`}>
+const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v, onClick, showValue = true }) => (
+  <div className={`flex items-center gap-2 w-full mb-2 ${onClick ? 'cursor-pointer group' : ''}`} onClick={(e) => { if(onClick) { playChipBeep('click'); onClick(e); } }}>
+    <div className={`w-20 text-[9px] font-black uppercase tracking-widest truncate ${onClick ? 'group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors' : ''}`} title={label}>{label}</div>
+    <div className={`flex-1 h-6 border-[2px] ${darkMode ? 'bg-gray-800 border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-gray-200 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} flex relative overflow-hidden ${onClick ? 'group-active:translate-y-0.5 group-active:translate-x-0.5 group-active:shadow-none transition-all' : ''}`}>
       <div className={`h-full transition-all duration-1000 ${getMondrianColor(index, darkMode)}`} style={{ width: `${max > 0 ? (value / max) * 100 : 0}%` }} />
-      <span className={`absolute inset-0 flex items-center ml-2 text-[10px] font-black ${darkMode ? 'text-white' : 'text-black'} drop-shadow-md`}>{valueFormatter(value)}</span>
+      {showValue && <span className={`absolute inset-0 flex items-center ml-2 text-[10px] font-black ${darkMode ? 'text-white' : 'text-black'} drop-shadow-md mix-blend-difference`}>{valueFormatter(value)}</span>}
     </div>
   </div>
 );
 
-const MondrianDonutChart = ({ title, data, darkMode }) => {
+const MondrianStackedBar = ({ data, total, darkMode }) => {
+  if (total === 0) return null;
+  return (
+    <div className="w-full flex flex-col gap-1 mt-2">
+      <div className={`w-full h-6 border-[2px] flex ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`}>
+        {data.map((d, i) => (
+          <div key={i} title={`${d.label}: ${d.value} (${((d.value/total)*100).toFixed(1)}%)`} className={`h-full transition-all duration-1000 flex items-center justify-center overflow-hidden cursor-help`} style={{ width: `${(d.value / total) * 100}%`, backgroundColor: d.colorHex }}>
+            {d.value / total > 0.15 && <span className="text-[8px] font-black text-white mix-blend-difference drop-shadow-md truncate px-1">{d.label}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap justify-between text-[8px] font-black uppercase tracking-widest opacity-70 mt-1">
+         {data.map((d, i) => <span key={i}>{d.label}: {((d.value/total)*100).toFixed(0)}%</span>)}
+      </div>
+    </div>
+  );
+};
+
+const MondrianDonutChart = ({ title, data, darkMode, onSliceClick }) => {
   const total = data.reduce((acc, item) => acc + item.value, 0);
   if (total === 0) return null;
   let currentAngle = 0;
-  const grad = data.map(item => { const p = (item.value / total) * 100; const s = currentAngle; const e = currentAngle + p; currentAngle = e; return `${item.colorHex} ${s}% ${e}%`; }).join(', ');
+  const slices = data.map((item, idx) => {
+      const p = (item.value / total) * 100;
+      const s = currentAngle;
+      const e = currentAngle + p;
+      currentAngle = e;
+      return { ...item, s, e, p, idx };
+  });
+
+  const grad = slices.map(s => `${s.colorHex} ${s.s}% ${s.e}%`).join(', ');
 
   return (
-    <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-center h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
+    <MContainer darkMode={darkMode} className="p-4 flex flex-col items-center justify-between h-full w-full" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
       <div className={`text-[10px] font-black uppercase tracking-widest mb-4 w-full border-b-[2px] pb-2 text-center ${darkMode ? 'border-gray-300' : 'border-black'}`}>{title}</div>
-      <div className={`relative w-24 h-24 rounded-full border-[2px] flex-shrink-0 ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} style={{ background: `conic-gradient(${grad})` }}>
-        <div className={`absolute inset-0 m-auto w-10 h-10 rounded-full border-[2px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'}`}></div>
+      
+      {/* Visual representation - pure CSS conic gradient */}
+      <div className="relative w-32 h-32 flex-shrink-0 mb-4 group cursor-pointer" onClick={() => onSliceClick && onSliceClick(null)} title="Limpar filtro deste gráfico">
+        <div className={`absolute inset-0 rounded-full border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} transition-transform group-active:scale-95`} style={{ background: `conic-gradient(${grad})` }}></div>
+        <div className={`absolute inset-0 m-auto w-14 h-14 rounded-full border-[2px] ${darkMode ? 'border-gray-300 bg-gray-900' : 'border-black bg-white'} flex items-center justify-center group-active:scale-95 transition-transform`}>
+           <span className="text-[9px] font-black">{total}</span>
+        </div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-4 w-full px-1">
-        {data.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
-            <div className={`w-3 h-3 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div>
-            <span className="truncate max-w-[60px]">{item.label}</span> ({item.value})
+
+      <div className="flex flex-col w-full gap-1.5 mt-auto">
+        {slices.map((item, idx) => (
+          <div key={idx} onClick={() => { if(onSliceClick) { playChipBeep('click'); onSliceClick(item.originalLabel || item.label); } }} className={`flex items-center justify-between text-[9px] font-black uppercase tracking-widest p-1 border-[2px] border-transparent ${onSliceClick ? 'cursor-pointer hover:border-current active:scale-95 transition-all' : ''}`}>
+            <div className="flex items-center gap-2 truncate">
+              <div className={`w-3 h-3 flex-shrink-0 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div>
+              <span className="truncate" title={item.label}>{item.label}</span>
+            </div>
+            <span className="flex-shrink-0 opacity-80">{item.value} ({item.p.toFixed(0)}%)</span>
           </div>
         ))}
       </div>
     </MContainer>
   );
 };
+
+const MetricCard = ({ label, value, subtext, darkMode, highlight = false, icon, onClick }) => (
+  <div onClick={onClick} className={`p-3 border-[2px] flex flex-col justify-between transition-all ${onClick ? 'cursor-pointer active:scale-95 hover:shadow-lg' : ''} ${highlight ? (darkMode ? 'bg-cyan-900 border-cyan-400 text-cyan-50 shadow-[2px_2px_0px_#22d3ee]' : 'bg-cyan-100 border-cyan-600 text-cyan-900 shadow-[2px_2px_0px_#0891b2]') : (darkMode ? 'bg-gray-800 border-gray-300 text-white' : 'bg-gray-50 border-black text-black')}`}>
+     <div className="flex justify-between items-start mb-2">
+       <span className="text-[9px] font-black uppercase tracking-widest opacity-70 leading-tight pr-1">{label}</span>
+       {icon && <span className="opacity-50 flex-shrink-0">{icon}</span>}
+     </div>
+     <div className={`text-2xl font-black ${highlight ? (darkMode ? 'text-cyan-300' : 'text-cyan-700') : ''}`}>{value}</div>
+     {subtext && <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1 truncate" title={subtext}>{subtext}</div>}
+  </div>
+);
+
 
 const syncItemToSheets = (itemToSync, googleSheetsUrl) => {
   if (googleSheetsUrl) {
@@ -879,104 +935,407 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
   );
 };
 
-const DashboardTab = ({ items, filteredItems, darkMode, activeCategories }) => {
+
+// ==========================================
+// BUSINESS INTELLIGENCE DASHBOARD
+// ==========================================
+const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, globalFilters, setGlobalFilters, settings }) => {
   const chartColors = getChartColors(darkMode);
-  
-  // 1. Calcular Dados Globais (Auditoria Unificada baseada nos filtros)
-  const total = filteredItems.length;
-  let concluidos = 0, backlog = 0;
-  const metrics = { 'Páginas': { sum: 0, count: 0, max: 0, maxName: '' }, 'Faixas': { sum: 0, count: 0, max: 0, maxName: '' }, 'Minutos': { sum: 0, count: 0, max: 0, maxName: '' }, 'Horas': { sum: 0, count: 0, max: 0, maxName: '' } };
+  const [activeSubTab, setActiveSubTab] = useState('visao_geral');
+  const [selectedEntity, setSelectedEntity] = useState(null); // { type: 'author'|'publisher', name: '' }
 
-  const catCounts = {}; const typeCounts = {}; const statusCounts = {}; const ratingCounts = {};
+  // Funções de filtro global ao clicar em gráficos
+  const applyFilter = (group, val) => {
+     setGlobalFilters(prev => {
+        const cur = prev[group];
+        if (!cur.includes(val)) return { ...prev, [group]: [...cur, val] };
+        return prev;
+     });
+  };
+  const clearFilters = () => setGlobalFilters({ Categorias: [], Subtipos: [], Status: [], Notas: [], Autores: [], Editoras: [] });
+  const hasFilters = Object.values(globalFilters).some(arr => arr && arr.length > 0);
 
-  filteredItems.forEach(i => {
-    // A. Concluidos e Backlog
-    const isBookGame = (activeCategories['Livros']||[]).includes(i.type) || (activeCategories['Games']||[]).includes(i.type);
-    if (isBookGame) {
-      if (i.status === 'Concluído') concluidos++; else if (i.status === 'Não Iniciado' || i.status === 'Na Fila') backlog++;
-    } else {
-      if ((Number(i.rating)||0) > 0) concluidos++; else backlog++;
-    }
+  // Helper para agrupar categorias
+  const getCategoryOf = (type) => {
+    for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(type)) return cat; }
+    return 'Outros';
+  };
 
-    // B. Médias e Máximos
-    const val = parseInt(i.pages_or_time) || 0;
-    if (val > 0) {
-      let label = 'Unidades';
-      if ((activeCategories['Livros']||[]).includes(i.type)) label = 'Páginas';
-      if ((activeCategories['Discos']||[]).includes(i.type)) label = 'Faixas';
-      if ((activeCategories['Vídeo']||[]).includes(i.type)) label = 'Minutos';
-      if ((activeCategories['Games']||[]).includes(i.type)) label = 'Horas';
+  // =====================================
+  // DADOS ANALÍTICOS (PROCESSAMENTO)
+  // =====================================
+  const analytics = useMemo(() => {
+    const data = {
+       total: filteredItems.length,
+       concluidos: 0, backlog: 0,
+       catCounts: {}, typeCounts: {}, statusCounts: {}, ratingCounts: {},
+       authors: {}, publishers: {}, decades: {}, years: {},
+       metrics: {
+          'Páginas': { sum: 0, count: 0, max: 0, maxName: '' },
+          'Faixas': { sum: 0, count: 0, max: 0, maxName: '' },
+          'Minutos': { sum: 0, count: 0, max: 0, maxName: '' },
+          'Horas': { sum: 0, count: 0, max: 0, maxName: '' }
+       },
+       oldest: null, newest: null,
+       ratedCount: 0, sumRatings: 0,
+       completeness: { totalFields: 0, filledFields: 0, missingCovers: 0, missingYears: 0, missingBarcodes: 0 }
+    };
 
-      if (metrics[label]) {
-         metrics[label].sum += val; metrics[label].count += 1;
-         if (val > metrics[label].max) { metrics[label].max = val; metrics[label].maxName = i.title || ''; }
+    filteredItems.forEach(i => {
+      // Categoria e Suporte
+      const cat = getCategoryOf(i.type);
+      data.catCounts[cat] = (data.catCounts[cat] || 0) + 1;
+      data.typeCounts[i.type || 'Sem Tipo'] = (data.typeCounts[i.type || 'Sem Tipo'] || 0) + 1;
+
+      // Status Analítico (Concluído vs Backlog)
+      const isBookGame = ['Livros', 'Games'].includes(cat);
+      let analyticalStatus = 'Não Iniciado';
+      if (isBookGame) {
+         if (i.status === 'Concluído') { data.concluidos++; analyticalStatus = 'Concluído'; }
+         else { data.backlog++; analyticalStatus = i.status || 'Não Iniciado'; }
+      } else { // Audiovisual usa nota
+         if ((Number(i.rating)||0) > 0) { data.concluidos++; analyticalStatus = 'Concluído'; }
+         else { data.backlog++; analyticalStatus = 'Backlog'; }
       }
-    }
+      data.statusCounts[analyticalStatus] = (data.statusCounts[analyticalStatus] || 0) + 1;
 
-    // C. Dados para Gráficos
-    let foundCat = 'Outros';
-    for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(i.type)) { foundCat = cat; break; } }
-    catCounts[foundCat] = (catCounts[foundCat] || 0) + 1;
-    typeCounts[i.type || 'Sem Tipo'] = (typeCounts[i.type || 'Sem Tipo'] || 0) + 1;
-    
-    if (isBookGame) statusCounts[i.status || 'Não Iniciado'] = (statusCounts[i.status || 'Não Iniciado'] || 0) + 1;
-    else statusCounts[(Number(i.rating)||0)>0 ? 'Ouvido/Visto' : 'Não Iniciado'] = (statusCounts[(Number(i.rating)||0)>0 ? 'Ouvido/Visto' : 'Não Iniciado'] || 0) + 1;
+      // Avaliação
+      const rInt = Math.floor(Number(i.rating) || 0);
+      data.ratingCounts[rInt] = (data.ratingCounts[rInt] || 0) + 1;
+      if (rInt > 0) { data.ratedCount++; data.sumRatings += rInt; }
 
-    const rFloor = Math.floor(Number(i.rating) || 0);
-    ratingCounts[rFloor] = (ratingCounts[rFloor] || 0) + 1;
-  });
+      // Tempo
+      const yr = parseInt(i.year);
+      if (!isNaN(yr)) {
+         data.years[yr] = (data.years[yr] || 0) + 1;
+         const dec = Math.floor(yr / 10) * 10;
+         data.decades[dec] = (data.decades[dec] || 0) + 1;
+         if (!data.oldest || yr < parseInt(data.oldest.year)) data.oldest = i;
+         if (!data.newest || yr > parseInt(data.newest.year)) data.newest = i;
+      } else {
+         data.completeness.missingYears++;
+      }
 
-  const catChartData = Object.entries(catCounts).map(([label, value], idx) => ({ label, value, colorHex: chartColors[idx % chartColors.length] })).sort((a,b) => b.value - a.value);
-  const typeChartData = Object.entries(typeCounts).map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 1) % chartColors.length] })).sort((a,b) => b.value - a.value);
-  const statusChartData = Object.entries(statusCounts).map(([label, value], idx) => ({ label, value, colorHex: chartColors[(idx + 2) % chartColors.length] })).sort((a,b) => b.value - a.value);
-  const ratingChartData = [5,4,3,2,1,0].filter(r => ratingCounts[r]).map((r, idx) => ({ label: `${r} Estrela${r!==1?'s':''}`, value: ratingCounts[r], colorHex: chartColors[(idx + 3) % chartColors.length] }));
+      // Atores (Autores / Editoras)
+      const auth = isVariousArtists(i.author_developer) ? 'Vários' : applyArtistAlias(i.author_developer, settings?.artistAliases) || 'Desconhecido';
+      const pub = i.publisher?.trim() || 'Desconhecida';
+      
+      if (!data.authors[auth]) data.authors[auth] = { count: 0, sumRating: 0, ratedCount: 0, concluidos: 0, backlog: 0, items: [] };
+      data.authors[auth].count++; data.authors[auth].items.push(i);
+      if (rInt > 0) { data.authors[auth].sumRating += rInt; data.authors[auth].ratedCount++; }
+      if (analyticalStatus === 'Concluído') data.authors[auth].concluidos++; else data.authors[auth].backlog++;
 
-  const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+      if (!data.publishers[pub]) data.publishers[pub] = { count: 0, sumRating: 0, ratedCount: 0, concluidos: 0, backlog: 0, items: [] };
+      data.publishers[pub].count++; data.publishers[pub].items.push(i);
+      if (rInt > 0) { data.publishers[pub].sumRating += rInt; data.publishers[pub].ratedCount++; }
+      if (analyticalStatus === 'Concluído') data.publishers[pub].concluidos++; else data.publishers[pub].backlog++;
+
+      // Dimensões / Métricas
+      const val = parseInt(i.pages_or_time) || 0;
+      if (val > 0) {
+         let label = 'Unidades';
+         if (cat === 'Livros') label = 'Páginas'; else if (cat === 'Discos') label = 'Faixas'; else if (cat === 'Vídeo') label = 'Minutos'; else if (cat === 'Games') label = 'Horas';
+         if (data.metrics[label]) {
+            data.metrics[label].sum += val; data.metrics[label].count += 1;
+            if (val > data.metrics[label].max) { data.metrics[label].max = val; data.metrics[label].maxName = i.title || ''; }
+         }
+      }
+
+      // Qualidade (Completude)
+      const expectedFields = ['title', 'author_developer', 'year', 'publisher', 'type', 'barcode', 'cover_url', 'pages_or_time'];
+      data.completeness.totalFields += expectedFields.length;
+      expectedFields.forEach(f => { if (i[f] && String(i[f]).trim() !== '') data.completeness.filledFields++; });
+      if (!i.cover_url) data.completeness.missingCovers++;
+      if (!i.barcode) data.completeness.missingBarcodes++;
+    });
+
+    return data;
+  }, [filteredItems, activeCategories, settings?.artistAliases]);
+
+  // Preparação de dados para Gráficos
+  const sortedCats = Object.entries(analytics.catCounts).map(([label, value], i) => ({ label, value, colorHex: getMondrianColorHex(i, darkMode) })).sort((a,b) => b.value - a.value);
+  const sortedTypes = Object.entries(analytics.typeCounts).sort((a, b) => b[1] - a[1]);
+  const sortedStatus = Object.entries(analytics.statusCounts).map(([label, value], i) => ({ label, value, colorHex: getMondrianColorHex(i+2, darkMode) })).sort((a,b) => b.value - a.value);
+  const sortedRatings = [5,4,3,2,1,0].filter(r => analytics.ratingCounts[r]).map((r, i) => ({ label: r===0?'Sem Nota':`${r}★`, value: analytics.ratingCounts[r], colorHex: getMondrianColorHex(i+1, darkMode) }));
+  
+  const sortedDecades = Object.entries(analytics.decades).sort((a, b) => a[0] - b[0]);
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
+  const maxDecade = sortedDecades.length > 0 ? Math.max(...sortedDecades.map(d => d[1])) : 1;
+
+  const topAuthors = Object.entries(analytics.authors).filter(([n]) => n !== 'Desconhecido').sort((a,b) => b[1].count - a[1].count).slice(0, 20);
+  const topPublishers = Object.entries(analytics.publishers).filter(([n]) => n !== 'Desconhecida').sort((a,b) => b[1].count - a[1].count).slice(0, 20);
+
+  // =====================================
+  // RENDERIZAÇÃO DAS SUB-ABAS
+  // =====================================
+  const renderFicha = () => {
+    if (!selectedEntity) return null;
+    const isAuthor = selectedEntity.type === 'author';
+    const entityData = isAuthor ? analytics.authors[selectedEntity.name] : analytics.publishers[selectedEntity.name];
+    if (!entityData) return <div className="p-4">Dados não encontrados no filtro atual.</div>;
+
+    const avgRating = entityData.ratedCount > 0 ? (entityData.sumRating / entityData.ratedCount).toFixed(1) : 'N/A';
+    
+    // Análises internas da Ficha
+    const items = entityData.items;
+    const catCounts = {}; const yearCounts = {};
+    items.forEach(i => {
+       const cat = getCategoryOf(i.type); catCounts[cat] = (catCounts[cat] || 0) + 1;
+       const yr = parseInt(i.year); if(!isNaN(yr)) yearCounts[Math.floor(yr/10)*10] = (yearCounts[Math.floor(yr/10)*10] || 0) + 1;
+    });
+
+    return (
+       <div className="flex flex-col gap-4 animate-in slide-in-from-right-4 duration-300">
+         <div className="flex items-center gap-3">
+           <button onClick={() => setSelectedEntity(null)} className={`p-2 border-[2px] ${darkMode ? 'border-gray-300 bg-gray-800 text-white' : 'border-black bg-gray-100 text-black'} active:scale-95`}><ChevronLeft className="w-5 h-5" /></button>
+           <h2 className="text-xl font-black uppercase tracking-tighter truncate leading-none">{selectedEntity.name}</h2>
+         </div>
+         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <MetricCard label="Total de Obras" value={entityData.count} darkMode={darkMode} />
+            <MetricCard label="Nota Média" value={avgRating} icon={<Star className="w-4 h-4 text-amber-500 fill-amber-500"/>} darkMode={darkMode} />
+            <MetricCard label="Concluídos" value={entityData.concluidos} darkMode={darkMode} highlight={true} />
+            <MetricCard label="Backlog" value={entityData.backlog} darkMode={darkMode} />
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col gap-2">
+               <span className="text-[10px] font-black uppercase tracking-widest border-b-[2px] border-current pb-1 mb-2">Composição</span>
+               {Object.entries(catCounts).map(([cat, count], i) => <MondrianHBar key={cat} label={cat} value={count} max={entityData.count} index={i} darkMode={darkMode} />)}
+            </MContainer>
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col gap-2">
+               <span className="text-[10px] font-black uppercase tracking-widest border-b-[2px] border-current pb-1 mb-2">Décadas</span>
+               {Object.entries(yearCounts).sort((a,b)=>a[0]-b[0]).map(([dec, count], i) => <MondrianHBar key={dec} label={`${dec}s`} value={count} max={Math.max(...Object.values(yearCounts))} index={i+1} darkMode={darkMode} />)}
+            </MContainer>
+         </div>
+         <MContainer darkMode={darkMode} className="p-0 overflow-hidden">
+            <div className={`p-3 border-b-[2px] ${darkMode ? 'border-gray-300 bg-gray-800' : 'border-black bg-gray-100'} text-[10px] font-black uppercase tracking-widest`}>Obras Associadas ({items.length})</div>
+            <div className="max-h-64 overflow-y-auto scrollbar-hide">
+              <table className="w-full text-left text-[9px] font-bold uppercase tracking-widest">
+                 <thead className={`sticky top-0 ${darkMode ? 'bg-gray-900' : 'bg-white'}`}><tr><th className="p-2 border-b-2">Ano</th><th className="p-2 border-b-2">Título</th><th className="p-2 border-b-2">Suporte</th><th className="p-2 border-b-2">Nota</th></tr></thead>
+                 <tbody>
+                    {items.sort((a,b)=>(parseInt(b.year)||0)-(parseInt(a.year)||0)).map(i => (
+                       <tr key={i.id} className={`border-b border-current opacity-80 hover:opacity-100 ${darkMode ? 'hover:bg-cyan-900/30' : 'hover:bg-cyan-50'}`}>
+                          <td className="p-2 w-12">{i.year || '--'}</td>
+                          <td className="p-2 truncate max-w-[120px]">{i.title}</td>
+                          <td className="p-2">{i.type}</td>
+                          <td className="p-2">{i.rating>0?`${i.rating}★`:'--'}</td>
+                       </tr>
+                    ))}
+                 </tbody>
+              </table>
+            </div>
+         </MContainer>
+       </div>
+    );
+  };
+
+  const renderVisaoGeral = () => (
+    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+         <MetricCard label="Total Acervo" value={analytics.total} darkMode={darkMode} icon={<Library className="w-4 h-4"/>} />
+         <MetricCard label="Concluídos" value={analytics.concluidos} darkMode={darkMode} highlight={true} icon={<Check className="w-4 h-4"/>} />
+         <MetricCard label="Backlog (Fila)" value={analytics.backlog} darkMode={darkMode} subtext={`${((analytics.backlog/Math.max(1,analytics.total))*100).toFixed(0)}% do acervo`} icon={<RefreshIcon className="w-4 h-4"/>} />
+         <MetricCard label="Nota Média" value={analytics.ratedCount > 0 ? (analytics.sumRatings / analytics.ratedCount).toFixed(1) : 'N/A'} darkMode={darkMode} icon={<Star className="w-4 h-4 text-amber-500 fill-amber-500"/>} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+         <div className="lg:col-span-1 flex flex-col gap-4">
+            <MondrianDonutChart title="Divisão Categórica" data={sortedCats} darkMode={darkMode} onSliceClick={(val) => applyFilter('Categorias', val)} />
+            <MContainer darkMode={darkMode} className="p-4 flex flex-col h-full" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+               <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Status (Consumo)</div>
+               <MondrianStackedBar data={sortedStatus} total={analytics.total} darkMode={darkMode} />
+               <div className="mt-4 flex-1 flex flex-col gap-2 justify-end">
+                  {sortedStatus.map((s,i) => <MondrianHBar key={s.label} label={s.label} value={s.value} max={analytics.total} index={i+2} darkMode={darkMode} onClick={() => applyFilter('Status', s.label)} />)}
+               </div>
+            </MContainer>
+         </div>
+         <div className="lg:col-span-2 flex flex-col gap-4">
+            <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+               <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2 flex justify-between"><span>Formatos (Suportes) Populares</span><span className="opacity-50">Clique para filtrar</span></div>
+               <div className="flex flex-col max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
+                  {sortedTypes.map(([type, count], index) => <MondrianHBar key={`type-${type}`} label={type} value={count} max={maxType} index={index} darkMode={darkMode} onClick={() => applyFilter('Subtipos', type)} />)}
+               </div>
+            </MContainer>
+            <MContainer darkMode={darkMode} className="p-4 flex-1" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+               <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2 flex justify-between"><span>Linha do Tempo (Décadas)</span><span className="opacity-50">Anos de Lançamento</span></div>
+               <div className="flex items-end gap-1 h-32 mt-4 overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1">
+                  {sortedDecades.map(([dec, count], i) => (
+                    <div key={dec} className="flex flex-col items-center flex-1 min-w-[30px] group cursor-help">
+                       <div className="text-[8px] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-1">{count}</div>
+                       <div className={`w-full transition-all duration-500 ${getMondrianColor(i, darkMode)} border-[2px] ${darkMode?'border-gray-300':'border-black'} hover:opacity-80`} style={{ height: `${(count / maxDecade) * 100}%` }}></div>
+                       <div className="text-[7px] font-black mt-1 opacity-70 -rotate-45 translate-y-2">{dec}s</div>
+                    </div>
+                  ))}
+               </div>
+            </MContainer>
+         </div>
+      </div>
+    </div>
+  );
+
+  const renderAutoresEditoras = (isAuthors = true) => {
+    const list = isAuthors ? topAuthors : topPublishers;
+    const title = isAuthors ? "Top 20 Autores & Artistas" : "Top 20 Editoras & Gravadoras";
+    const typeLabel = isAuthors ? "author" : "publisher";
+    const maxVal = list.length > 0 ? list[0][1].count : 1;
+
+    return (
+      <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+         <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+            <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2 flex justify-between items-center">
+              <span>{title} (Por Volume)</span>
+              <span className="opacity-50 text-[8px]">Clique para abrir a Ficha Analítica</span>
+            </div>
+            {list.length === 0 ? <div className="opacity-50 text-xs font-bold py-10 text-center">Nenhum dado com o filtro atual.</div> : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide">
+                 {list.map(([name, data], i) => (
+                    <div key={name} className={`flex flex-col p-2 border-[2px] border-transparent hover:border-current cursor-pointer transition-all active:scale-[0.98] ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`} onClick={() => setSelectedEntity({ type: typeLabel, name })}>
+                       <div className="flex justify-between items-end mb-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest truncate flex-1">{name}</span>
+                          <span className="text-[12px] font-black text-cyan-600 dark:text-cyan-400 ml-2">{data.count}</span>
+                       </div>
+                       <div className="w-full h-2 flex border-[2px] border-current opacity-80 overflow-hidden">
+                          <div className={`h-full ${darkMode ? 'bg-cyan-400' : 'bg-cyan-600'}`} style={{width:`${(data.count/maxVal)*100}%`}}></div>
+                       </div>
+                       <div className="flex justify-between text-[7px] font-black uppercase tracking-widest opacity-60 mt-1">
+                          <span>Concluídos: {data.concluidos}</span>
+                          <span>★ Média: {data.ratedCount > 0 ? (data.sumRating/data.ratedCount).toFixed(1) : '-'}</span>
+                       </div>
+                    </div>
+                 ))}
+              </div>
+            )}
+         </MContainer>
+      </div>
+    );
+  };
+
+  const renderDimensoes = () => (
+    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(analytics.metrics).map(([label, metricInfo], i) => {
+             if (metricInfo.count === 0) return null;
+             return (
+               <MContainer key={label} darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+                  <div className={`text-[10px] font-black uppercase tracking-widest mb-3 border-b-[2px] border-current pb-1 ${darkMode?'text-amber-400':'text-amber-600'}`}>Métrica: {label}</div>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                     <div className={`p-2 border-[2px] ${darkMode?'bg-gray-800 border-gray-700':'bg-gray-50 border-gray-200'}`}><div className="text-[8px] font-bold uppercase opacity-60">Total Acumulado</div><div className="text-xl font-black">{metricInfo.sum.toLocaleString('pt-BR')}</div></div>
+                     <div className={`p-2 border-[2px] ${darkMode?'bg-gray-800 border-gray-700':'bg-gray-50 border-gray-200'}`}><div className="text-[8px] font-bold uppercase opacity-60">Média por Item</div><div className="text-xl font-black">{Math.round(metricInfo.sum/metricInfo.count)}</div></div>
+                  </div>
+                  <div className={`p-2 border-[2px] ${darkMode?'border-gray-600':'border-black'} flex justify-between items-center`}>
+                     <div className="flex flex-col overflow-hidden pr-2">
+                        <span className="text-[7px] font-black uppercase opacity-70">Maior Registro (Recorde)</span>
+                        <span className="text-[10px] font-black truncate">{metricInfo.maxName}</span>
+                     </div>
+                     <span className="text-lg font-black text-pink-600">{metricInfo.max}</span>
+                  </div>
+               </MContainer>
+             )
+          })}
+       </div>
+    </div>
+  );
+
+  const renderQualidadeRecordes = () => {
+     const comp = analytics.completeness;
+     const score = comp.totalFields > 0 ? (comp.filledFields / comp.totalFields) * 100 : 0;
+     
+     return (
+       <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2 flex gap-2 items-center"><Zap className="w-4 h-4"/> Qualidade dos Dados (Completude)</div>
+                <div className="flex items-center gap-4 mb-6">
+                   <div className={`w-24 h-24 rounded-full border-[4px] flex items-center justify-center flex-shrink-0 shadow-[4px_4px_0px_currentColor] ${score > 80 ? 'border-cyan-500 text-cyan-500' : score > 50 ? 'border-amber-500 text-amber-500' : 'border-pink-500 text-pink-500'}`}>
+                      <span className="text-2xl font-black">{score.toFixed(0)}%</span>
+                   </div>
+                   <div className="flex flex-col gap-1 w-full text-[9px] font-black uppercase tracking-widest opacity-80">
+                      <div className="flex justify-between border-b border-current pb-0.5"><span>Campos Totais:</span><span>{comp.totalFields}</span></div>
+                      <div className="flex justify-between border-b border-current pb-0.5"><span>Campos Preenchidos:</span><span>{comp.filledFields}</span></div>
+                   </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                   <MondrianHBar label="Sem Capa" value={comp.missingCovers} max={analytics.total} index={1} darkMode={darkMode} />
+                   <MondrianHBar label="Sem Código (Barcode)" value={comp.missingBarcodes} max={analytics.total} index={2} darkMode={darkMode} />
+                   <MondrianHBar label="Sem Ano" value={comp.missingYears} max={analytics.total} index={3} darkMode={darkMode} />
+                </div>
+             </MContainer>
+
+             <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2 flex gap-2 items-center"><Sparkles className="w-4 h-4"/> DNA & Recordes</div>
+                <div className="flex-1 flex flex-col gap-3 justify-center">
+                   <div className={`p-2 border-[2px] ${darkMode?'border-gray-700 bg-gray-800':'border-gray-200 bg-gray-50'} flex justify-between items-center`}>
+                      <span className="text-[8px] font-black uppercase opacity-60">Obra Mais Antiga</span>
+                      <span className="text-[10px] font-black truncate max-w-[60%] text-right" title={analytics.oldest?.title}>{analytics.oldest ? `${analytics.oldest.year} - ${analytics.oldest.title}` : '--'}</span>
+                   </div>
+                   <div className={`p-2 border-[2px] ${darkMode?'border-gray-700 bg-gray-800':'border-gray-200 bg-gray-50'} flex justify-between items-center`}>
+                      <span className="text-[8px] font-black uppercase opacity-60">Obra Mais Recente</span>
+                      <span className="text-[10px] font-black truncate max-w-[60%] text-right" title={analytics.newest?.title}>{analytics.newest ? `${analytics.newest.year} - ${analytics.newest.title}` : '--'}</span>
+                   </div>
+                   <div className={`p-2 border-[2px] ${darkMode?'border-gray-700 bg-gray-800':'border-gray-200 bg-gray-50'} flex justify-between items-center`}>
+                      <span className="text-[8px] font-black uppercase opacity-60">Categoria Dominante</span>
+                      <span className="text-[10px] font-black">{sortedCats.length > 0 ? `${sortedCats[0].label} (${((sortedCats[0].value/analytics.total)*100).toFixed(0)}%)` : '--'}</span>
+                   </div>
+                   <div className={`p-2 border-[2px] ${darkMode?'border-gray-700 bg-gray-800':'border-gray-200 bg-gray-50'} flex justify-between items-center`}>
+                      <span className="text-[8px] font-black uppercase opacity-60">Suporte Dominante</span>
+                      <span className="text-[10px] font-black">{sortedTypes.length > 0 ? `${sortedTypes[0][0]} (${((sortedTypes[0][1]/analytics.total)*100).toFixed(0)}%)` : '--'}</span>
+                   </div>
+                </div>
+             </MContainer>
+          </div>
+       </div>
+     );
+  };
+
+  // =====================================
+  // ESTRUTURA PRINCIPAL DO DASHBOARD
+  // =====================================
+  const tabs = [
+    { id: 'visao_geral', label: 'Visão Geral' },
+    { id: 'autores', label: 'Autores & Artistas' },
+    { id: 'editoras', label: 'Editoras & Gravadoras' },
+    { id: 'dimensoes', label: 'Dimensões (Páginas/Tempo)' },
+    { id: 'qualidade', label: 'Qualidade & Recordes' }
+  ];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 space-y-4 scrollbar-hide max-w-5xl mx-auto w-full">
-      <MContainer darkMode={darkMode} className="p-4 flex flex-col" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-        <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] pb-2 flex items-center gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}><BarChart2 className="w-4 h-4" /> Auditoria da Coleção (Filtro Atual)</div>
-        <div className="grid grid-cols-3 gap-2 text-center border-b-[2px] pb-4 mb-4 border-gray-300 dark:border-gray-700">
-          <div><div className="text-3xl font-black">{total}</div><div className="text-[8px] font-black uppercase tracking-widest opacity-70">Total Itens</div></div>
-          <div><div className="text-3xl font-black text-cyan-600 dark:text-cyan-400">{concluidos}</div><div className="text-[8px] font-black uppercase tracking-widest opacity-70">Concluídos/Vistos</div></div>
-          <div><div className="text-3xl font-black text-pink-600 dark:text-pink-400">{backlog}</div><div className="text-[8px] font-black uppercase tracking-widest opacity-70">Backlog/Fila</div></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.keys(metrics).map(label => {
-            if (metrics[label].count === 0) return null;
-            return (
-               <div key={label} className={`p-3 border-[2px] ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
-                 <div className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-2">{label}</div>
-                 <div className="flex justify-between items-end mb-1"><span className="text-[10px] font-bold">Média p/ Unid:</span><span className="text-lg font-black">{Math.round(metrics[label].sum / metrics[label].count)}</span></div>
-                 <div className="flex justify-between items-end"><span className="text-[10px] font-bold">Maior Registro:</span><span className="text-lg font-black truncate text-right ml-2" title={metrics[label].maxName}>{metrics[label].max} <span className="text-[8px]">({String(metrics[label].maxName).substring(0,10)}...)</span></span></div>
-               </div>
-            )
-          })}
-        </div>
-      </MContainer>
+    <div className="flex flex-col h-full overflow-hidden pb-10 max-w-6xl mx-auto w-full relative">
+       {/* FILTRO GLOBAL ALERT */}
+       {hasFilters && (
+         <div className={`p-3 border-[2px] mb-4 flex items-center justify-between shadow-[2px_2px_0px_currentColor] animate-pulse ${darkMode ? 'border-pink-500 bg-pink-900/30 text-pink-300' : 'border-pink-600 bg-pink-100 text-pink-900'}`}>
+            <div className="flex items-center gap-2"><FilterIcon className="w-5 h-5"/> <div className="text-[10px] font-black uppercase tracking-widest">Filtros Ativos: Visualizando Subset do Acervo</div></div>
+            <button onClick={clearFilters} className={`px-3 py-1.5 border-[2px] border-current text-[8px] font-black uppercase tracking-widest active:scale-95 transition-transform ${darkMode?'bg-gray-900':'bg-white'}`}>Limpar Tudo</button>
+         </div>
+       )}
 
-      {total > 0 && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
-            {catChartData.length > 0 && <MondrianDonutChart title="Categorias" data={catChartData} darkMode={darkMode} />}
-            {typeChartData.length > 0 && <MondrianDonutChart title="Formatos" data={typeChartData} darkMode={darkMode} />}
-            {statusChartData.length > 0 && <MondrianDonutChart title="Status" data={statusChartData} darkMode={darkMode} />}
-            {ratingChartData.length > 0 && <MondrianDonutChart title="Notas" data={ratingChartData} darkMode={darkMode} />}
-          </div>
-          
-          <MContainer darkMode={darkMode} className="p-4" colorClass={darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}>
-             <div className={`text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] pb-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>Formatos Populares (Todos)</div>
-             <div className="flex flex-col max-h-64 overflow-y-auto pr-2 scrollbar-hide">
-                {sortedTypes.map(([type, count], index) => <MondrianHBar key={`type-${type}`} label={type} value={count} max={maxType} index={index} darkMode={darkMode} />)}
-             </div>
-          </MContainer>
-        </>
-      )}
+       {/* NAVEGAÇÃO INTERNA DO DASHBOARD */}
+       {!selectedEntity && (
+         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-4 border-b-[2px] border-transparent flex-shrink-0">
+           {tabs.map(t => (
+             <button key={t.id} onClick={() => setActiveSubTab(t.id)} className={`px-4 py-2 border-[2px] text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${activeSubTab === t.id ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white' : 'bg-white border-gray-300 text-gray-600 hover:text-black')}`}>{t.label}</button>
+           ))}
+         </div>
+       )}
+
+       {/* ÁREA DE CONTEÚDO SCROLLÁVEL */}
+       <div className="flex-1 overflow-y-auto scrollbar-hide pr-1 pb-10">
+          {analytics.total === 0 ? (
+             <div className="flex flex-col items-center justify-center h-64 opacity-50"><Ghost className="w-12 h-12 mb-4" /><span className="text-sm font-black uppercase tracking-widest">Nenhum dado analítico.</span><span className="text-[10px] font-bold mt-2">Remova os filtros ou adicione itens.</span></div>
+          ) : selectedEntity ? (
+             renderFicha()
+          ) : (
+             <>
+               {activeSubTab === 'visao_geral' && renderVisaoGeral()}
+               {activeSubTab === 'autores' && renderAutoresEditoras(true)}
+               {activeSubTab === 'editoras' && renderAutoresEditoras(false)}
+               {activeSubTab === 'dimensoes' && renderDimensoes()}
+               {activeSubTab === 'qualidade' && renderQualidadeRecordes()}
+             </>
+          )}
+       </div>
     </div>
   );
 };
+
 
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -1032,7 +1391,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     setSettings({ ...settings, artistAliases: updatedAliases }); playChipBeep('save'); onShowToast('success');
   };
 
-  const toggleSection = (s) => setOpenSection(openSection === s ? null : s);
+  const toggleSection = (s) => { playChipBeep('click'); setOpenSection(openSection === s ? null : s); };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative max-w-3xl mx-auto w-full">
@@ -1153,6 +1512,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   );
 };
 
+
 // ==========================================
 // COMPONENTE PRINCIPAL (APP)
 // ==========================================
@@ -1171,7 +1531,7 @@ export default function App() {
   const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
 
   // Estados Globais de Filtro e UI
-  const [globalFilters, setGlobalFilters] = useState({ Categorias: [], Subtipos: [], Status: [], Notas: [] });
+  const [globalFilters, setGlobalFilters] = useState({ Categorias: [], Subtipos: [], Status: [], Notas: [], Autores: [], Editoras: [] });
   const [searchTerm, setSearchTerm] = useState('');
   const [alphaFilter, setAlphaFilter] = useState('Todos');
   const [sortBy, setSortBy] = useState('added');
@@ -1215,9 +1575,9 @@ export default function App() {
         });
      }
 
-     if (globalFilters.Categorias.length > 0) res = res.filter(i => globalFilters.Categorias.some(c => (activeCategories[c] || []).includes(i.type)));
-     if (globalFilters.Subtipos.length > 0) res = res.filter(i => globalFilters.Subtipos.includes(i.type));
-     if (globalFilters.Status.length > 0) {
+     if (globalFilters.Categorias && globalFilters.Categorias.length > 0) res = res.filter(i => globalFilters.Categorias.some(c => (activeCategories[c] || []).includes(i.type)));
+     if (globalFilters.Subtipos && globalFilters.Subtipos.length > 0) res = res.filter(i => globalFilters.Subtipos.includes(i.type));
+     if (globalFilters.Status && globalFilters.Status.length > 0) {
         res = res.filter(i => {
            const isDisc = (activeCategories['Discos'] || []).includes(i.type);
            const isVideo = (activeCategories['Vídeo'] || []).includes(i.type);
@@ -1225,7 +1585,7 @@ export default function App() {
            return globalFilters.Status.includes(i.status);
         });
      }
-     if (globalFilters.Notas.length > 0) res = res.filter(i => globalFilters.Notas.includes(Math.floor(Number(i.rating)||0)));
+     if (globalFilters.Notas && globalFilters.Notas.length > 0) res = res.filter(i => globalFilters.Notas.includes(Math.floor(Number(i.rating)||0)));
 
      res = [...res].sort((a, b) => {
           let valA = '', valB = '';
@@ -1251,17 +1611,17 @@ export default function App() {
      return res;
   }, [items, searchTerm, alphaFilter, globalFilters, sortBy, sortOrder, activeCategories, settings?.artistAliases]);
 
-  const activeFiltersCount = Object.values(globalFilters).reduce((acc, arr) => acc + arr.length, 0);
+  const activeFiltersCount = Object.values(globalFilters).reduce((acc, arr) => acc + (arr ? arr.length : 0), 0);
 
   const handleGlobalCheckboxChange = (group, val) => {
      setGlobalFilters(prev => {
-        const cur = prev[group];
+        const cur = prev[group] || [];
         if (cur.includes(val)) return { ...prev, [group]: cur.filter(x => x !== val) };
         return { ...prev, [group]: [...cur, val] };
      });
      setLibraryPage(0);
   };
-  const clearGlobalFilters = () => { setGlobalFilters({ Categorias: [], Subtipos: [], Status: [], Notas: [] }); setLibraryPage(0); };
+  const clearGlobalFilters = () => { playChipBeep('click'); setGlobalFilters({ Categorias: [], Subtipos: [], Status: [], Notas: [], Autores: [], Editoras: [] }); setLibraryPage(0); };
 
   const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
 
@@ -1367,7 +1727,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
   const lfmPressTimer = useRef(null); const isLfmLongPress = useRef(false);
   const handleLfmPressStart = () => { isLfmLongPress.current = false; lfmPressTimer.current = setTimeout(() => { isLfmLongPress.current = true; setLfmPeriodIdx(p => (p + 1) % LFM_PERIODS.length); if (lfmStatIdx === 0) setLfmStatIdx(1); }, 500); };
   const handleLfmPressEnd = () => { if (lfmPressTimer.current) clearTimeout(lfmPressTimer.current); };
-  const handleLfmClick = () => { if (!isLfmLongPress.current) { setLfmStatIdx(p => (p + 1) % LFM_STATS.length); } };
+  const handleLfmClick = () => { if (!isLfmLongPress.current) { playChipBeep('click'); setLfmStatIdx(p => (p + 1) % LFM_STATS.length); } };
 
   let lfmLabelStr = 'Last.FM:'; let lfmDisplayStr = 'Sem dados'; let isPulsingLfm = false;
   if (!settings?.lastfmUser) lfmDisplayStr = 'Configure em Ajustes';
@@ -1384,33 +1744,64 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
 
   const hasSuggested = useRef(false); const [suggestion, setSuggestion] = useState(null);
   useEffect(() => { if (isLoaded && items.length > 0 && !hasSuggested.current) { const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type)); if (ms.length > 0) setSuggestion(ms[Math.floor(Math.random() * ms.length)]); hasSuggested.current = true; } }, [isLoaded, items, activeCategories]);
-  const shuffleSuggestion = () => { const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type)); if (ms.length > 0) { let ns = ms[Math.floor(Math.random() * ms.length)]; if (ms.length > 1 && suggestion) { while (ns.id === suggestion?.id) ns = ms[Math.floor(Math.random() * ms.length)]; } setSuggestion(ns); } };
+  const shuffleSuggestion = () => { playChipBeep('click'); const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type)); if (ms.length > 0) { let ns = ms[Math.floor(Math.random() * ms.length)]; if (ms.length > 1 && suggestion) { while (ns.id === suggestion?.id) ns = ms[Math.floor(Math.random() * ms.length)]; } setSuggestion(ns); } };
   const suggPressTimer = useRef(null); const isSuggLongPress = useRef(false);
   const handleSuggPressStart = () => { isSuggLongPress.current = false; suggPressTimer.current = setTimeout(() => { isSuggLongPress.current = true; shuffleSuggestion(); }, 500); };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
-  const handleSuggClick = () => { if (!isSuggLongPress.current && suggestion) window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank'); };
+  const handleSuggClick = () => { if (!isSuggLongPress.current && suggestion) { playChipBeep('click'); window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank'); } };
 
   const pressTimer = useRef(null); const isLongPress = useRef(false);
   const handleAddPressStart = () => { isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
   const handleAddPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
-  const handleAddClick = () => { if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
+  const handleAddClick = () => { if (!isLongPress.current) { playChipBeep('click'); setAddMode('barcode'); setActiveTab('add'); } };
 
   const libPressTimer = useRef(null); const isLibLongPress = useRef(false);
-  const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; setActiveTab('library'); }, 500); };
+  const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; clearGlobalFilters(); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
-  const handleLibClick = () => { if (!isLibLongPress.current) { setActiveTab('library'); } };
+  const handleLibClick = () => { if (!isLibLongPress.current) { playChipBeep('click'); setActiveTab('library'); } };
+
+  const dashPressTimer = useRef(null); const isDashLongPress = useRef(false);
+  const handleDashPressStart = () => { isDashLongPress.current = false; dashPressTimer.current = setTimeout(() => { isDashLongPress.current = true; clearGlobalFilters(); setActiveTab('dashboard'); }, 500); };
+  const handleDashPressEnd = () => { if (dashPressTimer.current) clearTimeout(dashPressTimer.current); };
+  const handleDashClick = () => { if (!isDashLongPress.current) { playChipBeep('click'); setActiveTab('dashboard'); } };
 
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
-  const currentSpeed = Math.max(3, speed / 4); // Calcula a velocidade usada no disco / titulo
+  const currentSpeed = Math.max(3, speed / 4);
+  const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
+  const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
+
+  const renderDiscoSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><DiscoSpinner className="w-5 h-5 flex-shrink-0" glow={glow} speed={currentSpeed} /></div>);
+  const renderPacmanEnd = () => (
+    <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
+      <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
+      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" />
+      <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #fbbf24)` : 'none' }}><path fill="#fbbf24" transform="scale(-1, 1) translate(-100, 0)"><animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" /></path></svg>
+    </div>
+  );
+
+  const renderMarqueeContent = () => {
+    const statsArr = [];
+    statsArr.push(<span key="total" className={`text-white ${ledItemStyle}`}>ACERVO TOTAL: {items.length}</span>);
+    
+    const gCatCounts = items.reduce((acc, i) => { let mainCat = 'Outros'; for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(i.type)) { mainCat = cat; break; } } acc[mainCat] = (acc[mainCat] || 0) + 1; return acc; }, {});
+    
+    Object.keys(activeCategories).forEach((cat, index) => {
+       const count = gCatCounts[cat] || 0; const perc = items.length > 0 ? ((count / items.length) * 100).toFixed(1) : 0;
+       const colors = ['text-pink-600', 'text-amber-500', 'text-cyan-500'];
+       statsArr.push(<span key={cat} className={`${colors[index % colors.length]} ${ledItemStyle}`}>{cat.toUpperCase()}: {count} ({perc}%)</span>);
+    });
+    const globRated = items.filter(i => (Number(i.rating) || 0) > 0);
+    if (globRated.length > 0) statsArr.push(<span key="rating" className={`text-amber-500 ${ledItemStyle}`}>NOTA MÉDIA GLOBAL: ★ {(globRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / globRated.length).toFixed(1)}</span>);
+
+    return (<div className="flex items-center py-1" style={textShadowStyle}>{statsArr.map((stat, index) => ( <React.Fragment key={index}>{stat}{index < statsArr.length - 1 ? renderDiscoSeparator() : renderPacmanEnd()}</React.Fragment> ))}</div>);
+  };
 
   if (isFetchingCloud && !showSuccessSplash) {
     return (
        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
           <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
-          <DiscoSpinner className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} speed={currentSpeed} />
-          <p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" /><DiscoSpinner className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} speed={currentSpeed} /><p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
        </div>
     );
   }
@@ -1425,37 +1816,6 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
     );
   }
 
-  const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
-  const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
-
-  const renderDiscoSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><DiscoSpinner className="w-5 h-5 flex-shrink-0" glow={glow} speed={currentSpeed} /></div>);
-  
-  const renderPacmanEnd = () => (
-    <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
-      <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
-      <div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" /><div className="w-1.5 h-1.5 bg-amber-400 rounded-full shadow-[0_0_3px_currentColor]" />
-      <svg viewBox="0 0 100 100" className="w-4 h-4 flex-shrink-0" style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px #fbbf24)` : 'none' }}><path fill="#fbbf24" transform="scale(-1, 1) translate(-100, 0)"><animate attributeName="d" values="M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z; M50 50 L99.9 48 A 50 50 0 1 0 99.9 52 Z; M50 50 L93.3 25 A 50 50 0 1 0 93.3 75 Z" dur="0.4s" repeatCount="indefinite" /></path></svg>
-    </div>
-  );
-
-  const renderMarqueeContent = () => {
-    const statsArr = [];
-    statsArr.push(<span key="total" className={`text-white ${ledItemStyle}`}>ACERVO TOTAL: {items.length}</span>);
-    
-    // Contagens globais (ignorando filtros) para o painel de LED
-    const gCatCounts = items.reduce((acc, i) => { let mainCat = 'Outros'; for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(i.type)) { mainCat = cat; break; } } acc[mainCat] = (acc[mainCat] || 0) + 1; return acc; }, {});
-    
-    Object.keys(activeCategories).forEach((cat, index) => {
-       const count = gCatCounts[cat] || 0; const perc = items.length > 0 ? ((count / items.length) * 100).toFixed(1) : 0;
-       const colors = ['text-pink-600', 'text-amber-500', 'text-cyan-500'];
-       statsArr.push(<span key={cat} className={`${colors[index % colors.length]} ${ledItemStyle}`}>{cat.toUpperCase()}: {count} ({perc}%)</span>);
-    });
-    const globRated = items.filter(i => (Number(i.rating) || 0) > 0);
-    if (globRated.length > 0) statsArr.push(<span key="rating" className={`text-amber-500 ${ledItemStyle}`}>NOTA MÉDIA GLOBAL: ★ {(globRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / globRated.length).toFixed(1)}</span>);
-
-    return (<div className="flex items-center py-1" style={textShadowStyle}>{statsArr.map((stat, index) => ( <React.Fragment key={index}>{stat}{index < statsArr.length - 1 ? renderDiscoSeparator() : renderPacmanEnd()}</React.Fragment> ))}</div>);
-  };
-
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; } .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } @keyframes titleColorCycle { 0%, 100% { color: #db2777; } 33% { color: #0891b2; } 66% { color: #d97706; } } `}</style>
@@ -1464,56 +1824,64 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
       {isFilterMenuOpen && (
           <div className="fixed inset-0 z-[999] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
               <div className={`w-full sm:max-w-md max-h-[85vh] sm:h-[80vh] flex flex-col border-t-[2px] sm:border-[2px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[6px_6px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[6px_6px_0px_rgba(0,0,0,1)]'}`}>
-                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => setIsFilterMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Filtro Global</span><div className="w-7"/></div>
+                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => { playChipBeep('click'); setIsFilterMenuOpen(false); }} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Filtro Global</span><div className="w-7"/></div>
                   <div className="flex-1 overflow-y-auto scrollbar-hide">
                     {/* CATEGORIAS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Categorias Principais</div>
                       <div className="flex flex-wrap gap-2">
-                        {Object.keys(activeCategories).map(cat => (
-                          <label key={cat} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${globalFilters.Categorias.includes(cat) ? (darkMode?'border-cyan-400 bg-cyan-900/30':'border-cyan-600 bg-cyan-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={globalFilters.Categorias.includes(cat)} onChange={() => handleGlobalCheckboxChange('Categorias', cat)} /> {cat}
+                        {Object.keys(activeCategories).map(cat => {
+                          const isActive = globalFilters.Categorias && globalFilters.Categorias.includes(cat);
+                          return (
+                          <label key={cat} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-cyan-400 bg-cyan-900/30':'border-cyan-600 bg-cyan-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Categorias', cat); }} /> {cat}
                           </label>
-                        ))}
+                        )})}
                       </div>
                     </div>
                     {/* FORMATOS/SUBTIPOS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Formatos Específicos</div>
                       <div className="flex flex-wrap gap-2">
-                        {allTypes.map(sub => (
-                          <label key={sub} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${globalFilters.Subtipos.includes(sub) ? (darkMode?'border-pink-400 bg-pink-900/30':'border-pink-600 bg-pink-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={globalFilters.Subtipos.includes(sub)} onChange={() => handleGlobalCheckboxChange('Subtipos', sub)} /> {sub}
+                        {allTypes.map(sub => {
+                          const isActive = globalFilters.Subtipos && globalFilters.Subtipos.includes(sub);
+                          return (
+                          <label key={sub} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-pink-400 bg-pink-900/30':'border-pink-600 bg-pink-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Subtipos', sub); }} /> {sub}
                           </label>
-                        ))}
+                        )})}
                       </div>
                     </div>
                     {/* STATUS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Status (Universal)</div>
                       <div className="flex flex-wrap gap-2">
-                        {STATUS_OPTIONS.map(st => (
-                          <label key={st} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${globalFilters.Status.includes(st) ? (darkMode?'border-amber-400 bg-amber-900/30':'border-amber-600 bg-amber-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={globalFilters.Status.includes(st)} onChange={() => handleGlobalCheckboxChange('Status', st)} /> {st}
+                        {STATUS_OPTIONS.map(st => {
+                          const isActive = globalFilters.Status && globalFilters.Status.includes(st);
+                          return (
+                          <label key={st} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-amber-400 bg-amber-900/30':'border-amber-600 bg-amber-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Status', st); }} /> {st}
                           </label>
-                        ))}
+                        )})}
                       </div>
                     </div>
                     {/* NOTAS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                       <div className="text-[10px] font-black uppercase tracking-widest mb-3 opacity-60">Avaliação Inteira</div>
                       <div className="flex flex-wrap gap-2">
-                        {[5,4,3,2,1,0].map(nt => (
-                          <label key={nt} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${globalFilters.Notas.includes(nt) ? (darkMode?'border-cyan-400 bg-cyan-900/30':'border-cyan-600 bg-cyan-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={globalFilters.Notas.includes(nt)} onChange={() => handleGlobalCheckboxChange('Notas', nt)} /> {nt===0?'Sem Nota':`${nt}★`}
+                        {[5,4,3,2,1,0].map(nt => {
+                          const isActive = globalFilters.Notas && globalFilters.Notas.includes(nt);
+                          return (
+                          <label key={nt} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-cyan-400 bg-cyan-900/30':'border-cyan-600 bg-cyan-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Notas', nt); }} /> {nt===0?'Sem Nota':`${nt}★`}
                           </label>
-                        ))}
+                        )})}
                       </div>
                     </div>
                   </div>
                   <div className={`p-4 border-t-[2px] flex gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <MButton onClick={clearGlobalFilters} variant="white" darkMode={darkMode} className="flex-1 py-4 text-[10px]">Limpar</MButton>
-                      <MButton onClick={() => setIsFilterMenuOpen(false)} variant="black" darkMode={darkMode} className="flex-[2] py-4 text-[10px]">Ver {processedItems.length} Itens</MButton>
+                      <MButton onClick={() => { playChipBeep('click'); setIsFilterMenuOpen(false); }} variant="black" darkMode={darkMode} className="flex-[2] py-4 text-[10px]">Ver {processedItems.length} Itens</MButton>
                   </div>
               </div>
           </div>
@@ -1522,34 +1890,33 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
       {isSortMenuOpen && (
           <div className="fixed inset-0 z-[999] bg-black/80 flex flex-col justify-end sm:justify-center items-center sm:p-4 animate-in fade-in duration-200">
               <div className={`w-full sm:max-w-md flex flex-col border-t-[2px] sm:border-[2px] max-h-[85vh] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[6px_6px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[6px_6px_0px_rgba(0,0,0,1)]'}`}>
-                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => setIsSortMenuOpen(false)} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Ordenação Global</span><div className="w-7"/></div>
+                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => { playChipBeep('click'); setIsSortMenuOpen(false); }} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Ordenação Global</span><div className="w-7"/></div>
                   <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                       <div className="mb-6">
                           <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Ordem</div>
                           <div className={`border-[2px] flex flex-col ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                              <MRadio label="↑ Ascendente" checked={sortOrder==='asc'} onChange={()=>setSortOrder('asc')} darkMode={darkMode} />
-                              <MRadio label="↓ Descendente" checked={sortOrder==='desc'} onChange={()=>setSortOrder('desc')} darkMode={darkMode} />
+                              <MRadio label="↑ Ascendente" checked={sortOrder==='asc'} onChange={()=>{ playChipBeep('click'); setSortOrder('asc'); }} darkMode={darkMode} />
+                              <MRadio label="↓ Descendente" checked={sortOrder==='desc'} onChange={()=>{ playChipBeep('click'); setSortOrder('desc'); }} darkMode={darkMode} />
                           </div>
                       </div>
                       <div>
                           <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Ordenar por</div>
                           <div className={`border-[2px] flex flex-col ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                              <MRadio label="Artista / Autor" checked={sortBy==='author'} onChange={()=>setSortBy('author')} darkMode={darkMode} />
-                              <MRadio label="Ano" checked={sortBy==='year'} onChange={()=>setSortBy('year')} darkMode={darkMode} />
-                              <MRadio label="Título" checked={sortBy==='title'} onChange={()=>setSortBy('title')} darkMode={darkMode} />
-                              <MRadio label="Data Adicionada" checked={sortBy==='added'} onChange={()=>setSortBy('added')} darkMode={darkMode} />
-                              <MRadio label="Formato" checked={sortBy==='type'} onChange={()=>setSortBy('type')} darkMode={darkMode} />
+                              <MRadio label="Artista / Autor" checked={sortBy==='author'} onChange={()=>{ playChipBeep('click'); setSortBy('author'); }} darkMode={darkMode} />
+                              <MRadio label="Ano" checked={sortBy==='year'} onChange={()=>{ playChipBeep('click'); setSortBy('year'); }} darkMode={darkMode} />
+                              <MRadio label="Título" checked={sortBy==='title'} onChange={()=>{ playChipBeep('click'); setSortBy('title'); }} darkMode={darkMode} />
+                              <MRadio label="Data Adicionada" checked={sortBy==='added'} onChange={()=>{ playChipBeep('click'); setSortBy('added'); }} darkMode={darkMode} />
+                              <MRadio label="Formato" checked={sortBy==='type'} onChange={()=>{ playChipBeep('click'); setSortBy('type'); }} darkMode={darkMode} />
                           </div>
                       </div>
                   </div>
                   <div className={`p-4 border-t-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`}>
-                      <MButton darkMode={darkMode} variant="pink" onClick={() => setIsSortMenuOpen(false)} className="w-full py-4 text-[10px]">Aplicar Ordenação</MButton>
+                      <MButton darkMode={darkMode} variant="pink" onClick={() => { playChipBeep('click'); setIsSortMenuOpen(false); }} className="w-full py-4 text-[10px]">Aplicar Ordenação</MButton>
                   </div>
               </div>
           </div>
       )}
 
-      {}
       <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
         
         {/* NAVEGAÇÃO LATERAL (Desktop) */}
@@ -1558,17 +1925,17 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
             <img src={LINK_DO_ICONE_NO_GITHUB} alt="Logo" className="w-8 h-8 object-contain" /><span className="hidden lg:block text-xs font-black uppercase tracking-widest mt-1">Memorabilia</span>
           </div>
           <div className="flex-1 flex flex-col pt-4">
-            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-700 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent'}`}>
+            <button onTouchStart={handleLibPressStart} onTouchEnd={handleLibPressEnd} onMouseDown={handleLibPressStart} onMouseUp={handleLibPressEnd} onMouseLeave={handleLibPressEnd} onClick={handleLibClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'library' ? (darkMode ? 'bg-cyan-700 text-white border-l-[4px] border-cyan-400' : 'bg-cyan-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
               <Library className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Coleção</span>
             </button>
-            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white border-l-[4px] border-amber-400' : 'bg-amber-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent'}`}>
+            <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white border-l-[4px] border-amber-400' : 'bg-amber-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
               <PlusSquare className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
-            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white border-l-[4px] border-pink-400' : 'bg-pink-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent'}`}>
-              <BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Dashboard</span>
+            <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white border-l-[4px] border-pink-400' : 'bg-pink-600 border-l-[4px] border-black text-white') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+              <BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Análises (BI)</span>
             </button>
             <div className="mt-auto mb-4">
-              <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white border-l-[4px] border-gray-400' : 'bg-gray-200 border-l-[4px] border-black') : 'border-l-[4px] border-transparent'}`}>
+              <button onClick={() => { playChipBeep('click'); setActiveTab('settings'); }} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white border-l-[4px] border-gray-400' : 'bg-gray-200 border-l-[4px] border-black') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <Settings className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Ajustes</span>
               </button>
             </div>
@@ -1637,17 +2004,17 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
                   <div className="flex-1 relative min-w-0">
                       <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                       <input type="text" placeholder="Buscar no acervo global..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setLibraryPage(0); }} className={`w-full h-10 pl-8 pr-8 border-[2px] font-black text-[10px] sm:text-[11px] uppercase tracking-wider outline-none transition-all focus:border-cyan-600 ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} />
-                      {searchTerm && (<button onClick={() => {setSearchTerm(''); setLibraryPage(0);}} className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>)}
+                      {searchTerm && (<button onClick={() => { playChipBeep('click'); setSearchTerm(''); setLibraryPage(0);}} className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>)}
                   </div>
-                  <button onClick={() => setIsFilterMenuOpen(true)} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Filtros Globais">
+                  <button onClick={() => { playChipBeep('click'); setIsFilterMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Filtros Globais">
                       <FilterIcon className="w-4 h-4" />
                       {activeFiltersCount > 0 && (<div className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full border-[2px] flex items-center justify-center text-[8px] font-black ${darkMode ? 'bg-pink-700 border-gray-900 text-white' : 'bg-pink-600 border-white text-white'}`}>{activeFiltersCount}</div>)}
                   </button>
-                  <button onClick={() => setIsSortMenuOpen(true)} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Ordenação Global">
+                  <button onClick={() => { playChipBeep('click'); setIsSortMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Ordenação Global">
                       {sortOrder === 'asc' ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
                   </button>
                   {activeTab === 'library' && (
-                    <select value={alphaFilter} onChange={e => { setAlphaFilter(e.target.value); setLibraryPage(0); }} className={`w-12 sm:w-14 h-10 p-0 text-center text-[10px] font-black uppercase tracking-widest border-[2px] outline-none cursor-pointer flex-shrink-0 ${darkMode ? 'border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+                    <select value={alphaFilter} onChange={e => { playChipBeep('click'); setAlphaFilter(e.target.value); setLibraryPage(0); }} className={`w-12 sm:w-14 h-10 p-0 text-center text-[10px] font-black uppercase tracking-widest border-[2px] outline-none cursor-pointer flex-shrink-0 ${darkMode ? 'border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
                         {['Todos', '#', ...Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i))].map(l => <option key={l} value={l}>{l === 'Todos' ? 'A-Z' : l}</option>)}
                     </select>
                   )}
@@ -1655,14 +2022,14 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
             )}
           </header>
 
-          {}
-          <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative flex flex-col">
+          {/* ROTEAMENTO DE ABAS */}
+          <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-4 relative flex flex-col">
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             
             {activeTab === 'library' && <LibraryTab items={items} setItems={setItems} filteredItems={processedItems} setFilteredItems={()=>{}} darkMode={darkMode} settings={settings} onShowToast={showToast} activeCategories={activeCategories} page={libraryPage} setPage={setLibraryPage} />}
-            {activeTab === 'add' && <div className="p-3 overflow-y-auto w-full"><AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} /></div>}
-            {activeTab === 'dashboard' && <div className="p-3 overflow-y-auto w-full"><DashboardTab items={items} filteredItems={processedItems} darkMode={darkMode} activeCategories={activeCategories} /></div>}
-            {activeTab === 'settings' && <div className="p-3 overflow-y-auto w-full"><SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} /></div>}
+            {activeTab === 'add' && <div className="p-3 overflow-y-auto w-full h-full"><AddTab items={items} setItems={setItems} settings={settings} darkMode={darkMode} addMode={addMode} setAddMode={setAddMode} setActiveTab={setActiveTab} onShowToast={showToast} triggerGlobalAI={triggerGlobalAI} globalAiState={aiBoxState} globalAiMessage={aiBoxMessage} resetGlobalAi={() => { setAiBoxState('idle'); setAiBoxMessage(''); }} scannedAIData={scannedAIData} setScannedAIData={setScannedAIData} isHtml5QrcodeLoaded={isHtml5QrcodeLoaded} activeCategories={activeCategories} activeClassCodes={activeClassCodes} allTypes={allTypes} /></div>}
+            {activeTab === 'dashboard' && <div className="p-1 sm:p-3 overflow-y-auto w-full h-full scrollbar-hide"><DashboardTab items={items} filteredItems={processedItems} darkMode={darkMode} activeCategories={activeCategories} globalFilters={globalFilters} setGlobalFilters={setGlobalFilters} settings={settings} /></div>}
+            {activeTab === 'settings' && <div className="p-3 overflow-y-auto w-full h-full scrollbar-hide"><SettingsTab items={items} setItems={setItems} settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} onShowToast={showToast} pwa={pwa} activeCategories={activeCategories} activeClassCodes={activeClassCodes} /></div>}
           </main>
 
           {/* NAV MOBILE */}
@@ -1673,10 +2040,10 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
             <button onTouchStart={handleAddPressStart} onTouchEnd={handleAddPressEnd} onMouseDown={handleAddPressStart} onMouseUp={handleAddPressEnd} onMouseLeave={handleAddPressEnd} onClick={handleAddClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'add' ? (darkMode ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white') : ''}`}>
               <PlusSquare className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Adicionar</span>
             </button>
-            <button onClick={() => setActiveTab('dashboard')} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white') : ''}`}>
-              <BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Geral</span>
+            <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-700 text-white' : 'bg-pink-600 text-white') : ''}`}>
+              <BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">BI</span>
             </button>
-            <button onClick={() => setActiveTab('settings')} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-black') : ''}`}>
+            <button onClick={() => { playChipBeep('click'); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-black') : ''}`}>
               <Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span>
             </button>
           </nav>
