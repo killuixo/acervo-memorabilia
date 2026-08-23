@@ -243,13 +243,41 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 // ÍCONES SVG NATIVOS
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>;
-const KatamariIcon = ({ className = "w-6 h-6", glow = 0 }) => (
+
+// O NOVO DISCO SPINNER QUE SUBSTITUI A KATAMARI
+const DiscoSpinner = ({ className = "w-6 h-6", glow = 0, speed = 3 }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
-    <g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="2.5s" repeatCount="indefinite" />
-    <circle cx="50" cy="50" r="28" fill="currentColor" stroke="currentColor" strokeWidth="6" strokeDasharray="5 5" />
-    <g stroke="#ffffff" strokeWidth="6" strokeLinecap="round" opacity="0.8"><line x1="50" y1="4" x2="50" y2="16" /><line x1="50" y1="96" x2="50" y2="84" /><line x1="4" y1="50" x2="16" y2="50" /><line x1="96" y1="50" x2="84" y2="50" /><line x1="17" y1="17" x2="26" y2="26" /><line x1="83" y1="83" x2="74" y2="74" /><line x1="17" y1="83" x2="26" y2="74" /><line x1="83" y1="17" x2="74" y2="26" /></g></g>
+    <defs>
+      <linearGradient id="cdGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#0891b2">
+          <animate attributeName="stop-color" values="#0891b2;#db2777;#d97706;#0891b2" dur={`${speed}s`} repeatCount="indefinite" />
+        </stop>
+        <stop offset="50%" stopColor="#db2777">
+          <animate attributeName="stop-color" values="#db2777;#d97706;#0891b2;#db2777" dur={`${speed}s`} repeatCount="indefinite" />
+        </stop>
+        <stop offset="100%" stopColor="#d97706">
+          <animate attributeName="stop-color" values="#d97706;#0891b2;#db2777;#d97706" dur={`${speed}s`} repeatCount="indefinite" />
+        </stop>
+      </linearGradient>
+    </defs>
+    <g>
+      {/* Rotação Anti-Horária */}
+      <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur={`${speed}s`} repeatCount="indefinite" />
+      
+      {/* Base do Disco (Degradê Furta-cor) - Sem Sulcos */}
+      <circle cx="50" cy="50" r="46" fill="url(#cdGradient)" />
+      
+      {/* Center Label (Strobe effect piscando preto/branco na mesma velocidade) */}
+      <circle cx="50" cy="50" r="14" fill="black">
+        <animate attributeName="fill" values="black;white;black" dur={`${speed}s`} repeatCount="indefinite" />
+      </circle>
+      
+      {/* Furo Central */}
+      <circle cx="50" cy="50" r="4" fill="gray" opacity="0.8" />
+    </g>
   </svg>
 );
+
 const Search = p => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>} />;
 const Library = p => <Icon {...p} path={<><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></>} />;
 const PlusSquare = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3"/><path d="M8 12h8"/><path d="M12 8v8"/></>} />;
@@ -1374,10 +1402,34 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
 
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
+  const currentSpeed = Math.max(3, speed / 4); // Calcula a velocidade usada no disco / titulo
+
+  if (isFetchingCloud && !showSuccessSplash) {
+    return (
+       <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
+          <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+          <DiscoSpinner className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} speed={currentSpeed} />
+          <p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
+       </div>
+    );
+  }
+
+  if (showSuccessSplash) {
+    return (
+      <div className={`min-h-screen flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden bg-black text-white`} style={{ backgroundImage: 'radial-gradient(circle, #222 1.5px, transparent 1.5px)', backgroundSize: '4px 4px' }}>
+         <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+         <div className="z-10 flex flex-col items-center justify-center gap-6 animate-in zoom-in duration-300"><img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(219,39,119,0.8)]" /><h1 className="text-4xl text-pink-600 drop-shadow-[0_0_10px_currentColor] text-center leading-none uppercase tracking-tighter">Memorabilia</h1></div>
+      </div>
+    );
+  }
+
   const textShadowStyle = { textShadow: glow > 0 ? `0 0 ${glow}px currentColor, 0 0 ${glow * 1.5}px currentColor` : 'none' };
   const ledItemStyle = "font-led text-[9px] sm:text-[10px] uppercase tracking-normal";
 
-  const renderKatamariSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><KatamariIcon className="w-5 h-5 flex-shrink-0" glow={glow} /></div>);
+  const renderDiscoSeparator = () => (<div className="flex items-center mx-4 opacity-90 pb-0.5"><DiscoSpinner className="w-5 h-5 flex-shrink-0" glow={glow} speed={currentSpeed} /></div>);
+  
   const renderPacmanEnd = () => (
     <div className="flex items-center gap-2 ml-6 mr-10 opacity-90 pb-0.5">
       <Ghost className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }} />
@@ -1401,27 +1453,8 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
     const globRated = items.filter(i => (Number(i.rating) || 0) > 0);
     if (globRated.length > 0) statsArr.push(<span key="rating" className={`text-amber-500 ${ledItemStyle}`}>NOTA MÉDIA GLOBAL: ★ {(globRated.reduce((acc, i) => acc + (Number(i.rating) || 0), 0) / globRated.length).toFixed(1)}</span>);
 
-    return (<div className="flex items-center py-1" style={textShadowStyle}>{statsArr.map((stat, index) => ( <React.Fragment key={index}>{stat}{index < statsArr.length - 1 ? renderKatamariSeparator() : renderPacmanEnd()}</React.Fragment> ))}</div>);
+    return (<div className="flex items-center py-1" style={textShadowStyle}>{statsArr.map((stat, index) => ( <React.Fragment key={index}>{stat}{index < statsArr.length - 1 ? renderDiscoSeparator() : renderPacmanEnd()}</React.Fragment> ))}</div>);
   };
-
-  if (isFetchingCloud && !showSuccessSplash) {
-    return (
-       <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" /><KatamariIcon className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} /><p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
-       </div>
-    );
-  }
-
-  if (showSuccessSplash) {
-    return (
-      <div className={`min-h-screen flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden bg-black text-white`} style={{ backgroundImage: 'radial-gradient(circle, #222 1.5px, transparent 1.5px)', backgroundSize: '4px 4px' }}>
-         <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
-         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
-         <div className="z-10 flex flex-col items-center justify-center gap-6 animate-in zoom-in duration-300"><img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(219,39,119,0.8)]" /><h1 className="text-4xl text-pink-600 drop-shadow-[0_0_10px_currentColor] text-center leading-none uppercase tracking-tighter">Memorabilia</h1></div>
-      </div>
-    );
-  }
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
@@ -1516,6 +1549,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
           </div>
       )}
 
+      {}
       <div className={`w-full h-screen relative flex flex-col md:flex-row shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
         
         {/* NAVEGAÇÃO LATERAL (Desktop) */}
@@ -1621,7 +1655,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
             )}
           </header>
 
-          {/* ROTEAMENTO DE ABAS */}
+          {}
           <main className="flex-1 overflow-hidden p-0 sm:p-2 lg:p-6 relative flex flex-col">
             <input type="file" accept="image/*" capture="environment" ref={globalFileInputRef} onChange={handleGlobalFileChange} className="hidden" />
             
