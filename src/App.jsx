@@ -25,6 +25,8 @@ const STATUS_OPTIONS = ['Não Iniciado', 'Na Fila', 'Em Andamento', 'Concluído'
 // AUDIO ENGINE (CHIPTUNE 8-BIT)
 // ==========================================
 let audioCtx = null;
+let globalSoundEnabled = true;
+
 const initAudio = () => {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -33,6 +35,7 @@ const initAudio = () => {
 };
 
 const playLydianSuccess = () => {
+  if (!globalSoundEnabled) return;
   try {
     if (!audioCtx) initAudio();
     if (!audioCtx) return;
@@ -52,6 +55,7 @@ const playLydianSuccess = () => {
 };
 
 const playChipBeep = (type) => {
+  if (!globalSoundEnabled) return;
   try {
     if (!audioCtx) initAudio();
     if (!audioCtx) return;
@@ -250,7 +254,6 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
 // ==========================================
 const Icon = ({ path, className = "w-6 h-6", onClick, fill = "none", style }) => <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" className={className} style={style}>{path}</svg>;
 
-// O NOVO DISCO SPINNER QUE SUBSTITUI A KATAMARI (Sem sulcos, giro anti-horário)
 const DiscoSpinner = ({ className = "w-6 h-6", glow = 0, speed = 3 }) => (
   <svg viewBox="0 0 100 100" className={className} style={{ filter: glow > 0 ? `drop-shadow(0 0 ${glow}px currentColor)` : 'none' }}>
     <defs>
@@ -267,18 +270,11 @@ const DiscoSpinner = ({ className = "w-6 h-6", glow = 0, speed = 3 }) => (
       </linearGradient>
     </defs>
     <g>
-      {/* Rotação Anti-Horária */}
       <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur={`${speed}s`} repeatCount="indefinite" />
-      
-      {/* Base do Disco (Degradê Furta-cor) - Sem Sulcos */}
       <circle cx="50" cy="50" r="46" fill="url(#cdGradient)" />
-      
-      {/* Center Label (Strobe effect piscando preto/branco na mesma velocidade) */}
       <circle cx="50" cy="50" r="14" fill="black">
         <animate attributeName="fill" values="black;white;black" dur={`${speed}s`} repeatCount="indefinite" />
       </circle>
-      
-      {/* Furo Central */}
       <circle cx="50" cy="50" r="4" fill="gray" opacity="0.8" />
     </g>
   </svg>
@@ -377,7 +373,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
 };
 
 const MInput = ({ label, value, onChange, onBlur, type = "text", placeholder = "", multiline = false, darkMode, readOnly = false }) => (
-  <div className="flex flex-col mb-3 w-full h-full">
+  <div className="flex flex-col w-full h-full mb-1.5">
     {label && <label className={`text-[10px] font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-900'}`}>{label}</label>}
     {multiline ? (
       <textarea readOnly={readOnly} value={value} onChange={onChange} onBlur={onBlur} placeholder={placeholder} className={`w-full p-2 border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'} font-sans text-sm font-bold outline-none ${readOnly?'':'focus:bg-amber-100 dark:focus:bg-amber-900'} transition-colors min-h-[80px] resize-none`} />
@@ -542,7 +538,6 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
   };
 
   const saveModifications = () => {
-    // Treat Backlog / Não Iniciado as the same when saving manually
     let statusToSave = editedItem.status;
     if (statusToSave === 'Backlog') statusToSave = 'Não Iniciado';
 
@@ -610,8 +605,8 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
           <button onClick={saveModifications} className={`px-4 py-2 border-[2px] font-black uppercase text-[10px] tracking-widest ${darkMode ? 'bg-cyan-700 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black bg-cyan-600 text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}>Salvar</button>
         </MContainer>
 
-        <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-10 scrollbar-hide">
-          <div className="flex gap-4 flex-col md:flex-row md:items-start">
+        <div className="flex-1 overflow-y-auto px-1 flex flex-col gap-2.5 pb-10 scrollbar-hide">
+          <div className="flex gap-3 flex-col md:flex-row md:items-start">
             <MContainer darkMode={darkMode} className={`${imageContainerClass} flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto md:mx-0`} colorClass={`border-[2px] ${darkMode ? 'bg-gray-800' : 'bg-black'}`}>
               {editedItem.cover_url ? <img src={editedItem.cover_url} alt="Capa" className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" /> : <LibraryBig className={`w-10 h-10 md:w-16 h-16 ${darkMode ? 'text-gray-500' : 'text-white opacity-30'}`} />}
             </MContainer>
@@ -635,14 +630,14 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
 
           <div className="flex gap-2 flex-col sm:flex-row">
             {isBookOrGame && (
-              <MContainer darkMode={darkMode} className="flex-1 p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
+              <MContainer darkMode={darkMode} className="flex-1 p-2" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
                 <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Status</label>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map(opt => <button key={opt} onClick={() => setEditedItem({...editedItem, status: opt})} className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)]'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all ${editedItem.status === opt ? (darkMode ? 'bg-cyan-700 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-gray-900 border-gray-300 text-gray-400' : 'bg-white border-black text-black')}`}>{opt}</button>)}
                 </div>
               </MContainer>
             )}
-            <MContainer darkMode={darkMode} className="flex-1 p-3" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
+            <MContainer darkMode={darkMode} className="flex-1 p-2" colorClass={darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'}>
               <label className={`text-[10px] font-black uppercase tracking-widest mb-2 block border-b-[2px] pb-1 ${darkMode ? 'border-gray-300 text-gray-400' : 'border-gray-300 text-gray-700'}`}>Sua Avaliação</label>
               <div className="flex gap-1.5 mt-2">
                 {[1, 2, 3, 4, 5].map(star => <Star key={star} onClick={() => setEditedItem({...editedItem, rating: star})} className={`w-8 h-8 cursor-pointer active:scale-90 transition-transform ${star <= (editedItem.rating || 0) ? (darkMode ? 'fill-amber-400 text-amber-400' : 'fill-black text-black') : (darkMode ? 'text-gray-600' : 'text-gray-300')}`} />)}
@@ -653,18 +648,18 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
           <MInput label="Descrição" multiline value={editedItem.description || ''} onChange={e => setEditedItem({...editedItem, description: e.target.value})} darkMode={darkMode} />
           <MInput label="Código de Barras/Catálogo" value={editedItem.barcode || ''} onChange={e => setEditedItem({...editedItem, barcode: e.target.value})} darkMode={darkMode} />
           
-          <MContainer darkMode={darkMode} className="p-3" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-50 text-black'}>
+          <MContainer darkMode={darkMode} className="p-2" colorClass={darkMode ? 'bg-amber-900/30 text-white' : 'bg-amber-50 text-black'}>
             <MInput label="Anotações" multiline value={editedItem.notes || ''} onChange={e => setEditedItem({...editedItem, notes: e.target.value})} darkMode={darkMode} />
           </MContainer>
 
-          <div className="flex gap-2 flex-col sm:flex-row">
+          <div className="flex gap-2 flex-col sm:flex-row mt-1">
             <a href={linkInfo.url} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}><ExternalLink className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Buscar na Web</span></a>
             {isDiscItem && <a href={`https://open.spotify.com/search/${encodeURIComponent((editedItem.title || '') + ' ' + (editedItem.author_developer || ''))}`} target="_blank" rel="noopener noreferrer" className={`flex-1 p-3 border-[2px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 border-gray-300 text-cyan-400' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-100 border-black text-cyan-800'} flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] transition-all active:translate-y-1 active:translate-x-1 active:shadow-none`}><Headphones className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Spotify</span></a>}
           </div>
 
-          <button onClick={saveModifications} className={`w-full mt-4 py-3 border-[2px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-700 border-gray-300 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-600 border-black text-white'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><Check className="w-5 h-5" /> Salvar Alterações</button>
+          <button onClick={saveModifications} className={`w-full mt-2 py-3 border-[2px] font-black uppercase text-[12px] tracking-widest flex items-center justify-center gap-2 ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-cyan-700 border-gray-300 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-cyan-600 border-black text-white'} active:translate-y-1 active:translate-x-1 active:shadow-none transition-all`}><Check className="w-5 h-5" /> Salvar Alterações</button>
 
-          <div className="mt-8 mb-2 flex flex-row items-center justify-center gap-6">
+          <div className="mt-4 mb-2 flex flex-row items-center justify-center gap-6">
             <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
             <span className="opacity-20 text-[9px] font-black">|</span>
             <button disabled={isSearchingCover} onClick={handleSearchCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
@@ -904,7 +899,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
               <div className="flex-1">
                 <MInput darkMode={darkMode} label="Código de Barras/Catálogo" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} />
               </div>
-              <div className="flex items-end mb-3">
+              <div className="flex items-end mb-1.5">
                 <MButton darkMode={darkMode} variant="amber" onClick={(e) => { e.preventDefault(); if(formData.barcode) fetchMultiDatabaseParallel(formData.barcode); else { playChipBeep('error'); updateStatus('error', 'Digite um código primeiro.'); } }} className="h-[38px] px-3"><Search className="w-4 h-4"/> Buscar</MButton>
               </div>
             </div>
@@ -1401,7 +1396,6 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   );
 };
 
-
 const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDarkMode, onShowToast, pwa, activeCategories, activeClassCodes }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importData, setImportData] = useState(null);
@@ -1475,6 +1469,23 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
               <span className="text-[10px] font-black uppercase tracking-widest">Tema Visual</span>
               <button onClick={() => { setDarkMode(!darkMode); playChipBeep('save'); onShowToast('success'); }} className={`px-4 py-2 border-[2px] font-black uppercase tracking-widest text-[10px] ${darkMode ? 'shadow-[2px_2px_0px_rgba(209,213,219,1)] border-gray-300 bg-gray-800 text-white' : 'shadow-[2px_2px_0px_rgba(0,0,0,1)] border-black bg-gray-200 text-black'} active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all`}>{darkMode ? 'Modo Claro' : 'Modo Escuro'}</button>
             </div>
+            
+            {/* NOVO TOGGLE DE EFEITOS SONOROS */}
+            <div className={`border-t-[2px] ${darkMode ? 'border-amber-900' : 'border-amber-200'} pt-3`}>
+               <div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center justify-between">
+                   <span className="flex items-center gap-2"><MonitorPlay className="w-4 h-4"/> Efeitos Sonoros</span>
+                   <button onClick={() => { 
+                       const val = settings?.soundEnabled === false ? true : false;
+                       setSettings({...settings, soundEnabled: val});
+                       globalSoundEnabled = val;
+                       if(val) { setTimeout(() => playChipBeep('click'), 50); }
+                       onShowToast('success');
+                   }} className={`w-10 h-5 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'} flex items-center p-0.5 transition-colors ${settings?.soundEnabled !== false ? (darkMode ? 'bg-cyan-600' : 'bg-cyan-500') : (darkMode ? 'bg-gray-700' : 'bg-gray-300')}`}>
+                       <div className={`w-3 h-3 ${darkMode ? 'bg-white border-gray-300' : 'bg-black border-black'} border-[2px] transform transition-transform ${settings?.soundEnabled !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                   </button>
+               </div>
+            </div>
+
             <div className={`border-t-[2px] ${darkMode ? 'border-amber-900' : 'border-amber-200'} pt-3 flex flex-col gap-5`}>
                <div><div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><MonitorPlay className="w-4 h-4"/> Velocidade LED</div><input type="range" min="10" max="150" step="1" value={160 - (Number(settings?.marqueeSpeed) || 35)} onChange={e => setSettings({...settings, marqueeSpeed: 160 - parseInt(e.target.value)})} onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }} onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-full h-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} style={{ accentColor: '#0891b2' }} /></div>
                <div><div className="text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Sun className="w-4 h-4"/> Brilho LED</div><input type="range" min="0" max="100" step="5" value={Number(settings?.marqueeBrightness) ?? 50} onChange={e => setSettings({...settings, marqueeBrightness: parseInt(e.target.value)})} onMouseUp={() => { playChipBeep('save'); onShowToast('success'); }} onTouchEnd={() => { playChipBeep('save'); onShowToast('success'); }} className={`w-full h-2 rounded-lg cursor-pointer ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} style={{ accentColor: '#d97706' }} /></div>
@@ -1585,7 +1596,7 @@ export default function App() {
   const [addMode, setAddMode] = useState('manual');
   const [darkMode, setDarkMode] = useState(false);
   const [items, setItems] = useState([]);
-  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '', discogsToken: '', artistAliases: [] });
+  const [settings, setSettings] = useState({ geminiApiKey: '', googleSheetsUrl: '', marqueeSpeed: 35, marqueeBrightness: 50, archivePrefix: 'MBU', lastfmUser: '', lastfmApiKey: '', discogsToken: '', artistAliases: [], soundEnabled: true });
 
   const [isFetchingCloud, setIsFetchingCloud] = useState(false);
   const [showSuccessSplash, setShowSuccessSplash] = useState(false);
@@ -1745,7 +1756,12 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcod
     try {
       if (localStorage.getItem('memorabilia_theme') === 'dark') setDarkMode(true);
       const sItems = localStorage.getItem('memorabilia_items'); if (sItems) setItems(JSON.parse(sItems));
-      const sSett = localStorage.getItem('memorabilia_settings'); if (sSett) { savedSettings = JSON.parse(sSett); setSettings(p => ({ ...p, ...savedSettings })); }
+      const sSett = localStorage.getItem('memorabilia_settings'); 
+      if (sSett) { 
+          savedSettings = JSON.parse(sSett); 
+          setSettings(p => ({ ...p, ...savedSettings })); 
+          globalSoundEnabled = savedSettings.soundEnabled !== false;
+      }
     } catch (e) {}
 
     if (savedSettings?.googleSheetsUrl) {
