@@ -166,7 +166,6 @@ const normalizeWorkTitle = title => {
 const getSortableName = name => name ? String(name).trim().replace(/^(the|a|an|o|os|as)\s+/i, '') : '';
 const isVariousArtists = name => ['various', 'vários', 'varios', 'variados', 'compilação', 'compilações'].some(k => String(name || '').toLowerCase().trim().includes(k));
 const getValidYear = val => val ? (String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/) ? parseInt(String(val).match(/\b(1[0-9]{3}|20[0-9]{2})\b/)[0], 10) : NaN) : NaN;
-const getDecade = year => year && !isNaN(year) ? Math.floor(year / 10) * 10 : null;
 
 const applyArtistAlias = (name, aliases = []) => {
   if (!name || !Array.isArray(aliases)) return name;
@@ -275,7 +274,6 @@ const DiscoSpinner = ({ className = "w-6 h-6", glow = 0, speed = 3 }) => (
       <circle cx="50" cy="50" r="14" fill="black">
         <animate attributeName="fill" values="black;white;black" dur={`${speed}s`} repeatCount="indefinite" />
       </circle>
-      <circle cx="50" cy="50" r="4" fill="gray" opacity="0.8" />
     </g>
   </svg>
 );
@@ -310,7 +308,6 @@ const ListIcon = p => <Icon {...p} path={<><line x1="8" x2="21" y1="6" y2="6"/><
 const Share = p => <Icon {...p} path={<><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></>} />;
 const Headphones = p => <Icon {...p} path={<><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></>} />;
 const ImageIcon = p => <Icon {...p} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>} />;
-const RefreshIcon = p => <Icon {...p} path={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>} />;
 const Trash2 = p => <Icon {...p} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
 const MonitorPlay = p => <Icon {...p} path={<><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M14 21h-4"/><path d="M12 17v4"/><path d="m10 13 5-3-5-3v6z"/></>} />;
 
@@ -663,7 +660,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
             <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
             <span className="opacity-20 text-[9px] font-black">|</span>
             <button disabled={isSearchingCover} onClick={handleSearchCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
-                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}{isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
+                {isSearchingCover ? <DiscoSpinner className="w-3 h-3 flex-shrink-0" speed={2} /> : <ImageIcon className="w-3 h-3" />}{isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
             </button>
           </div>
         </div>
@@ -815,7 +812,20 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       return { title: info.title || "", author_developer: info.authors?.join(", ") || "", publisher: info.publisher || "", year: info.publishedDate?.substring(0,4) || "", pages_or_time: info.pageCount?.toString() || "", cover_url: coverUrl, description: info.description || "", type: fmt };
     };
 
-    if (isBookCode) fetchers.push(fetchGBooks(), fetchUPC());
+    const fetchBrasilAPI = async () => {
+      const res = await fetchTimeout(`https://brasilapi.com.br/api/isbn/v1/${cleanCode}`); const data = await res.json();
+      if (!data || !data.title) throw new Error("Not found");
+      return { title: data.title, author_developer: data.authors?.join(", ") || "", publisher: data.publisher || "", year: data.year ? data.year.toString() : "", pages_or_time: data.page_count ? data.page_count.toString() : "", type: 'Livro', cover_url: data.cover_url || "", description: data.synopsis || "" };
+    };
+
+    const fetchOpenLibrary = async () => {
+      const res = await fetchTimeout(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanCode}&format=json&jscmd=data`); const data = await res.json();
+      const book = data[`ISBN:${cleanCode}`] || data[`ISBN:${cleanCode.substring(3)}`]; 
+      if (!book) throw new Error("Not found");
+      return { title: book.title || "", author_developer: book.authors?.map(a=>a.name).join(", ") || "", publisher: book.publishers?.map(p=>p.name).join(", ") || "", year: book.publish_date ? book.publish_date.substring(0,4) : "", pages_or_time: book.number_of_pages ? book.number_of_pages.toString() : "", type: 'Livro', cover_url: book.cover?.large || book.cover?.medium || "" };
+    };
+
+    if (isBookCode) fetchers.push(fetchGBooks(), fetchUPC(), fetchBrasilAPI(), fetchOpenLibrary());
     else { fetchers.push(fetchMBrainz(), fetchUPC()); if (settings?.discogsToken) fetchers.push(fetchDiscogs()); }
 
     try {
@@ -850,7 +860,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
       {displayBoxState !== 'idle' && (
         <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-500 border-gray-300 text-black' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
-          {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-sm animate-spin flex-shrink-0" />}
+          {displayBoxState === 'loading' && <DiscoSpinner className="w-6 h-6 flex-shrink-0" speed={2} />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
           <span className="leading-relaxed break-words whitespace-pre-wrap flex-1">{displayBoxMessage}</span>
@@ -940,6 +950,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   const chartColors = getChartColors(darkMode);
   const [activeSubTab, setActiveSubTab] = useState('visao_geral');
   const [selectedEntity, setSelectedEntity] = useState(null); // { type: 'author'|'publisher', name: '' }
+  const [selectedTime, setSelectedTime] = useState(null); // { label, count, perc, type }
 
   // Funções de filtro global ao clicar em gráficos
   const applyFilter = (group, val) => {
@@ -1103,6 +1114,8 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   const sortedDecades = Object.entries(analytics.decades).sort((a, b) => a[0] - b[0]);
   const sortedYears = Object.entries(analytics.years).sort((a, b) => a[0] - b[0]);
   
+  const totalTimedWorks = Object.values(analytics.years).reduce((a,b) => a+b, 0);
+
   const maxType = sortedTypes.length > 0 ? sortedTypes[0][1] : 1;
   const maxDecade = sortedDecades.length > 0 ? Math.max(...sortedDecades.map(d => d[1])) : 1;
   const maxYear = sortedYears.length > 0 ? Math.max(...sortedYears.map(y => y[1])) : 1;
@@ -1201,26 +1214,34 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                </div>
             </MContainer>
             
-            {/* GRÁFICOS DE LINHA DO TEMPO - CORRIGIDOS COM ALTURA MÁXIMA E FLEX 100% */}
+            {/* GRÁFICOS DE LINHA DO TEMPO - CORRIGIDOS (Aumentados e Clicáveis com labels e tooltip local) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <MContainer darkMode={darkMode} className="p-4 flex-1 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-                 <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Décadas)</div>
-                 <div className="flex items-end gap-1 h-32 mt-auto overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1 relative">
+                 <div className="flex justify-between items-center border-b-[2px] border-current pb-2 mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest">Lançamento (Décadas)</span>
+                    {selectedTime && selectedTime.type === 'decade' && <span className="text-[9px] font-black text-pink-600 bg-pink-100 dark:bg-pink-900/30 px-2 py-0.5 animate-in zoom-in duration-200">{selectedTime.label}: {selectedTime.count} ({selectedTime.perc}%)</span>}
+                 </div>
+                 <div className="flex items-end gap-1 h-48 mt-auto overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-6 px-1 relative">
                     {sortedDecades.map(([dec, count], i) => (
-                      <div key={dec} className="flex flex-col justify-end items-center flex-1 min-w-[30px] group cursor-help h-full">
-                         <div className="text-[8px] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-1">{count}</div>
-                         <div className={`w-full transition-all duration-500 ${getMondrianColor(i, darkMode)} border-[2px] ${darkMode?'border-gray-300':'border-black'} hover:opacity-80`} style={{ height: `${Math.max(2, (count / maxDecade) * 100)}%` }}></div>
-                         <div className="text-[7px] font-black mt-1 opacity-70 -rotate-45 translate-y-2">{String(dec).slice(-2)}s</div>
+                      <div key={dec} onClick={() => { playChipBeep('click'); setSelectedTime({ type: 'decade', label: `${dec}s`, count, perc: ((count/totalTimedWorks)*100).toFixed(1) }) }} className="flex flex-col justify-end items-center flex-1 min-w-[30px] group cursor-pointer h-full">
+                         <div className="text-[8px] font-black opacity-0 group-hover:opacity-100 transition-opacity mb-1 text-cyan-600 dark:text-cyan-400">{count}</div>
+                         <div className={`w-full transition-all duration-500 ${getMondrianColor(i, darkMode)} border-[2px] ${darkMode?'border-gray-300':'border-black'} group-hover:opacity-80 active:translate-y-1`} style={{ height: `${Math.max(2, (count / maxDecade) * 100)}%` }}></div>
+                         <div className="absolute bottom-0 text-[7px] font-black mt-1 opacity-70 translate-y-4">{String(dec).slice(-2)}s</div>
                       </div>
                     ))}
                  </div>
               </MContainer>
+              
               <MContainer darkMode={darkMode} className="p-4 flex-1 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
-                 <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Anos)</div>
-                 <div className="flex items-end gap-0.5 h-32 mt-auto overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-1 px-1 relative">
+                 <div className="flex justify-between items-center border-b-[2px] border-current pb-2 mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest">Lançamento (Anos)</span>
+                    {selectedTime && selectedTime.type === 'year' && <span className="text-[9px] font-black text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 animate-in zoom-in duration-200">{selectedTime.label}: {selectedTime.count} ({selectedTime.perc}%)</span>}
+                 </div>
+                 <div className="flex items-end gap-0.5 h-48 mt-auto overflow-x-auto scrollbar-hide border-b-[2px] border-current pb-6 px-1 relative">
                     {sortedYears.map(([yr, count], i) => (
-                      <div key={yr} className="flex flex-col justify-end items-center flex-1 min-w-[12px] group cursor-help h-full">
-                         <div className={`w-full transition-all duration-500 bg-pink-500 border-x border-t ${darkMode?'border-gray-800':'border-gray-200'} hover:opacity-80`} style={{ height: `${Math.max(1, (count / maxYear) * 100)}%` }} title={`${yr}: ${count}`}></div>
+                      <div key={yr} onClick={() => { playChipBeep('click'); setSelectedTime({ type: 'year', label: yr, count, perc: ((count/totalTimedWorks)*100).toFixed(1) }) }} className="flex flex-col justify-end items-center flex-1 min-w-[24px] group cursor-pointer h-full">
+                         <div className={`w-full transition-all duration-500 bg-pink-500 border-x border-t ${darkMode?'border-gray-800':'border-gray-200'} group-hover:opacity-80 active:translate-y-1`} style={{ height: `${Math.max(1, (count / maxYear) * 100)}%` }}></div>
+                         <div className="absolute bottom-0 text-[7px] font-black mt-1 opacity-70 -rotate-45 translate-y-4">{yr}</div>
                       </div>
                     ))}
                  </div>
@@ -1370,7 +1391,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
        {!selectedEntity && (
          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-4 border-b-[2px] border-transparent flex-shrink-0">
            {tabs.map(t => (
-             <button key={t.id} onClick={() => setActiveSubTab(t.id)} className={`px-4 py-2 border-[2px] text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${activeSubTab === t.id ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white' : 'bg-white border-gray-300 text-gray-600 hover:text-black')}`}>{t.label}</button>
+             <button key={t.id} onClick={() => { playChipBeep('click'); setActiveSubTab(t.id); }} className={`px-4 py-2 border-[2px] text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${activeSubTab === t.id ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-cyan-600 border-black text-white shadow-[2px_2px_0px_rgba(0,0,0,1)]') : (darkMode ? 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white' : 'bg-white border-gray-300 text-gray-600 hover:text-black')}`}>{t.label}</button>
            ))}
          </div>
        )}
