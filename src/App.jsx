@@ -1201,6 +1201,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                </div>
             </MContainer>
             
+            {/* GRÁFICOS DE LINHA DO TEMPO - CORRIGIDOS COM ALTURA MÁXIMA E FLEX 100% */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <MContainer darkMode={darkMode} className="p-4 flex-1 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
                  <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Décadas)</div>
@@ -1732,7 +1733,7 @@ Analise a imagem (capa, etiqueta de disco, ficha catalográfica). Retorne EXCLUS
 REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcode'. 3. APENAS JSON puro.`;
 
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json" } })
       });
 
       if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
