@@ -124,7 +124,7 @@ const reindexCollection = (currentItems) => {
   return reindexed;
 };
 
-const resizeImageForAPI = (file, maxWidth = 800) => {
+const resizeImageForAPI = (file, maxWidth = 512) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader(); reader.readAsDataURL(file);
     reader.onload = (e) => {
@@ -133,7 +133,7 @@ const resizeImageForAPI = (file, maxWidth = 800) => {
         const canvas = document.createElement('canvas');
         canvas.width = maxWidth; canvas.height = img.height * (maxWidth / img.width);
         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
+        resolve(canvas.toDataURL('image/jpeg', 0.5));
       }; img.onerror = reject;
     }; reader.onerror = reject;
   });
