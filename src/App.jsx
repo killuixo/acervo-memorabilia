@@ -556,11 +556,8 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
       if (newCover) {
         setEditedItem(prev => ({ ...prev, cover_url: newCover }));
         playChipBeep('success'); onShowToast('success');
-      } else { 
-        playChipBeep('error'); 
-        onShowToast('error'); 
-      }
-    } catch (e) { playChipBeep('error'); onShowToast('error'); } finally { setIsSearchingCover(false); }
+      } else { playChipBeep('error'); }
+    } catch (e) { playChipBeep('error'); } finally { setIsSearchingCover(false); }
   };
 
   const confirmDelete = async () => {
@@ -666,7 +663,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
             <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
             <span className="opacity-20 text-[9px] font-black">|</span>
             <button disabled={isSearchingCover} onClick={handleSearchCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
-                {isSearchingCover ? <DiscoSpinner className="w-3 h-3" speed={2} /> : <ImageIcon className="w-3 h-3" />}{isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
+                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}{isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
             </button>
           </div>
         </div>
@@ -749,10 +746,28 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
   useEffect(() => {
     if (scannedAIData) {
-       setFormData(prev => ({ ...prev, title: scannedAIData.title||'', author_developer: scannedAIData.author_developer||'', year: scannedAIData.year?.toString()||'', publisher: scannedAIData.publisher||'', description: scannedAIData.description||'', barcode: scannedAIData.barcode||'', pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro' }));
+       const derivedType = allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro';
+       setFormData(prev => ({ 
+           ...prev, 
+           title: scannedAIData.title||'', 
+           author_developer: scannedAIData.author_developer||'', 
+           year: scannedAIData.year?.toString()||'', 
+           publisher: scannedAIData.publisher||'', 
+           description: scannedAIData.description||'', 
+           barcode: scannedAIData.barcode||'', 
+           pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, 
+           type: derivedType 
+       }));
+
+       // PIPELINE DE BUSCA AUTOMÁTICA
+       if (scannedAIData.barcode) {
+           fetchMultiDatabaseParallel(scannedAIData.barcode);
+       }
+
        setScannedAIData(null);
     }
-  }, [scannedAIData, setScannedAIData, allTypes]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannedAIData]);
 
   const displayBoxState = globalAiState !== 'idle' ? globalAiState : scanBox.state;
   const displayBoxMessage = globalAiState !== 'idle' ? globalAiMessage : scanBox.message;
@@ -767,7 +782,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             if (scannerRef.current?.getState() === 2) {
                scannerRef.current.stop().then(() => { if (isMounted) { setAddMode('manual'); setFormData(prev => ({ ...prev, barcode: decodedText })); fetchMultiDatabaseParallel(decodedText); setTimeout(() => { isProcessingScan.current = false; }, 2000); } }).catch(e => {});
             }
-          }, () => {}).catch(() => { if (isMounted) { updateStatus('error', 'Erro na câmera ou permissão negada.'); setAddMode('manual'); } });
+          }, () => {}).catch(() => { if (isMounted) { updateStatus('error', 'Erro Câmera.'); setAddMode('manual'); } });
     }
     return () => {
         isMounted = false;
@@ -783,7 +798,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
-      const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${cleanCode}&token=${settings.discogsToken}`); const data = await res.json();
+      // BUSCA HÍBRIDA: Usa o barcode original (sem limpar) para suportar catálogos com traços (ex: XSB-2033)
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?q=${encodeURIComponent(barcode)}&token=${settings.discogsToken}`); 
+      const data = await res.json();
       if (!data.results || data.results.length === 0) throw new Error("Not found");
       const item = data.results[0]; const titleParts = item.title ? item.title.split(' - ') : [];
       let discType = 'CD'; const fStr = (item.format || []).join(' ').toLowerCase();
@@ -793,7 +810,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchMBrainz = async () => {
-      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`); const data = await res.json();
+      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(barcode)}&fmt=json&inc=media+labels`); const data = await res.json();
       if (!data.releases || data.releases.length === 0) throw new Error("Not found");
       const release = data.releases[0]; let fmt = 'CD'; let tc = '';
       if (release.media && release.media.length > 0) { const m = release.media[0]; const fStr = m.format?.toLowerCase() || ''; if (fStr.includes('vinyl') || fStr.includes('12"')) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete'; if (m['track-count']) tc = `${m['track-count']}`; }
@@ -823,11 +840,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     try {
       const foundItem = await Promise.any(fetchers); playChipBeep('success'); updateStatus('success', 'Encontrado com velocidade!');
-      setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
-    } catch (e) { 
-      playChipBeep('error'); 
-      updateStatus('error', 'Item não encontrado em nenhum banco de dados (Discogs, MusicBrainz, UPC, Google Books). Preencha manualmente.'); 
-    }
+      setFormData(prev => ({ ...prev, ...foundItem, barcode: barcode }));
+    } catch (e) { playChipBeep('error'); updateStatus('error', 'Item não localizado nos bancos. Verifique os dados preenchidos pela IA.'); }
   };
 
   const handleSave = () => {
@@ -855,11 +869,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       </div>
 
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-all duration-300 ${
-          displayBoxState === 'loading' 
-            ? 'loading-glow-box' 
-            : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')
-        }`}>
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-500 border-gray-300 text-black' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
           {displayBoxState === 'loading' && <DiscoSpinner className="w-6 h-6 flex-shrink-0" speed={2} glow={5} />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
@@ -1723,44 +1733,31 @@ export default function App() {
 
   const processGlobalAIFile = async (file) => {
     const apiKey = (settings?.geminiApiKey || "").trim();
-    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API do Gemini ausente ou não configurada.'); playChipBeep('error'); return; }
+    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente ou não configurada.'); playChipBeep('error'); return; }
     setAiBoxState('loading'); setAiBoxMessage('Analisando com IA (Precisão Máxima)...');
 
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
-      const promptInstructions = `Aja como um arquivista especialista musical e literário. Seja rápido.
-Analise a imagem fornecida (capa, selo/adesivo de centro de disco de vinil, encarte, ou ficha catalográfica).
-Retorne EXCLUSIVAMENTE um objeto JSON.
+      const promptInstructions = `Aja como arquivista especializado. Seja rápido.
+Analise a imagem (capa, etiqueta de disco, ficha catalográfica). Retorne EXCLUSIVAMENTE um JSON.
 
-Diretrizes Especiais para DISCOS DE VINIL:
-1. Busque PRIMEIRO pelo código de gravadora (número de catálogo) impresso no selo central ou capa (ex: 33.062, XRLP-123).
-2. Use seu vasto conhecimento interno de bancos de dados (como Discogs e MusicBrainz) para cruzar esse código de gravadora com as informações legíveis no adesivo de centro (título, artista, faixas).
-3. Compare os dados lidos com o seu conhecimento para preencher os campos de forma impecável (identifique a gravadora correta e arrume possíveis abreviações).
+Diretriz CRÍTICA para Discos de Vinil:
+Localize o NÚMERO DE CATÁLOGO / CÓDIGO DA GRAVADORA impresso no selo central ou capa (ex: 225012-A, XSB-2033, 33.062). Este é o dado mais importante. Coloque-o no campo "barcode".
 
-Diretrizes para OUTROS FORMATOS (Livros, CDs, Games, Revistas, etc.):
-1. Extraia os dados normalmente da capa, código de barras ou ficha catalográfica.
-2. Mantenha compatibilidade total com todos os suportes.
-
-JSON ESPERADO:
 {
   "type": "Escolha APENAS uma: ${allTypes.join(', ')}",
   "title": "Título Principal",
   "author_developer": "Autor(es) ou Artista",
   "year": "Ano (formato YYYY)",
   "publisher": "Editora ou Gravadora",
-  "pages_or_time": "Páginas, número de faixas ou minutos (apenas números)",
-  "barcode": "Código de barras (EAN/UPC) OU Código de Catálogo da Gravadora (crucial para vinil)",
-  "description": "Texto descritivo. Deixe VAZIO se não houver texto explícito descrevendo a obra."
+  "pages_or_time": "Páginas, faixas ou minutos (apenas números)",
+  "barcode": "Código de barras OU Código de Catálogo da Gravadora (ex: 33.062)",
+  "description": "Texto descritivo. Deixe VAZIO se não houver explícito."
 }
-REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja direto e exato.`;
+REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS JSON puro.`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-          contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], 
-          generationConfig: { responseMimeType: "application/json", temperature: 0.1 } 
-        })
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0.1 } })
       });
 
       if (!res.ok) {
@@ -1770,16 +1767,14 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
          throw new Error(`Erro de Servidor na IA (${res.status}).`);
       }
       
-      const data = await res.json(); 
-      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const data = await res.json(); let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (!text) {
          if (data.promptFeedback?.blockReason) throw new Error(`Conteúdo bloqueado pelos filtros de segurança da IA: ${data.promptFeedback.blockReason}`);
          throw new Error("Erro de Leitura: A IA não retornou nenhum dado útil.");
       }
       
-      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); 
-      text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
 
       setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com sucesso da imagem!'); playChipBeep('save'); showToast('success');
     } catch (e) {
@@ -1933,10 +1928,7 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
   if (isFetchingCloud && !showSuccessSplash) {
     return (
        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
-          <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); 
-            .font-led { font-family: 'Press Start 2P', monospace; }
-          `}</style>
+          <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" /><DiscoSpinner className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} speed={currentSpeed} /><p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
        </div>
     );
@@ -1945,10 +1937,7 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
   if (showSuccessSplash) {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden bg-black text-white`} style={{ backgroundImage: 'radial-gradient(circle, #222 1.5px, transparent 1.5px)', backgroundSize: '4px 4px' }}>
-         <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); 
-            .font-led { font-family: 'Press Start 2P', monospace; }
-         `}</style>
+         <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
          <div className="z-10 flex flex-col items-center justify-center gap-6 animate-in zoom-in duration-300"><img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(219,39,119,0.8)]" /><h1 className="text-4xl text-pink-600 drop-shadow-[0_0_10px_currentColor] text-center leading-none uppercase tracking-tighter">Memorabilia</h1></div>
       </div>
@@ -1957,27 +1946,7 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); 
-        .font-led { font-family: 'Press Start 2P', monospace; } 
-        .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } 
-        @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } 
-        @keyframes titleColorCycle { 0%, 100% { color: #db2777; } 33% { color: #0891b2; } 66% { color: #d97706; } }
-        
-        @keyframes discoBg {
-          0% { background-position: 0% 50% }
-          50% { background-position: 100% 50% }
-          100% { background-position: 0% 50% }
-        }
-        .loading-glow-box {
-          background: linear-gradient(45deg, #0891b2, #db2777, #d97706, #0891b2);
-          background-size: 300% 300%;
-          animation: discoBg 3s linear infinite;
-          color: white !important;
-          border-color: white !important;
-          text-shadow: 0px 1px 2px rgba(0,0,0,0.5);
-        }
-      `}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; } .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } @keyframes titleColorCycle { 0%, 100% { color: #db2777; } 33% { color: #0891b2; } 66% { color: #d97706; } } `}</style>
       
       {/* MENUS GLOBAIS DE FILTRO E ORDENAÇÃO */}
       {isFilterMenuOpen && (
