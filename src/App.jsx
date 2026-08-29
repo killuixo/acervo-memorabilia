@@ -73,11 +73,6 @@ const playChipBeep = (type) => {
       osc.frequency.setValueAtTime(150, now); osc.frequency.setValueAtTime(100, now + 0.1);
       gain.gain.setValueAtTime(vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.start(now); osc.stop(now + 0.2);
-    } else if (type === 'click') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(800, now);
-      gain.gain.setValueAtTime(0.01, now); gain.gain.linearRampToValueAtTime(0, now + 0.05);
-      osc.start(now); osc.stop(now + 0.05);
     }
   } catch (e) {}
 };
@@ -217,7 +212,7 @@ const fetchCoverBySearch = async (item, settings, activeCategories) => {
       try { const res = await fetchTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${barcodeRaw}`); const data = await res.json(); if (data.items?.[0]?.volumeInfo?.imageLinks?.thumbnail) return data.items[0].volumeInfo.imageLinks.thumbnail.replace("http://", "https://").replace("&zoom=1", "&zoom=3"); } catch(e) {}
     }
     if (isDisc && settings?.discogsToken) {
-      try { const res = await fetchTimeout(`https://api.discogs.com/database/search?barcode=${barcodeRaw}&token=${settings.discogsToken}`); const data = await res.json(); if (data.results?.[0]?.cover_image && !data.results[0].cover_image.includes('spacer.gif')) return data.results[0].cover_image; } catch(e) {}
+      try { const res = await fetchTimeout(`https://api.discogs.com/database/search?q=${barcodeRaw}&token=${settings.discogsToken}`); const data = await res.json(); if (data.results?.[0]?.cover_image && !data.results[0].cover_image.includes('spacer.gif')) return data.results[0].cover_image; } catch(e) {}
     }
   }
 
@@ -300,7 +295,7 @@ const ScanLine = p => <Icon {...p} path={<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><pa
 const Ghost = p => <Icon {...p} path={<><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></>} />;
 const LibraryBig = p => <Icon {...p} path={<><rect width="8" height="18" x="3" y="3"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></>} />;
 const AlertTriangle = p => <Icon {...p} path={<><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></>} />;
-const Sparkles = p => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
+const Sparkles = p => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></>} />;
 const FilterIcon = p => <Icon {...p} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
 const Smartphone = p => <Icon {...p} path={<><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></>} />;
 const DiscIcon = p => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></>} />;
@@ -366,7 +361,7 @@ const MButton = ({ onClick, children, className = '', variant = 'primary', icon,
   if (variant === 'black') bg = darkMode ? 'bg-gray-200 text-black' : 'bg-black text-white';
 
   return (
-    <button title={title} disabled={disabled} onClick={(e) => { playChipBeep('click'); onClick && onClick(e); }} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}>
+    <button title={title} disabled={disabled} onClick={(e) => { onClick && onClick(e); }} className={`flex items-center justify-center gap-2 p-3 font-sans text-xs font-black uppercase tracking-widest border-[2px] ${darkMode ? 'border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} ${disabled ? 'opacity-50 shadow-none translate-y-1 translate-x-1' : 'active:shadow-none active:translate-y-1 active:translate-x-1'} transition-all ${bg} ${className}`}>
       {icon} {children}
     </button>
   );
@@ -409,7 +404,7 @@ const MModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Si
 };
 
 const MondrianHBar = ({ label, value, max, index, darkMode, valueFormatter = (v)=>v, onClick, showValue = true }) => (
-  <div className={`flex items-center gap-2 w-full mb-2 ${onClick ? 'cursor-pointer group' : ''}`} onClick={(e) => { if(onClick) { playChipBeep('click'); onClick(e); } }}>
+  <div className={`flex items-center gap-2 w-full mb-2 ${onClick ? 'cursor-pointer group' : ''}`} onClick={(e) => { if(onClick) { onClick(e); } }}>
     <div className={`w-20 text-[9px] font-black uppercase tracking-widest truncate ${onClick ? 'group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors' : ''}`} title={label}>{label}</div>
     <div className={`flex-1 h-6 border-[2px] ${darkMode ? 'bg-gray-800 border-gray-300 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-gray-200 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'} flex relative overflow-hidden ${onClick ? 'group-active:translate-y-0.5 group-active:translate-x-0.5 group-active:shadow-none transition-all' : ''}`}>
       <div className={`h-full transition-all duration-1000 ${getMondrianColor(index, darkMode)}`} style={{ width: `${max > 0 ? (value / max) * 100 : 0}%` }} />
@@ -463,7 +458,7 @@ const MondrianDonutChart = ({ title, data, darkMode, onSliceClick }) => {
 
       <div className="flex flex-col w-full gap-1.5 mt-auto">
         {slices.map((item, idx) => (
-          <div key={idx} onClick={() => { if(onSliceClick) { playChipBeep('click'); onSliceClick(item.originalLabel || item.label); } }} className={`flex items-center justify-between text-[9px] font-black uppercase tracking-widest p-1 border-[2px] border-transparent ${onSliceClick ? 'cursor-pointer hover:border-current active:scale-95 transition-all' : ''}`}>
+          <div key={idx} onClick={() => { if(onSliceClick) { onSliceClick(item.originalLabel || item.label); } }} className={`flex items-center justify-between text-[9px] font-black uppercase tracking-widest p-1 border-[2px] border-transparent ${onSliceClick ? 'cursor-pointer hover:border-current active:scale-95 transition-all' : ''}`}>
             <div className="flex items-center gap-2 truncate">
               <div className={`w-3 h-3 flex-shrink-0 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`} style={{ backgroundColor: item.colorHex }}></div>
               <span className="truncate" title={item.label}>{item.label}</span>
@@ -573,13 +568,13 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
           for (let i = 0; i < reindexedList.length; i++) {
              const newItem = reindexedList[i]; const oldItem = updatedList[i];
              if (newItem.id !== oldItem.id) {
-                syncDeleteToSheets(oldItem.id, settings.googleSheetsUrl);
-                await new Promise(r => setTimeout(r, 400));
-                syncItemToSheets(newItem, settings.googleSheetsUrl);
-                await new Promise(r => setTimeout(r, 400));
+                 syncDeleteToSheets(oldItem.id, settings.googleSheetsUrl);
+                 await new Promise(r => setTimeout(r, 400));
+                 syncItemToSheets(newItem, settings.googleSheetsUrl);
+                 await new Promise(r => setTimeout(r, 400));
              } else if (newItem.archive_code !== oldItem.archive_code) {
-                syncItemToSheets(newItem, settings.googleSheetsUrl);
-                await new Promise(r => setTimeout(r, 400));
+                 syncItemToSheets(newItem, settings.googleSheetsUrl);
+                 await new Promise(r => setTimeout(r, 400));
              }
           }
        }
@@ -736,38 +731,20 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
 };
 
 const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setActiveTab, onShowToast, triggerGlobalAI, globalAiState, globalAiMessage, resetGlobalAi, scannedAIData, setScannedAIData, isHtml5QrcodeLoaded, activeCategories, activeClassCodes, allTypes }) => {
-  const [scanBox, setScanBox] = useState({ state: 'idle', message: '' });
+  const [scanBox, setScanBox] = useState({ state: 'idle', message: null });
   const scannerRef = useRef(null); const isProcessingScan = useRef(false);
   const [formData, setFormData] = useState({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   const updateStatus = (state, message) => setScanBox({ state, message });
-  const changeMode = (newMode) => { setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', ''); resetGlobalAi(); } };
+  const changeMode = (newMode) => { setAddMode(newMode); if (newMode !== 'manual') { updateStatus('idle', null); resetGlobalAi(); } };
 
   useEffect(() => {
     if (scannedAIData) {
-       const derivedType = allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro';
-       setFormData(prev => ({ 
-           ...prev, 
-           title: scannedAIData.title||'', 
-           author_developer: scannedAIData.author_developer||'', 
-           year: scannedAIData.year?.toString()||'', 
-           publisher: scannedAIData.publisher||'', 
-           description: scannedAIData.description||'', 
-           barcode: scannedAIData.barcode||'', 
-           pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, 
-           type: derivedType 
-       }));
-
-       // PIPELINE DE BUSCA AUTOMÁTICA
-       if (scannedAIData.barcode) {
-           fetchMultiDatabaseParallel(scannedAIData.barcode);
-       }
-
+       setFormData(prev => ({ ...prev, title: scannedAIData.title||'', author_developer: scannedAIData.author_developer||'', year: scannedAIData.year?.toString()||'', publisher: scannedAIData.publisher||'', description: scannedAIData.description||'', barcode: scannedAIData.barcode||'', pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro' }));
        setScannedAIData(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scannedAIData]);
+  }, [scannedAIData, setScannedAIData, allTypes]);
 
   const displayBoxState = globalAiState !== 'idle' ? globalAiState : scanBox.state;
   const displayBoxMessage = globalAiState !== 'idle' ? globalAiMessage : scanBox.message;
@@ -798,9 +775,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
-      // BUSCA HÍBRIDA: Usa o barcode original (sem limpar) para suportar catálogos com traços (ex: XSB-2033)
-      const res = await fetchTimeout(`https://api.discogs.com/database/search?q=${encodeURIComponent(barcode)}&token=${settings.discogsToken}`); 
-      const data = await res.json();
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?q=${cleanCode}&token=${settings.discogsToken}`); const data = await res.json();
       if (!data.results || data.results.length === 0) throw new Error("Not found");
       const item = data.results[0]; const titleParts = item.title ? item.title.split(' - ') : [];
       let discType = 'CD'; const fStr = (item.format || []).join(' ').toLowerCase();
@@ -810,7 +785,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
 
     const fetchMBrainz = async () => {
-      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(barcode)}&fmt=json&inc=media+labels`); const data = await res.json();
+      const res = await fetchTimeout(`https://musicbrainz.org/ws/2/release/?query=barcode:${cleanCode}&fmt=json&inc=media+labels`); const data = await res.json();
       if (!data.releases || data.releases.length === 0) throw new Error("Not found");
       const release = data.releases[0]; let fmt = 'CD'; let tc = '';
       if (release.media && release.media.length > 0) { const m = release.media[0]; const fStr = m.format?.toLowerCase() || ''; if (fStr.includes('vinyl') || fStr.includes('12"')) fmt = 'Vinil'; else if (fStr.includes('cassette')) fmt = 'Fita Cassete'; if (m['track-count']) tc = `${m['track-count']}`; }
@@ -840,8 +815,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     try {
       const foundItem = await Promise.any(fetchers); playChipBeep('success'); updateStatus('success', 'Encontrado com velocidade!');
-      setFormData(prev => ({ ...prev, ...foundItem, barcode: barcode }));
-    } catch (e) { playChipBeep('error'); updateStatus('error', 'Item não localizado nos bancos. Verifique os dados preenchidos pela IA.'); }
+      setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
+    } catch (e) { playChipBeep('error'); updateStatus('error', 'Item não localizado nos bancos. Preencha manualmente.'); }
   };
 
   const handleSave = () => {
@@ -853,7 +828,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     const sequence = String(maxSeq + 1).padStart(4, '0'); const newItem = { ...formData, id: generateId(items), archive_code: `${prefix}-${classCode}-${sequence}` };
     setItems([...items, newItem]); syncItemToSheets(newItem, settings?.googleSheetsUrl); playChipBeep('save'); onShowToast('success');
     setFormData({ type: 'Livro', title: '', author_developer: '', year: '', publisher: '', status: 'Não Iniciado', pages_or_time: '', barcode: '', description: '', cover_url: '', rating: 0, location: '', notes: '', wiki_info: '' });
-    updateStatus('idle', ''); resetGlobalAi(); setActiveTab('library');
+    updateStatus('idle', null); resetGlobalAi(); setActiveTab('library');
   };
 
   const isBookOrGame = [...(activeCategories['Livros'] || []), ...(activeCategories['Games'] || [])].includes(formData.type);
@@ -869,11 +844,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       </div>
 
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-500 border-gray-300 text-black' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
-          {displayBoxState === 'loading' && <DiscoSpinner className="w-6 h-6 flex-shrink-0" speed={2} glow={5} />}
-          {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
-          {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
-          <span className="leading-relaxed break-words whitespace-pre-wrap flex-1">{displayBoxMessage}</span>
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 relative overflow-hidden ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-500 border-gray-300 text-black' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
+          {displayBoxState === 'loading' && <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.5)_100%)] pointer-events-none" />}
+          {displayBoxState === 'loading' && <DiscoSpinner className="w-6 h-6 flex-shrink-0 z-10" speed={2} glow={5} />}
+          {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0 z-10" />}
+          {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5 z-10" />}
+          <span className="leading-relaxed break-words whitespace-pre-wrap flex-1 z-10">{displayBoxMessage}</span>
         </div>
       )}
 
@@ -1452,7 +1428,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   };
 
   const handleAddSubclass = () => {
-    if (!newSubclass.name || !newSubclass.code) { playChipBeep('error'); onShowToast('error'); return; }
+    if (!newSubclass.name || !newSubclass.code) { onShowToast('error'); return; }
     const updatedCats = { ...activeCategories }; if (!updatedCats[newSubclass.parent]) updatedCats[newSubclass.parent] = [];
     if (!updatedCats[newSubclass.parent].includes(newSubclass.name.trim())) updatedCats[newSubclass.parent] = [...updatedCats[newSubclass.parent], newSubclass.name.trim()];
     setSettings({ ...settings, userCategories: updatedCats, userClassCodes: { ...activeClassCodes, [newSubclass.name.trim()]: newSubclass.code.trim() } });
@@ -1460,7 +1436,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
   };
 
   const handleAddAlias = () => {
-    if (!newAlias.main || !newAlias.alias) { playChipBeep('error'); onShowToast('error'); return; }
+    if (!newAlias.main || !newAlias.alias) { onShowToast('error'); return; }
     const updatedAliases = [...(settings?.artistAliases || []), { main: newAlias.main.trim(), alias: newAlias.alias.trim() }];
     setSettings({ ...settings, artistAliases: updatedAliases }); setNewAlias({ main: '', alias: '' }); playChipBeep('save'); onShowToast('success');
   };
@@ -1469,7 +1445,7 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
     setSettings({ ...settings, artistAliases: updatedAliases }); playChipBeep('save'); onShowToast('success');
   };
 
-  const toggleSection = (s) => { playChipBeep('click'); setOpenSection(openSection === s ? null : s); };
+  const toggleSection = (s) => { setOpenSection(openSection === s ? null : s); };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20 pr-1 relative max-w-3xl mx-auto w-full">
@@ -1496,7 +1472,6 @@ const SettingsTab = ({ items, setItems, settings, setSettings, darkMode, setDark
                        const val = settings?.soundEnabled === false ? true : false;
                        setSettings({...settings, soundEnabled: val});
                        globalSoundEnabled = val;
-                       if(val) { setTimeout(() => playChipBeep('click'), 50); }
                        onShowToast('success');
                    }} className={`w-10 h-5 border-[2px] ${darkMode ? 'border-gray-300' : 'border-black'} flex items-center p-0.5 transition-colors ${settings?.soundEnabled !== false ? 'bg-cyan-500' : (darkMode ? 'bg-gray-700' : 'bg-gray-300')}`}>
                        <div className={`w-3 h-3 ${darkMode ? 'bg-white border-gray-300' : 'bg-black border-black'} border-[2px] transform transition-transform ${settings?.soundEnabled !== false ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -1721,7 +1696,7 @@ export default function App() {
      });
      setLibraryPage(0);
   };
-  const clearGlobalFilters = () => { playChipBeep('click'); setGlobalFilters({ Categorias: [], Subtipos: [], Status: [], Notas: [], Autores: [], Editoras: [] }); setLibraryPage(0); };
+  const clearGlobalFilters = () => { setGlobalFilters({ Categorias: [], Subtipos: [], Status: [], Notas: [], Autores: [], Editoras: [] }); setLibraryPage(0); };
 
   const triggerGlobalAI = () => { setActiveTab('add'); setAddMode('manual'); if (globalFileInputRef.current) globalFileInputRef.current.click(); };
 
@@ -1733,17 +1708,13 @@ export default function App() {
 
   const processGlobalAIFile = async (file) => {
     const apiKey = (settings?.geminiApiKey || "").trim();
-    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente ou não configurada.'); playChipBeep('error'); return; }
-    setAiBoxState('loading'); setAiBoxMessage('Analisando com IA (Precisão Máxima)...');
+    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente.'); playChipBeep('error'); return; }
+    setAiBoxState('loading'); setAiBoxMessage('Analisando com IA...');
 
     try {
       const b64 = (await resizeImageForAPI(file)).split(',')[1];
       const promptInstructions = `Aja como arquivista especializado. Seja rápido.
 Analise a imagem (capa, etiqueta de disco, ficha catalográfica). Retorne EXCLUSIVAMENTE um JSON.
-
-Diretriz CRÍTICA para Discos de Vinil:
-Localize o NÚMERO DE CATÁLOGO / CÓDIGO DA GRAVADORA impresso no selo central ou capa (ex: 225012-A, XSB-2033, 33.062). Este é o dado mais importante. Coloque-o no campo "barcode".
-
 {
   "type": "Escolha APENAS uma: ${allTypes.join(', ')}",
   "title": "Título Principal",
@@ -1751,41 +1722,40 @@ Localize o NÚMERO DE CATÁLOGO / CÓDIGO DA GRAVADORA impresso no selo central 
   "year": "Ano (formato YYYY)",
   "publisher": "Editora ou Gravadora",
   "pages_or_time": "Páginas, faixas ou minutos (apenas números)",
-  "barcode": "Código de barras OU Código de Catálogo da Gravadora (ex: 33.062)",
-  "description": "Texto descritivo. Deixe VAZIO se não houver explícito."
+  "barcode": "Código de barras OU Código de Catálogo da Gravadora impresso no selo (ex: 33.062)",
+  "description": "Texto descritivo. Deixe VAZIO se não houver texto explícito descrevendo a obra."
 }
-REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS JSON puro.`;
+REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcode'. 3. APENAS JSON puro.`;
 
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0.1 } })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json" } })
       });
 
       if (!res.ok) {
          if (res.status === 429) throw new Error("Cota da IA excedida (Aguarde alguns minutos e tente novamente).");
          if (res.status === 400) throw new Error("Imagem inválida ou formato não suportado.");
          if (res.status === 403) throw new Error("Sua chave da API do Gemini é inválida ou expirou.");
+         if (res.status === 503) throw new Error("ERRO_503");
          throw new Error(`Erro de Servidor na IA (${res.status}).`);
       }
       
       const data = await res.json(); let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!text) {
-         if (data.promptFeedback?.blockReason) throw new Error(`Conteúdo bloqueado pelos filtros de segurança da IA: ${data.promptFeedback.blockReason}`);
-         throw new Error("Erro de Leitura: A IA não retornou nenhum dado útil.");
-      }
-      
+      if (!text) throw new Error("Retorno vazio.");
       text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
 
       setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com sucesso da imagem!'); playChipBeep('save'); showToast('success');
     } catch (e) {
       setAiBoxState('error');
       let msg = e.message;
-      if (msg.includes("JSON") || msg.includes("Unexpected token") || msg.includes("is not valid JSON") || msg.includes("Retorno vazio")) {
-          msg = "Erro de Leitura: A IA falhou ao formatar os dados ou a imagem estava muito confusa. Tente tirar outra foto mais nítida.";
+      if (msg === "ERRO_503") {
+          setAiBoxMessage(<span>A IA falhou (Erro 503 - Servidor Ocupado). O Google está com tráfego alto, aguarde e tente de novo. <a href="https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/503" target="_blank" rel="noopener noreferrer" className="underline font-bold opacity-80 hover:opacity-100">O que é Erro 503?</a></span>);
+      } else if (msg.includes("JSON") || msg.includes("Unexpected token") || msg.includes("is not valid JSON") || msg.includes("Retorno vazio")) {
+          setAiBoxMessage("Erro de Leitura: A IA falhou ao formatar os dados ou a imagem estava muito confusa. Tente tirar outra foto mais nítida.");
       } else if (msg.includes("Failed to fetch")) {
-          msg = "Erro de Conexão: Verifique sua internet ou a disponibilidade da API do Gemini.";
+          setAiBoxMessage("Erro de Conexão: Verifique sua internet ou a disponibilidade da API do Gemini.");
+      } else {
+          setAiBoxMessage(msg);
       }
-      setAiBoxMessage(msg);
       playChipBeep('error'); showToast('error');
     }
   };
@@ -1855,16 +1825,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
   const lfmPressTimer = useRef(null); const isLfmLongPress = useRef(false);
   const handleLfmPressStart = () => { isLfmLongPress.current = false; lfmPressTimer.current = setTimeout(() => { isLfmLongPress.current = true; setLfmPeriodIdx(p => (p + 1) % LFM_PERIODS.length); if (lfmStatIdx === 0) setLfmStatIdx(1); }, 500); };
   const handleLfmPressEnd = () => { if (lfmPressTimer.current) clearTimeout(lfmPressTimer.current); };
-  const handleLfmClick = () => { if (!isLfmLongPress.current) { playChipBeep('click'); setLfmStatIdx(p => (p + 1) % LFM_STATS.length); } };
-
-  let lfmLabelStr = 'Last.FM:'; let lfmDisplayStr = 'Sem dados'; let isPulsingLfm = false;
-  if (!settings?.lastfmUser) lfmDisplayStr = 'Configure em Ajustes';
-  else if (lfmStatIdx === 0) { if (lastFmTrack) { lfmLabelStr = lastFmTrack.nowPlaying ? 'Ouvindo:' : 'Última:'; lfmDisplayStr = `${lastFmTrack.artist} - ${lastFmTrack.name}`; isPulsingLfm = lastFmTrack.nowPlaying; } else lfmDisplayStr = 'Carregando...'; }
-  else {
-    const pl = LFM_PERIOD_LABELS[lfmPeriodIdx]; const ck = `${lfmStatIdx}-${LFM_PERIODS[lfmPeriodIdx]}`;
-    if (lfmStatIdx === 1) lfmLabelStr = `(${pl}) Top Artista:`; else if (lfmStatIdx === 2) lfmLabelStr = `(${pl}) Top Álbum:`; else if (lfmStatIdx === 3) lfmLabelStr = `(${pl}) Top Faixa:`; else if (lfmStatIdx === 4) lfmLabelStr = `(${pl}) Artistas Únicos:`; else if (lfmStatIdx === 5) lfmLabelStr = `(${pl}) Total Faixas:`;
-    lfmDisplayStr = (isLfmLoading && !lfmCache[ck]) ? 'Carregando...' : (lfmCache[ck] || 'N/A');
-  }
+  const handleLfmClick = () => { if (!isLfmLongPress.current) { setLfmStatIdx(p => (p + 1) % LFM_STATS.length); } };
 
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_items', JSON.stringify(items)); }, [items, initialLoadDone]);
   useEffect(() => { if (initialLoadDone) localStorage.setItem('memorabilia_settings', JSON.stringify(settings)); }, [settings, initialLoadDone]);
@@ -1872,26 +1833,26 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
 
   const hasSuggested = useRef(false); const [suggestion, setSuggestion] = useState(null);
   useEffect(() => { if (isLoaded && items.length > 0 && !hasSuggested.current) { const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type)); if (ms.length > 0) setSuggestion(ms[Math.floor(Math.random() * ms.length)]); hasSuggested.current = true; } }, [isLoaded, items, activeCategories]);
-  const shuffleSuggestion = () => { playChipBeep('click'); const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type)); if (ms.length > 0) { let ns = ms[Math.floor(Math.random() * ms.length)]; if (ms.length > 1 && suggestion) { while (ns.id === suggestion?.id) ns = ms[Math.floor(Math.random() * ms.length)]; } setSuggestion(ns); } };
+  const shuffleSuggestion = () => { const ms = items.filter(i => (activeCategories['Discos'] || []).includes(i.type)); if (ms.length > 0) { let ns = ms[Math.floor(Math.random() * ms.length)]; if (ms.length > 1 && suggestion) { while (ns.id === suggestion?.id) ns = ms[Math.floor(Math.random() * ms.length)]; } setSuggestion(ns); } };
   const suggPressTimer = useRef(null); const isSuggLongPress = useRef(false);
   const handleSuggPressStart = () => { isSuggLongPress.current = false; suggPressTimer.current = setTimeout(() => { isSuggLongPress.current = true; shuffleSuggestion(); }, 500); };
   const handleSuggPressEnd = () => { if (suggPressTimer.current) clearTimeout(suggPressTimer.current); };
-  const handleSuggClick = () => { if (!isSuggLongPress.current && suggestion) { playChipBeep('click'); window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank'); } };
+  const handleSuggClick = () => { if (!isSuggLongPress.current && suggestion) { window.open(`https://open.spotify.com/search/${encodeURIComponent((suggestion.title || '') + ' ' + (suggestion.author_developer || ''))}`, '_blank'); } };
 
   const pressTimer = useRef(null); const isLongPress = useRef(false);
   const handleAddPressStart = () => { isLongPress.current = false; pressTimer.current = setTimeout(() => { isLongPress.current = true; triggerGlobalAI(); }, 500); };
   const handleAddPressEnd = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
-  const handleAddClick = () => { if (!isLongPress.current) { playChipBeep('click'); setAddMode('barcode'); setActiveTab('add'); } };
+  const handleAddClick = () => { if (!isLongPress.current) { setAddMode('barcode'); setActiveTab('add'); } };
 
   const libPressTimer = useRef(null); const isLibLongPress = useRef(false);
   const handleLibPressStart = () => { isLibLongPress.current = false; libPressTimer.current = setTimeout(() => { isLibLongPress.current = true; clearGlobalFilters(); setActiveTab('library'); }, 500); };
   const handleLibPressEnd = () => { if (libPressTimer.current) clearTimeout(libPressTimer.current); };
-  const handleLibClick = () => { if (!isLibLongPress.current) { playChipBeep('click'); setActiveTab('library'); } };
+  const handleLibClick = () => { if (!isLibLongPress.current) { setActiveTab('library'); } };
 
   const dashPressTimer = useRef(null); const isDashLongPress = useRef(false);
   const handleDashPressStart = () => { isDashLongPress.current = false; dashPressTimer.current = setTimeout(() => { isDashLongPress.current = true; clearGlobalFilters(); setActiveTab('dashboard'); }, 500); };
   const handleDashPressEnd = () => { if (dashPressTimer.current) clearTimeout(dashPressTimer.current); };
-  const handleDashClick = () => { if (!isDashLongPress.current) { playChipBeep('click'); setActiveTab('dashboard'); } };
+  const handleDashClick = () => { if (!isDashLongPress.current) { setActiveTab('dashboard'); } };
 
   const speed = settings?.marqueeSpeed || 35;
   const glow = (settings?.marqueeBrightness ?? 50) / 10;
@@ -1952,7 +1913,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
       {isFilterMenuOpen && (
           <div className="fixed inset-0 z-[999] bg-black/80 flex justify-center items-end sm:items-center animate-in fade-in duration-200">
               <div className={`w-full sm:max-w-md max-h-[85vh] sm:h-[80vh] flex flex-col border-t-[2px] sm:border-[2px] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[6px_6px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[6px_6px_0px_rgba(0,0,0,1)]'}`}>
-                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => { playChipBeep('click'); setIsFilterMenuOpen(false); }} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Filtro Global</span><div className="w-7"/></div>
+                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => { setIsFilterMenuOpen(false); }} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Filtro Global</span><div className="w-7"/></div>
                   <div className="flex-1 overflow-y-auto scrollbar-hide">
                     {/* CATEGORIAS */}
                     <div className={`p-4 border-b-[2px] ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
@@ -1962,7 +1923,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
                           const isActive = globalFilters.Categorias && globalFilters.Categorias.includes(cat);
                           return (
                           <label key={cat} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-cyan-400 bg-cyan-900/30':'border-cyan-600 bg-cyan-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Categorias', cat); }} /> {cat}
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { handleGlobalCheckboxChange('Categorias', cat); }} /> {cat}
                           </label>
                         )})}
                       </div>
@@ -1975,7 +1936,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
                           const isActive = globalFilters.Subtipos && globalFilters.Subtipos.includes(sub);
                           return (
                           <label key={sub} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-pink-400 bg-pink-900/30':'border-pink-600 bg-pink-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Subtipos', sub); }} /> {sub}
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { handleGlobalCheckboxChange('Subtipos', sub); }} /> {sub}
                           </label>
                         )})}
                       </div>
@@ -1988,7 +1949,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
                           const isActive = globalFilters.Status && globalFilters.Status.includes(st);
                           return (
                           <label key={st} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-amber-400 bg-amber-900/30':'border-amber-600 bg-amber-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Status', st); }} /> {st}
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { handleGlobalCheckboxChange('Status', st); }} /> {st}
                           </label>
                         )})}
                       </div>
@@ -2001,7 +1962,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
                           const isActive = globalFilters.Notas && globalFilters.Notas.includes(nt);
                           return (
                           <label key={nt} className={`flex items-center gap-2 p-2 border-[2px] cursor-pointer transition-colors ${isActive ? (darkMode?'border-cyan-400 bg-cyan-900/30':'border-cyan-600 bg-cyan-50') : (darkMode?'border-gray-700':'border-gray-300')} text-[10px] font-black uppercase`}>
-                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { playChipBeep('click'); handleGlobalCheckboxChange('Notas', nt); }} /> {nt===0?'Sem Nota':`${nt}★`}
+                            <input type="checkbox" className="hidden" checked={isActive} onChange={() => { handleGlobalCheckboxChange('Notas', nt); }} /> {nt===0?'Sem Nota':`${nt}★`}
                           </label>
                         )})}
                       </div>
@@ -2009,7 +1970,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
                   </div>
                   <div className={`p-4 border-t-[2px] flex gap-2 ${darkMode ? 'border-gray-300' : 'border-black'}`}>
                       <MButton onClick={clearGlobalFilters} variant="white" darkMode={darkMode} className="flex-1 py-4 text-[10px]">Limpar</MButton>
-                      <MButton onClick={() => { playChipBeep('click'); setIsFilterMenuOpen(false); }} variant="black" darkMode={darkMode} className="flex-[2] py-4 text-[10px]">Ver {processedItems.length} Itens</MButton>
+                      <MButton onClick={() => { setIsFilterMenuOpen(false); }} variant="black" darkMode={darkMode} className="flex-[2] py-4 text-[10px]">Ver {processedItems.length} Itens</MButton>
                   </div>
               </div>
           </div>
@@ -2018,28 +1979,28 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
       {isSortMenuOpen && (
           <div className="fixed inset-0 z-[999] bg-black/80 flex flex-col justify-end sm:justify-center items-center sm:p-4 animate-in fade-in duration-200">
               <div className={`w-full sm:max-w-md flex flex-col border-t-[2px] sm:border-[2px] max-h-[85vh] ${darkMode ? 'bg-gray-900 border-gray-300 shadow-[6px_6px_0px_rgba(209,213,219,1)]' : 'bg-white border-black shadow-[6px_6px_0px_rgba(0,0,0,1)]'}`}>
-                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => { playChipBeep('click'); setIsSortMenuOpen(false); }} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Ordenação Global</span><div className="w-7"/></div>
+                  <div className={`p-4 border-b-[2px] flex justify-between items-center ${darkMode ? 'border-gray-300' : 'border-black'}`}><button onClick={() => { setIsSortMenuOpen(false); }} className="p-1 active:scale-90"><XIcon className="w-5 h-5" /></button><span className="text-[12px] font-black uppercase tracking-widest">Ordenação Global</span><div className="w-7"/></div>
                   <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                       <div className="mb-6">
                           <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Ordem</div>
                           <div className={`border-[2px] flex flex-col ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                              <MRadio label="↑ Ascendente" checked={sortOrder==='asc'} onChange={()=>{ playChipBeep('click'); setSortOrder('asc'); }} darkMode={darkMode} />
-                              <MRadio label="↓ Descendente" checked={sortOrder==='desc'} onChange={()=>{ playChipBeep('click'); setSortOrder('desc'); }} darkMode={darkMode} />
+                              <MRadio label="↑ Ascendente" checked={sortOrder==='asc'} onChange={()=>{ setSortOrder('asc'); }} darkMode={darkMode} />
+                              <MRadio label="↓ Descendente" checked={sortOrder==='desc'} onChange={()=>{ setSortOrder('desc'); }} darkMode={darkMode} />
                           </div>
                       </div>
                       <div>
                           <div className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Ordenar por</div>
                           <div className={`border-[2px] flex flex-col ${darkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                              <MRadio label="Artista / Autor" checked={sortBy==='author'} onChange={()=>{ playChipBeep('click'); setSortBy('author'); }} darkMode={darkMode} />
-                              <MRadio label="Ano" checked={sortBy==='year'} onChange={()=>{ playChipBeep('click'); setSortBy('year'); }} darkMode={darkMode} />
-                              <MRadio label="Título" checked={sortBy==='title'} onChange={()=>{ playChipBeep('click'); setSortBy('title'); }} darkMode={darkMode} />
-                              <MRadio label="Data Adicionada" checked={sortBy==='added'} onChange={()=>{ playChipBeep('click'); setSortBy('added'); }} darkMode={darkMode} />
-                              <MRadio label="Formato" checked={sortBy==='type'} onChange={()=>{ playChipBeep('click'); setSortBy('type'); }} darkMode={darkMode} />
+                              <MRadio label="Artista / Autor" checked={sortBy==='author'} onChange={()=>{ setSortBy('author'); }} darkMode={darkMode} />
+                              <MRadio label="Ano" checked={sortBy==='year'} onChange={()=>{ setSortBy('year'); }} darkMode={darkMode} />
+                              <MRadio label="Título" checked={sortBy==='title'} onChange={()=>{ setSortBy('title'); }} darkMode={darkMode} />
+                              <MRadio label="Data Adicionada" checked={sortBy==='added'} onChange={()=>{ setSortBy('added'); }} darkMode={darkMode} />
+                              <MRadio label="Formato" checked={sortBy==='type'} onChange={()=>{ setSortBy('type'); }} darkMode={darkMode} />
                           </div>
                       </div>
                   </div>
                   <div className={`p-4 border-t-[2px] ${darkMode ? 'border-gray-300' : 'border-black'}`}>
-                      <MButton darkMode={darkMode} variant="pink" onClick={() => { playChipBeep('click'); setIsSortMenuOpen(false); }} className="w-full py-4 text-[10px]">Aplicar Ordenação</MButton>
+                      <MButton darkMode={darkMode} variant="pink" onClick={() => { setIsSortMenuOpen(false); }} className="w-full py-4 text-[10px]">Aplicar Ordenação</MButton>
                   </div>
               </div>
           </div>
@@ -2063,7 +2024,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
               <BarChart2 className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Dashboard</span>
             </button>
             <div className="mt-auto mb-4">
-              <button onClick={() => { playChipBeep('click'); setActiveTab('settings'); }} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white border-l-[4px] border-gray-400' : 'bg-gray-200 border-l-[4px] border-black') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+              <button onClick={() => { setActiveTab('settings'); }} className={`w-full flex items-center lg:justify-start justify-center gap-3 p-4 transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white border-l-[4px] border-gray-400' : 'bg-gray-200 border-l-[4px] border-black') : 'border-l-[4px] border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <Settings className="w-6 h-6" /><span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Ajustes</span>
               </button>
             </div>
@@ -2132,17 +2093,17 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
                   <div className="flex-1 relative min-w-0">
                       <Search className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                       <input type="text" placeholder="Buscar no acervo global..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setLibraryPage(0); }} className={`w-full h-10 pl-8 pr-8 border-[2px] font-black text-[10px] sm:text-[11px] uppercase tracking-wider outline-none transition-all focus:border-cyan-600 ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} />
-                      {searchTerm && (<button onClick={() => { playChipBeep('click'); setSearchTerm(''); setLibraryPage(0);}} className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>)}
+                      {searchTerm && (<button onClick={() => { setSearchTerm(''); setLibraryPage(0);}} className="absolute right-2.5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 active:scale-90"><XIcon className="w-4 h-4" /></button>)}
                   </div>
-                  <button onClick={() => { playChipBeep('click'); setIsFilterMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Filtros Globais">
+                  <button onClick={() => { setIsFilterMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Filtros Globais">
                       <FilterIcon className="w-4 h-4" />
                       {activeFiltersCount > 0 && (<div className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full border-[2px] flex items-center justify-center text-[8px] font-black ${darkMode ? 'bg-pink-600 border-gray-900 text-white' : 'bg-pink-600 border-white text-white'}`}>{activeFiltersCount}</div>)}
                   </button>
-                  <button onClick={() => { playChipBeep('click'); setIsSortMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Ordenação Global">
+                  <button onClick={() => { setIsSortMenuOpen(true); }} className={`w-10 h-10 flex-shrink-0 flex items-center justify-center border-[2px] transition-all active:translate-y-0.5 active:translate-x-0.5 active:shadow-none relative ${darkMode ? 'bg-gray-800 text-white border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)]' : 'bg-white text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]'}`} title="Ordenação Global">
                       {sortOrder === 'asc' ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
                   </button>
                   {activeTab === 'library' && (
-                    <select value={alphaFilter} onChange={e => { playChipBeep('click'); setAlphaFilter(e.target.value); setLibraryPage(0); }} className={`w-12 sm:w-14 h-10 p-0 text-center text-[10px] font-black uppercase tracking-widest border-[2px] outline-none cursor-pointer flex-shrink-0 ${darkMode ? 'border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
+                    <select value={alphaFilter} onChange={e => { setAlphaFilter(e.target.value); setLibraryPage(0); }} className={`w-12 sm:w-14 h-10 p-0 text-center text-[10px] font-black uppercase tracking-widest border-[2px] outline-none cursor-pointer flex-shrink-0 ${darkMode ? 'border-gray-400 shadow-[2px_2px_0px_rgba(209,213,219,1)] bg-gray-800 text-white' : 'border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white text-black'}`}>
                         {['Todos', '#', ...Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i))].map(l => <option key={l} value={l}>{l === 'Todos' ? 'A-Z' : l}</option>)}
                     </select>
                   )}
@@ -2171,7 +2132,7 @@ REGRAS: 1. NÃO invente descrições. 2. Capture código no 'barcode'. 3. APENAS
             <button onTouchStart={handleDashPressStart} onTouchEnd={handleDashPressEnd} onMouseDown={handleDashPressStart} onMouseUp={handleDashPressEnd} onMouseLeave={handleDashPressEnd} onClick={handleDashClick} className={`flex-1 flex flex-col items-center justify-center border-r-[2px] transition-colors ${darkMode ? 'border-gray-300 text-gray-300' : 'border-black text-black'} ${activeTab === 'dashboard' ? (darkMode ? 'bg-pink-600 text-white' : 'bg-pink-600 text-white') : ''}`}>
               <BarChart2 className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Dashboard</span>
             </button>
-            <button onClick={() => { playChipBeep('click'); setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-black') : ''}`}>
+            <button onClick={() => { setActiveTab('settings'); }} className={`flex-1 flex flex-col items-center justify-center transition-colors ${darkMode ? 'text-gray-300' : 'text-black'} ${activeTab === 'settings' ? (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-black') : ''}`}>
               <Settings className="w-5 h-5 mb-1" /><span className="text-[7px] font-black uppercase tracking-widest">Ajustes</span>
             </button>
           </nav>
