@@ -556,8 +556,11 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
       if (newCover) {
         setEditedItem(prev => ({ ...prev, cover_url: newCover }));
         playChipBeep('success'); onShowToast('success');
-      } else { playChipBeep('error'); }
-    } catch (e) { playChipBeep('error'); } finally { setIsSearchingCover(false); }
+      } else { 
+        playChipBeep('error'); 
+        onShowToast('error'); 
+      }
+    } catch (e) { playChipBeep('error'); onShowToast('error'); } finally { setIsSearchingCover(false); }
   };
 
   const confirmDelete = async () => {
@@ -663,7 +666,7 @@ const LibraryTab = ({ items, setItems, filteredItems, setFilteredItems, darkMode
             <button onClick={() => setItemToDelete(editedItem.id)} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-pink-400' : 'text-gray-500 hover:text-pink-600'}`}><Trash2 className="w-3 h-3" /> Apagar este item</button>
             <span className="opacity-20 text-[9px] font-black">|</span>
             <button disabled={isSearchingCover} onClick={handleSearchCover} className={`text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 underline flex items-center gap-1 ${darkMode ? 'text-gray-400 hover:text-cyan-400' : 'text-gray-500 hover:text-cyan-600'}`}>
-                {isSearchingCover ? <RefreshIcon className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}{isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
+                {isSearchingCover ? <DiscoSpinner className="w-3 h-3" speed={2} /> : <ImageIcon className="w-3 h-3" />}{isSearchingCover ? 'Buscando...' : 'Procurar Capa'}
             </button>
           </div>
         </div>
@@ -764,7 +767,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             if (scannerRef.current?.getState() === 2) {
                scannerRef.current.stop().then(() => { if (isMounted) { setAddMode('manual'); setFormData(prev => ({ ...prev, barcode: decodedText })); fetchMultiDatabaseParallel(decodedText); setTimeout(() => { isProcessingScan.current = false; }, 2000); } }).catch(e => {});
             }
-          }, () => {}).catch(() => { if (isMounted) { updateStatus('error', 'Erro Câmera.'); setAddMode('manual'); } });
+          }, () => {}).catch(() => { if (isMounted) { updateStatus('error', 'Erro na câmera ou permissão negada.'); setAddMode('manual'); } });
     }
     return () => {
         isMounted = false;
@@ -821,12 +824,16 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     try {
       const foundItem = await Promise.any(fetchers); playChipBeep('success'); updateStatus('success', 'Encontrado com velocidade!');
       setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
-    } catch (e) { playChipBeep('error'); updateStatus('error', 'Item não localizado nos bancos. Preencha manualmente.'); }
+    } catch (e) { 
+      playChipBeep('error'); 
+      updateStatus('error', 'Item não encontrado em nenhum banco de dados (Discogs, MusicBrainz, UPC, Google Books). Preencha manualmente.'); 
+    }
   };
 
   const handleSave = () => {
     if (!formData.title) { playChipBeep('error'); setShowErrorModal(true); return; }
     
+    // Treat Backlog as Não Iniciado conceptually, but user can only pick the basic 4 in the form
     const classCode = activeClassCodes[formData.type] || '000'; const prefix = settings?.archivePrefix ? settings.archivePrefix.trim().toUpperCase() : 'MBU'; let maxSeq = 0;
     items.forEach(item => { if(item.archive_code) { const parts = String(item.archive_code).split('-'); if (parts.length >= 3 && parts[1] === classCode) { const seqNum = parseInt(parts[2], 10); if(!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum; } } });
     const sequence = String(maxSeq + 1).padStart(4, '0'); const newItem = { ...formData, id: generateId(items), archive_code: `${prefix}-${classCode}-${sequence}` };
@@ -848,8 +855,12 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
       </div>
 
       {displayBoxState !== 'idle' && (
-        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-colors duration-300 ${displayBoxState === 'loading' ? (darkMode ? 'bg-amber-500 border-gray-300 text-black' : 'bg-amber-600 border-black text-white') : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')}`}>
-          {displayBoxState === 'loading' && <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-sm animate-spin flex-shrink-0" />}
+        <div className={`p-4 mb-4 flex items-start gap-3 border-[2px] shadow-[2px_2px_0px_rgba(0,0,0,1)] font-black text-xs uppercase tracking-widest transition-all duration-300 ${
+          displayBoxState === 'loading' 
+            ? 'loading-glow-box' 
+            : displayBoxState === 'success' ? (darkMode ? 'bg-cyan-600 border-gray-300 text-white' : 'bg-cyan-600 border-black text-white') : (darkMode ? 'bg-pink-600 border-gray-300 text-white' : 'bg-pink-600 border-black text-white')
+        }`}>
+          {displayBoxState === 'loading' && <DiscoSpinner className="w-6 h-6 flex-shrink-0" speed={2} glow={5} />}
           {displayBoxState === 'success' && <Check className="w-6 h-6 flex-shrink-0" />}
           {displayBoxState === 'error' && <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />}
           <span className="leading-relaxed break-words whitespace-pre-wrap flex-1">{displayBoxMessage}</span>
@@ -938,8 +949,9 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, globalFilters, setGlobalFilters, settings }) => {
   const chartColors = getChartColors(darkMode);
   const [activeSubTab, setActiveSubTab] = useState('visao_geral');
-  const [selectedEntity, setSelectedEntity] = useState(null);
+  const [selectedEntity, setSelectedEntity] = useState(null); // { type: 'author'|'publisher', name: '' }
 
+  // Funções de filtro global ao clicar em gráficos
   const applyFilter = (group, val) => {
      setGlobalFilters(prev => {
         const cur = prev[group] || [];
@@ -950,12 +962,17 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   const clearFilters = () => setGlobalFilters({ Categorias: [], Subtipos: [], Status: [], Notas: [], Autores: [], Editoras: [] });
   const hasFilters = Object.values(globalFilters).some(arr => arr && arr.length > 0);
 
+  // Helper para agrupar categorias
   const getCategoryOf = (type) => {
     for (const [cat, subs] of Object.entries(activeCategories)) { if ((subs || []).includes(type)) return cat; }
     return 'Outros';
   };
 
+  // =====================================
+  // AGRUPAMENTO DE VOLUMES E CÁLCULO
+  // =====================================
   const analytics = useMemo(() => {
+    // 1. Agrupar volumes em uma única "Obra"
     const groupedMap = new Map();
     filteredItems.forEach(item => {
         const normTitle = normalizeWorkTitle(item.title);
@@ -977,14 +994,16 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
             existing.volumeCount += 1;
             existing.isGroup = true;
             existing.aggregated_metric += (parseInt(item.pages_or_time) || 0);
-            existing.rating = Math.max(existing.rating || 0, item.rating || 0); 
+            existing.rating = Math.max(existing.rating || 0, item.rating || 0); // Considera a melhor nota
             
+            // Lógica de Status: Pega o mais avançado
             const statusWeights = {'Concluído':4, 'Em Andamento':3, 'Na Fila':2, 'Não Iniciado':1, 'Backlog':1};
             const currentStatus = existing.status || 'Não Iniciado';
             const itemStatus = item.status || 'Não Iniciado';
             if ((statusWeights[itemStatus] || 0) > (statusWeights[currentStatus] || 0)) {
                existing.status = itemStatus;
             }
+            // Manter ano mais antigo se for uma coleção
             const yrCur = getValidYear(existing.year); const yrNew = getValidYear(item.year);
             if (!isNaN(yrCur) && !isNaN(yrNew) && yrNew < yrCur) existing.year = item.year;
         }
@@ -1010,27 +1029,31 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
     };
 
     groupedWorks.forEach(i => {
+      // Categoria e Suporte
       const cat = getCategoryOf(i.type);
       data.catCounts[cat] = (data.catCounts[cat] || 0) + 1;
       data.typeCounts[i.type || 'Sem Tipo'] = (data.typeCounts[i.type || 'Sem Tipo'] || 0) + 1;
 
+      // Status Analítico (Unificando Backlog e Não Iniciado)
       const isBookGame = ['Livros', 'Games'].includes(cat);
       let analyticalStatus = 'Backlog / Não Iniciado';
       if (isBookGame) {
          if (i.status === 'Concluído') { data.concluidos++; analyticalStatus = 'Concluído'; }
          else if (i.status === 'Em Andamento') { data.backlog++; analyticalStatus = 'Em Andamento'; }
          else if (i.status === 'Na Fila') { data.backlog++; analyticalStatus = 'Na Fila'; }
-         else { data.backlog++; analyticalStatus = 'Backlog / Não Iniciado'; } 
-      } else { 
+         else { data.backlog++; analyticalStatus = 'Backlog / Não Iniciado'; } // Não Iniciado vira Backlog
+      } else { // Audiovisual usa nota
          if ((Number(i.rating)||0) > 0) { data.concluidos++; analyticalStatus = 'Concluído'; }
          else { data.backlog++; analyticalStatus = 'Backlog / Não Iniciado'; }
       }
       data.statusCounts[analyticalStatus] = (data.statusCounts[analyticalStatus] || 0) + 1;
 
+      // Avaliação
       const rInt = Math.floor(Number(i.rating) || 0);
       data.ratingCounts[rInt] = (data.ratingCounts[rInt] || 0) + 1;
       if (rInt > 0) { data.ratedCount++; data.sumRatings += rInt; }
 
+      // Tempo
       const yr = getValidYear(i.year);
       if (!isNaN(yr)) {
          data.years[yr] = (data.years[yr] || 0) + 1;
@@ -1042,9 +1065,11 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
          data.completeness.missingYears++;
       }
 
+      // Atores (Autores / Editoras)
       const auth = applyArtistAlias(i.author_developer, settings?.artistAliases) || 'Desconhecido';
       const pub = i.publisher?.trim() || 'Desconhecida';
       
+      // Ignorar Various Artists no ranking
       if (!isVariousArtists(auth)) {
          if (!data.authors[auth]) data.authors[auth] = { count: 0, sumRating: 0, ratedCount: 0, concluidos: 0, backlog: 0, items: [] };
          data.authors[auth].count++; data.authors[auth].items.push(i);
@@ -1057,6 +1082,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
       if (rInt > 0) { data.publishers[pub].sumRating += rInt; data.publishers[pub].ratedCount++; }
       if (analyticalStatus === 'Concluído') data.publishers[pub].concluidos++; else data.publishers[pub].backlog++;
 
+      // Dimensões / Métricas
       const val = i.aggregated_metric;
       if (val > 0) {
          let label = 'Unidades';
@@ -1067,6 +1093,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
          }
       }
 
+      // Qualidade (Completude)
       const expectedFields = ['title', 'author_developer', 'year', 'publisher', 'type', 'barcode', 'cover_url', 'pages_or_time'];
       data.completeness.totalFields += expectedFields.length;
       expectedFields.forEach(f => { if (i[f] && String(i[f]).trim() !== '') data.completeness.filledFields++; });
@@ -1077,6 +1104,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
     return data;
   }, [filteredItems, activeCategories, settings?.artistAliases]);
 
+  // Preparação de dados para Gráficos
   const sortedCats = Object.entries(analytics.catCounts).map(([label, value], i) => ({ label, value, colorHex: getMondrianColorHex(i, darkMode) })).sort((a,b) => b.value - a.value);
   const sortedTypes = Object.entries(analytics.typeCounts).sort((a, b) => b[1] - a[1]);
   const sortedStatus = Object.entries(analytics.statusCounts).map(([label, value], i) => ({ label, value, colorHex: getMondrianColorHex(i+2, darkMode) })).sort((a,b) => b.value - a.value);
@@ -1092,6 +1120,9 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
   const topAuthors = Object.entries(analytics.authors).filter(([n]) => n !== 'Desconhecido').sort((a,b) => b[1].count - a[1].count).slice(0, 20);
   const topPublishers = Object.entries(analytics.publishers).filter(([n]) => n !== 'Desconhecida').sort((a,b) => b[1].count - a[1].count).slice(0, 20);
 
+  // =====================================
+  // RENDERIZAÇÃO DAS SUB-ABAS
+  // =====================================
   const renderFicha = () => {
     if (!selectedEntity) return null;
     const isAuthor = selectedEntity.type === 'author';
@@ -1100,6 +1131,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
 
     const avgRating = entityData.ratedCount > 0 ? (entityData.sumRating / entityData.ratedCount).toFixed(1) : 'N/A';
     
+    // Análises internas da Ficha
     const items = entityData.items;
     const catCounts = {}; const yearCounts = {};
     items.forEach(i => {
@@ -1179,6 +1211,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
                </div>
             </MContainer>
             
+            {/* GRÁFICOS DE LINHA DO TEMPO - CORRIGIDOS COM ALTURA MÁXIMA E FLEX 100% */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <MContainer darkMode={darkMode} className="p-4 flex-1 flex flex-col" colorClass={darkMode ? 'bg-gray-900' : 'bg-white'}>
                  <div className="text-[10px] font-black uppercase tracking-widest mb-4 border-b-[2px] border-current pb-2">Lançamento (Décadas)</div>
@@ -1322,6 +1355,9 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
      );
   };
 
+  // =====================================
+  // ESTRUTURA PRINCIPAL DO DASHBOARD
+  // =====================================
   const tabs = [
     { id: 'visao_geral', label: 'Visão Geral' },
     { id: 'autores', label: 'Autores & Artistas' },
@@ -1332,6 +1368,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
 
   return (
     <div className="flex flex-col h-full overflow-hidden pb-10 max-w-6xl mx-auto w-full relative">
+       {/* FILTRO GLOBAL ALERT */}
        {hasFilters && (
          <div className={`p-3 border-[2px] mb-4 flex items-center justify-between shadow-[2px_2px_0px_currentColor] animate-pulse ${darkMode ? 'border-pink-500 bg-pink-900/30 text-pink-300' : 'border-pink-600 bg-pink-100 text-pink-900'}`}>
             <div className="flex items-center gap-2"><FilterIcon className="w-5 h-5"/> <div className="text-[10px] font-black uppercase tracking-widest">Filtros Ativos: Visualizando Subset do Acervo</div></div>
@@ -1339,6 +1376,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
          </div>
        )}
 
+       {/* NAVEGAÇÃO INTERNA DO DASHBOARD */}
        {!selectedEntity && (
          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 mb-4 border-b-[2px] border-transparent flex-shrink-0">
            {tabs.map(t => (
@@ -1347,6 +1385,7 @@ const DashboardTab = ({ items, filteredItems, darkMode, activeCategories, global
          </div>
        )}
 
+       {/* ÁREA DE CONTEÚDO SCROLLÁVEL */}
        <div className="flex-1 overflow-y-auto scrollbar-hide pr-1 pb-10">
           {analytics.total_raw === 0 ? (
              <div className="flex flex-col items-center justify-center h-64 opacity-50"><Ghost className="w-12 h-12 mb-4" /><span className="text-sm font-black uppercase tracking-widest">Nenhum dado analítico.</span><span className="text-[10px] font-bold mt-2">Remova os filtros ou adicione itens.</span></div>
@@ -1574,6 +1613,7 @@ export default function App() {
   const [toast, setToast] = useState({ visible: false, type: 'success' });
   const [isHtml5QrcodeLoaded, setIsHtml5QrcodeLoaded] = useState(false);
 
+  // Estados Globais de Filtro e UI
   const [globalFilters, setGlobalFilters] = useState({ Categorias: [], Subtipos: [], Status: [], Notas: [], Autores: [], Editoras: [] });
   const [searchTerm, setSearchTerm] = useState('');
   const [alphaFilter, setAlphaFilter] = useState('Todos');
@@ -1594,6 +1634,9 @@ export default function App() {
   const activeClassCodes = (settings?.userClassCodes && typeof settings.userClassCodes === 'object' && !Array.isArray(settings.userClassCodes)) ? settings.userClassCodes : DEFAULT_CLASS_CODES;
   const allTypes = Object.values(activeCategories).flat();
 
+  // ---------------------------------------------------------
+  // LÓGICA DE FILTRAGEM GLOBAL
+  // ---------------------------------------------------------
   const processedItems = useMemo(() => {
      let res = items;
 
@@ -1623,6 +1666,7 @@ export default function App() {
            const isVideo = (activeCategories['Vídeo'] || []).includes(i.type);
            if (isDisc || isVideo) {
               const st = (Number(i.rating)||0)>0 ? 'Concluído' : 'Não Iniciado';
+              // If filter asks for Backlog/Não Iniciado, accept 'Não Iniciado'
               if (globalFilters.Status.includes('Backlog / Não Iniciado') && st === 'Não Iniciado') return true;
               return globalFilters.Status.includes(st);
            }
@@ -1679,7 +1723,7 @@ export default function App() {
 
   const processGlobalAIFile = async (file) => {
     const apiKey = (settings?.geminiApiKey || "").trim();
-    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API ausente.'); playChipBeep('error'); return; }
+    if (!apiKey) { setAiBoxState('error'); setAiBoxMessage('Chave API do Gemini ausente ou não configurada.'); playChipBeep('error'); return; }
     setAiBoxState('loading'); setAiBoxMessage('Analisando com IA (Precisão Máxima)...');
 
     try {
@@ -1719,14 +1763,35 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
         })
       });
 
-      if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
-      const data = await res.json(); let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Retorno vazio.");
-      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+      if (!res.ok) {
+         if (res.status === 429) throw new Error("Cota da IA excedida (Aguarde alguns minutos e tente novamente).");
+         if (res.status === 400) throw new Error("Imagem inválida ou formato não suportado.");
+         if (res.status === 403) throw new Error("Sua chave da API do Gemini é inválida ou expirou.");
+         throw new Error(`Erro de Servidor na IA (${res.status}).`);
+      }
+      
+      const data = await res.json(); 
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!text) {
+         if (data.promptFeedback?.blockReason) throw new Error(`Conteúdo bloqueado pelos filtros de segurança da IA: ${data.promptFeedback.blockReason}`);
+         throw new Error("Erro de Leitura: A IA não retornou nenhum dado útil.");
+      }
+      
+      text = text.replace(/```json/gi, '').replace(/```/g, '').trim(); 
+      text = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
 
       setScannedAIData(JSON.parse(text)); setAiBoxState('success'); setAiBoxMessage('Extraído com sucesso da imagem!'); playChipBeep('save'); showToast('success');
     } catch (e) {
-      setAiBoxState('error'); setAiBoxMessage(`Falha na IA. Tente modo manual ou Barcode.`); playChipBeep('error'); showToast('error');
+      setAiBoxState('error');
+      let msg = e.message;
+      if (msg.includes("JSON") || msg.includes("Unexpected token") || msg.includes("is not valid JSON") || msg.includes("Retorno vazio")) {
+          msg = "Erro de Leitura: A IA falhou ao formatar os dados ou a imagem estava muito confusa. Tente tirar outra foto mais nítida.";
+      } else if (msg.includes("Failed to fetch")) {
+          msg = "Erro de Conexão: Verifique sua internet ou a disponibilidade da API do Gemini.";
+      }
+      setAiBoxMessage(msg);
+      playChipBeep('error'); showToast('error');
     }
   };
 
@@ -1868,7 +1933,10 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
   if (isFetchingCloud && !showSuccessSplash) {
     return (
        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-black text-white'} flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden`} style={{ backgroundColor: '#0b0b0b', backgroundImage: 'radial-gradient(circle, #000 1.5px, transparent 1.5px)', backgroundSize: '3px 3px' }}>
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+          <style>{`
+            @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); 
+            .font-led { font-family: 'Press Start 2P', monospace; }
+          `}</style>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" /><DiscoSpinner className="w-24 h-24 mb-6 z-10 text-cyan-600" glow={10} speed={currentSpeed} /><p className="text-cyan-600 z-10 font-led text-[10px] text-center drop-shadow-[0_0_8px_currentColor] animate-pulse leading-loose">SINCRONIZANDO<br/>COM GOOGLE SHEETS...</p>
        </div>
     );
@@ -1877,7 +1945,10 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
   if (showSuccessSplash) {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center font-sans font-black tracking-widest relative overflow-hidden bg-black text-white`} style={{ backgroundImage: 'radial-gradient(circle, #222 1.5px, transparent 1.5px)', backgroundSize: '4px 4px' }}>
-         <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; }`}</style>
+         <style>{`
+            @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); 
+            .font-led { font-family: 'Press Start 2P', monospace; }
+         `}</style>
          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] pointer-events-none" />
          <div className="z-10 flex flex-col items-center justify-center gap-6 animate-in zoom-in duration-300"><img src={LINK_DO_ICONE_NO_GITHUB} alt="Memorabilia Icon" className="w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(219,39,119,0.8)]" /><h1 className="text-4xl text-pink-600 drop-shadow-[0_0_10px_currentColor] text-center leading-none uppercase tracking-tighter">Memorabilia</h1></div>
       </div>
@@ -1886,7 +1957,27 @@ REGRAS: 1. APENAS JSON puro, sem formatação markdown (\`\`\`json). 2. Seja dir
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-black'} font-sans antialiased transition-colors duration-300 select-none`}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); .font-led { font-family: 'Press Start 2P', monospace; } .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } @keyframes titleColorCycle { 0%, 100% { color: #db2777; } 33% { color: #0891b2; } 66% { color: #d97706; } } `}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); 
+        .font-led { font-family: 'Press Start 2P', monospace; } 
+        .led-board { background-color: #0b0b0b; background-image: radial-gradient(circle, #000 1.5px, transparent 1.5px); background-size: 3px 3px; box-shadow: inset 0 0 15px #000; } 
+        @keyframes marqueeLinear { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } } 
+        @keyframes titleColorCycle { 0%, 100% { color: #db2777; } 33% { color: #0891b2; } 66% { color: #d97706; } }
+        
+        @keyframes discoBg {
+          0% { background-position: 0% 50% }
+          50% { background-position: 100% 50% }
+          100% { background-position: 0% 50% }
+        }
+        .loading-glow-box {
+          background: linear-gradient(45deg, #0891b2, #db2777, #d97706, #0891b2);
+          background-size: 300% 300%;
+          animation: discoBg 3s linear infinite;
+          color: white !important;
+          border-color: white !important;
+          text-shadow: 0px 1px 2px rgba(0,0,0,0.5);
+        }
+      `}</style>
       
       {/* MENUS GLOBAIS DE FILTRO E ORDENAÇÃO */}
       {isFilterMenuOpen && (
