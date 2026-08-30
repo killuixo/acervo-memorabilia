@@ -744,7 +744,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
        setFormData(prev => ({ ...prev, title: scannedAIData.title||'', author_developer: scannedAIData.author_developer||'', year: scannedAIData.year?.toString()||'', publisher: scannedAIData.publisher||'', description: scannedAIData.description||'', barcode: scannedAIData.barcode||'', pages_or_time: scannedAIData.pages_or_time||prev.pages_or_time, type: allTypes.includes(scannedAIData.type) ? scannedAIData.type : 'Livro' }));
        
        if (scannedAIData.barcode) {
-          fetchMultiDatabaseParallel(scannedAIData.barcode);
+          fetchMultiDatabaseParallel(scannedAIData.barcode, scannedAIData.author_developer, scannedAIData);
        }
        setScannedAIData(null);
     }
@@ -761,7 +761,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
             if (isProcessingScan.current) return;
             isProcessingScan.current = true;
             if (scannerRef.current?.getState() === 2) {
-               scannerRef.current.stop().then(() => { if (isMounted) { setAddMode('manual'); setFormData(prev => ({ ...prev, barcode: decodedText })); fetchMultiDatabaseParallel(decodedText); setTimeout(() => { isProcessingScan.current = false; }, 2000); } }).catch(e => {});
+               scannerRef.current.stop().then(() => { if (isMounted) { setAddMode('manual'); setFormData(prev => ({ ...prev, barcode: decodedText })); fetchMultiDatabaseParallel(decodedText, '', null); setTimeout(() => { isProcessingScan.current = false; }, 2000); } }).catch(e => {});
             }
           }, () => {}).catch(() => { if (isMounted) { updateStatus('error', 'Erro Câmera.'); setAddMode('manual'); } });
     }
@@ -771,7 +771,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
     };
   }, [addMode, isHtml5QrcodeLoaded]);
 
-  const fetchMultiDatabaseParallel = async (barcode) => {
+  const fetchMultiDatabaseParallel = async (barcode, artistName = '', aiData = null) => {
+    const rawBarcode = barcode.trim();
     const cleanCode = barcode.replace(/[-\s]/g, "").toUpperCase();
     updateStatus('loading', 'Consultando bancos de dados...');
     const isBookCode = (cleanCode.length === 13 && (cleanCode.startsWith("978") || cleanCode.startsWith("979"))) || (cleanCode.length === 10 && /^\d{9}[\dX]$/.test(cleanCode));
@@ -779,7 +780,8 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     const fetchDiscogs = async () => {
       if (!settings?.discogsToken) throw new Error("No token");
-      const res = await fetchTimeout(`https://api.discogs.com/database/search?q=${cleanCode}&token=${settings.discogsToken}`); const data = await res.json();
+      const query = artistName ? `${rawBarcode} ${artistName}` : rawBarcode;
+      const res = await fetchTimeout(`https://api.discogs.com/database/search?q=${encodeURIComponent(query)}&token=${settings.discogsToken}`); const data = await res.json();
       if (!data.results || data.results.length === 0) throw new Error("Not found");
       const item = data.results[0]; const titleParts = item.title ? item.title.split(' - ') : [];
       let discType = 'CD'; const fStr = (item.format || []).join(' ').toLowerCase();
@@ -819,7 +821,33 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
 
     try {
       const foundItem = await Promise.any(fetchers); updateStatus('success', 'Encontrado com velocidade!');
-      setFormData(prev => ({ ...prev, ...foundItem, barcode: cleanCode }));
+      setFormData(prev => {
+         const merged = { ...prev };
+         if (aiData) {
+             const apiArtist = (foundItem.author_developer || '').toLowerCase();
+             const aiArtist = (aiData.author_developer || '').toLowerCase();
+             const isMatch = apiArtist && aiArtist && (apiArtist.includes(aiArtist) || aiArtist.includes(apiArtist));
+
+             if (isMatch) {
+                 merged.title = foundItem.title || aiData.title || prev.title;
+                 merged.author_developer = foundItem.author_developer || aiData.author_developer || prev.author_developer;
+                 merged.year = foundItem.year || aiData.year || prev.year;
+                 merged.publisher = foundItem.publisher || aiData.publisher || prev.publisher;
+                 merged.pages_or_time = foundItem.pages_or_time || aiData.pages_or_time || prev.pages_or_time;
+             } else {
+                 merged.title = aiData.title || prev.title;
+                 merged.author_developer = aiData.author_developer || prev.author_developer;
+                 merged.year = aiData.year || foundItem.year || prev.year;
+                 merged.publisher = aiData.publisher || foundItem.publisher || prev.publisher;
+                 merged.pages_or_time = aiData.pages_or_time || foundItem.pages_or_time || prev.pages_or_time;
+             }
+             merged.cover_url = foundItem.cover_url || prev.cover_url;
+         } else {
+             Object.assign(merged, foundItem);
+         }
+         merged.barcode = rawBarcode;
+         return merged;
+      });
     } catch (e) { updateStatus('error', 'Item não localizado nos bancos. Preencha manualmente.'); }
   };
 
@@ -900,7 +928,7 @@ const AddTab = ({ items, setItems, settings, darkMode, addMode, setAddMode, setA
                 <MInput darkMode={darkMode} label="Código de Barras/Catálogo" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} />
               </div>
               <div className="flex items-end mb-1.5">
-                <MButton darkMode={darkMode} variant="amber" onClick={(e) => { e.preventDefault(); if(formData.barcode) fetchMultiDatabaseParallel(formData.barcode); else { playChipBeep('error'); updateStatus('error', 'Digite um código primeiro.'); } }} className="h-[38px] px-3"><Search className="w-4 h-4"/> Buscar</MButton>
+                <MButton darkMode={darkMode} variant="amber" onClick={(e) => { e.preventDefault(); if(formData.barcode) fetchMultiDatabaseParallel(formData.barcode, formData.author_developer, null); else { playChipBeep('error'); updateStatus('error', 'Digite um código primeiro.'); } }} className="h-[38px] px-3"><Search className="w-4 h-4"/> Buscar</MButton>
               </div>
             </div>
             
@@ -1716,20 +1744,19 @@ export default function App() {
     setAiBoxState('loading'); setAiBoxMessage('Analisando com IA...');
 
     try {
-      const b64 = (await resizeImageForAPI(file)).split(',')[1];
-      const promptInstructions = `Aja como arquivista especializado. Seja rápido.
-Analise a imagem (capa, etiqueta de disco, ficha catalográfica). Retorne EXCLUSIVAMENTE um JSON.
+      const b64 = (await resizeImageForAPI(file, 600)).split(',')[1];
+      const promptInstructions = `Aja rápido. Leia o disco/capa. Retorne EXCLUSIVAMENTE um JSON:
 {
   "type": "Escolha APENAS uma: ${allTypes.join(', ')}",
   "title": "Título Principal",
-  "author_developer": "Autor(es) ou Artista",
-  "year": "Ano (formato YYYY)",
-  "publisher": "Editora ou Gravadora",
-  "pages_or_time": "Páginas, faixas ou minutos (apenas números)",
-  "barcode": "Código de barras OU Código de Catálogo da Gravadora impresso no selo (ex: 33.062)",
-  "description": "Texto descritivo. Deixe VAZIO se não houver texto explícito descrevendo a obra."
+  "author_developer": "Artista",
+  "year": "Ano",
+  "publisher": "Gravadora",
+  "pages_or_time": "Total faixas (se visível)",
+  "barcode": "Código de catálogo EXATO (NÃO remova espaços ou hífens. Ex: BKL 21)",
+  "description": ""
 }
-REGRAS: 1. NÃO invente descrições. 2. Capture código de catálogo no 'barcode'. 3. APENAS JSON puro.`;
+MANTENHA espaços e hífens originais no código ('barcode'). Sem formatações textuais, só JSON puro.`;
 
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [ { text: promptInstructions }, { inlineData: { mimeType: "image/jpeg", data: b64 } } ] }], generationConfig: { responseMimeType: "application/json", temperature: 0.1 } })
