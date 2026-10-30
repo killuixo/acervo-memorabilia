@@ -341,12 +341,12 @@ const usePWA = (iconUrl) => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    const manifest = { name: "Memorabilia", short_name: "Memorabilia", display: "standalone", background_color: "#ffffff", theme_color: "#000000", icons: [{ src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" }, { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }] };
-    const manifestUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
-    let manifestLink = document.querySelector('link[rel="manifest"]');
-    if (!manifestLink) { manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; document.head.appendChild(manifestLink); }
-    manifestLink.href = manifestUrl;
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(new Blob([`self.addEventListener('fetch', (e) => {});`], { type: 'application/javascript' }))).catch(() => {});
+    // Manifest e ícones agora são arquivos reais em /public (ligados no index.html).
+    // O service worker (/sw.js) só é registrado no site publicado, para não atrapalhar o desenvolvimento.
+    const isProd = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.PROD;
+    if (isProd && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('Service worker não registrado:', err));
+    }
 
     const handlePrompt = (e) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', handlePrompt);
