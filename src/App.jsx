@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 // ==========================================
 // CONFIGURAÇÕES DO APLICATIVO E ARQUIVOLOGIA
 // ==========================================
-const LINK_DO_ICONE_NO_GITHUB = "https://raw.githubusercontent.com/killuixo/acervo-memorabilia/main/icon-192.png";
+// Ícone local: o arquivo fica em public/icon-192.png e é servido pelo próprio site em /icon-192.png
+const LINK_DO_ICONE_NO_GITHUB = "/icon-192.png";
 
 const DEFAULT_CATEGORIES = {
   'Livros': ['Livro', 'Quadrinho', 'Revista'],
